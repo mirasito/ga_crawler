@@ -1,52 +1,70 @@
 ---
 tags: [priorities, current-focus, phase-1]
-date: 2026-05-05
+date: 2026-05-06
 ---
 
 # Текущие приоритеты — Phase 1 спайк
 
-**Сейчас:** Phase 1 контекст зафиксирован. Готов к `/gsd-plan-phase 1`.
+**Сейчас:** Phase 1 на 6/12 планов + Camoufox-side-spike. **Tier-стратегия перевёрнута** — см. session [[2026-05-06 — Camoufox побеждает GroupIB, Phase 1 re-route]]. Осталось ~1.5 ч wall-clock до закрытия Phase 1.
 
-## Что нужно сделать (по 16 решениям из CONTEXT.md)
+## Что осталось (минимум для закрытия)
 
-1. Зарегистрировать **IPRoyal или Decodo** trial-аккаунт (заранее, до старта тестов)
-2. Гонять **Patchright** (Tier 2) с **двух IP-гео** — laptop KZ + один proxy
-3. Параллельно — **JSON-endpoint hunt** на goldapple: DevTools, sitemap.xml, `__NEXT_DATA__`
-4. Notebook с **100 sequential goldapple fetches**, threshold **≥95/100** с JSON-LD как fetch-OK критерием
-5. **viled feasibility** через `curl_cffi impersonate="chrome"` (≥10 product fetches + side-deliverables: timing, JSON-LD, pagination)
-6. **Robots.txt + ToS** аудит обоих сайтов → `tos-audit.md`
-7. **Page-volume estimate** через sitemap.xml + pagination meta
-8. **Decision memo**: tier (0/1/2/3/4), proxy provider, browser engine, prod-IP-гео — подписан и закоммичен
+1. **01-08 переписать на Camoufox** + прогнать на 100 URLs (D-13 ≥95/100, D-14 JSON-LD, D-15 challenge-rate). 30-60 мин.
+2. **01-11 MEMO finalize** с обновлённым verdict: Tier 2 = Camoufox direct, no proxy.
+3. **01-12 wrap-up** — Obsidian copy MEMO в `knowledge/decisions/`, project skill, STATE update.
 
-**Артефакты:** `.planning/spikes/01-goldapple/MEMO.md` + `notebook.py` + `tos-audit.md`. Копия memo в `knowledge/decisions/` после `/gsd-spike --wrap-up`.
+## Что НЕ делаем (snapped из плана)
 
-**Timebox:** 1 неделя. После — вердикт «Tier 4 / managed unblocker» если ничего ниже не сработало.
+- ❌ **01-03 IPRoyal trial** — прокси не нужен, Camoufox без него работает ([[Camoufox а не Patchright — engine для goldapple]])
+- ❌ **01-09 EU-proxy multi-geo** — value-of-info низкий когда фингерпринт сам решает
+- ❌ **01-10 Tier 3 escalation** — триггер не сработает (Tier 2 = Camoufox проходит)
 
-## Ключевые решения
+## Что уже готово (closed)
 
-- [[Tier 2 Patchright — стартовый tier для goldapple]] — скип Tier 1
-- [[Multi-geo измерение в спайке — laptop KZ плюс один proxy]] — две метрики в memo
-- [[JSON-endpoint hunt — явный deliverable Phase 1]] — может убрать browser tier совсем
-- [[Спайковый fetch-OK = HTML 200 плюс product JSON-LD]] — ≥95/100 threshold
+| Plan | Что дало |
+|---|---|
+| 01-01 ✓ | spike skeleton |
+| 01-02 ✓ | uv project + curl_cffi 0.15 + patchright 1.59 + selectolax + chromium |
+| 01-04 ✓ | RECON-04: viled чистый robots/ToS, goldapple глобально gated. Rate-limits committed. |
+| 01-05 ✓ | RECON-03 part 1: sitemap.xml plain-deliverable, 112k URLs, ~600 MB/week budget |
+| 01-06 ✓ | JSON-endpoint hunt: Tier 0 мёртв для product data ([[Tier 0 для goldapple — мёртв, JSON endpoints за gate'ом]]); vendor ID = GroupIB |
+| 01-07 ✓ | RECON-02: viled 15/15 HTTP 200, `__NEXT_DATA__` extraction patterns заморожены |
+| 01-06b spike ✓ | Camoufox 3/3 instantly. **THE big finding.** |
 
-## Stop-rules в спайке
+## Ключевые решения (живущие)
 
-- **5 подряд блоков** (403/429) или первая Cloudflare interstitial / DataDome captcha → tier failed, эскалация
-- **Persistent context (warm)** для Patchright, slow rate 3-5с между fetches
-- **Auto-resolved challenges** = проход (но challenge-rate логируется как отдельная метрика)
+- [[Camoufox а не Patchright — engine для goldapple]] — engine для Phase 3 production
+- [[Goldapple anti-bot — это GroupIB FACCT, не Cloudflare]] — vendor ID
+- [[Tier 0 для goldapple — мёртв, JSON endpoints за gate'ом]] — но sitemap живой → hybrid stack
+- [[Multi-geo измерение в спайке — laptop KZ плюс один proxy]] — multi-geo gap признаётся в MEMO (не выполнялся, см. [[Camoufox...]] rationale)
+- [[JSON-endpoint hunt — явный deliverable Phase 1]] — выполнено, Tier 0 не виабелен
 
-## Почему именно так
+## Superseded решения (сохранены как audit trail)
 
-См. [[Phase 1 — throwaway спайк до production-кода]] и [[Goldapple anti-bot — определяющий риск проекта]]. Anti-bot tier — единственный риск, способный убить проект; спайк построен ровно под этот де-рискинг.
+- ~~[[Tier 2 Patchright — стартовый tier для goldapple]]~~ — см. supersedes header в файле
 
-## После завершения Phase 1
-
-Переход к Phase 2: skeleton + viled crawl + storage. См. [[.planning/ROADMAP|ROADMAP.md]] для последующих фаз.
-
-## Команда для запуска
+## Phase 3 stack preview (после MEMO finalize)
 
 ```
-/gsd-plan-phase 1
+goldapple enumeration   : curl_cffi + sitemap.xml      (Tier 0 ✓)
+goldapple product render: Camoufox + JSON-LD parse     (Tier 2 ✓)
+viled enumeration       : curl_cffi + sitemap.xml      (Tier 0 ✓)
+viled product render    : curl_cffi + __NEXT_DATA__    (Tier 0 ✓)
+proxy budget            : $0 baseline
+host (Phase 7)          : Hetzner-EU candidate; обязательно проверить Camoufox+EU перед locking
+maintenance risk        : daijro/camoufox upstream — periodic health-check в playbook
 ```
 
-Контекст лежит в `.planning/phases/01-goldapple-reconnaissance-spike/01-CONTEXT.md`.
+## Команда продолжения
+
+После решения "rewrite-в-place vs формальный re-plan" для 01-08:
+
+```
+/gsd-execute-phase 1
+```
+
+Контекст: `.planning/phases/01-goldapple-reconnaissance-spike/01-CONTEXT.md` (16 D-XX decisions всё ещё валидны кроме D-01 и D-08 — см. supersedes).
+
+## Timebox
+
+D-02 = 1 неделя. День 2 из 7. Текущий темп: вердикт по anti-bot tier — ясный. Spike реально окупился.
