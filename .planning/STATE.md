@@ -1,37 +1,38 @@
 # State: GA Crawler
 
 **Last updated:** 2026-05-06
-**Mode:** Phase 1 executing — Wave 0 partial (01-01, 01-02 done; **01-03 IPRoyal REQUIRES REVIVAL** before 01-08 per 01-06 finding), Wave 1 COMPLETE (01-04 ✓, 01-05 ✓, 01-06 ✓, 01-07 ✓); next plan = revive 01-03 OR 01-08 with Camoufox parallel-track
+**Mode:** Phase 1 COMPLETE (signed off 2026-05-06). Tier 2 = Camoufox direct, no proxy. Ready for `/gsd-discuss-phase 2` (viled crawl + storage) OR `/gsd-discuss-phase 3` (goldapple crawl).
 
 ## Project Reference
 
 **Core value:** Команда viled.kz один раз в неделю получает детализированный, сопоставленный по позициям отчёт о ценах конкурента (goldapple.kz) и может корректировать собственное ценообразование, видеть ассортиментные разрывы и отслеживать чужие промо-акции.
 
-**Current focus:** Phase 1 executing — Wave 1 COMPLETE. **01-06 (JSON-endpoint hunt) loud-flag finding:** Patchright direct on KZ-laptop (no proxy) FAILS goldapple gate 0/7 even with 20-25s wait → STATE deferral gate ("≥98/100 + challenge<10%") decisively fails → **01-03 IPRoyal REQUIRES REVIVAL before 01-08.** Anti-bot vendor identified as **GroupIB / F.A.C.C.T.** (Russian-market fraud-prevention vendor; rebrand of Singapore-based GroupIB), NOT Cloudflare/DataDome — material reorder of escalation tree: Camoufox now a primary 01-08 candidate (different fingerprint surface) not Tier-4 last resort. D-14 verification deferred to 01-08 (challenge shell has no schema.org markup; cannot confirm/deny `__NEXT_DATA__`/JSON-LD on real product HTML without first passing the gate). Earlier in this session: 01-04 (robots/ToS audit) ✓, 01-05 (sitemap + page-volume) ✓, 01-07 (viled curl_cffi feasibility) ✓ — **viled CONFIRMED Tier 0** (15/15 HTTP 200, avg 485ms, no anti-bot); critical Phase 2 finding: viled has zero JSON-LD on product pages, instead uses `__NEXT_DATA__` Next.js SSR blob; canonical field paths extracted (price/realPrice/brandName/name/sizeType/Размер/currency); viled sitemap also plain-deliverable (42,294 product URLs under `/item/<numeric_id>` route across 9 sub-sitemaps split by gender). Phase 2 viled stack frozen: curl_cffi + selectolax + json.parse on `__NEXT_DATA__`, sitemap-driven enumeration, no HTML pagination. **goldapple sitemap.xml IS plain-deliverable via curl_cffi** (HTTP 200, no JS-challenge — exempt from anti-bot layer); catalog enumerated: 112,317 URLs total, 100,779 product-numeric URLs across 1,461 brand slugs (~69 products/brand catalog-wide). 5 niche-perfumery brands selected for 01-08 (Jo Malone London, Tom Ford, Creed, Frederic Malle, Givenchy) после autonomous probe viled.kz (luxury fashion + niche perfumery, NOT mass-market — default plan_context list rejected). Phase 3 budget anchor: ~600 MB/week, ~$2.10 proxy, ~4.4h duration.
+**Current focus:** Phase 1 (Goldapple Reconnaissance Spike) **CLOSED** 2026-05-06 with signed-off MEMO. **Verdict:** Tier 2 = Camoufox v135.0.1-beta.24 (Firefox + C++ fingerprint spoof), KZ-laptop direct, **no proxy**. Plan 01-08 100-fetch run = **99/100 success, 0% gate-shell rate, NOT FRAGILE per D-15.** Anti-bot vendor = **GroupIB / F.A.C.C.T.** (Russian-market fraud-prevention; uncharted scraping territory — Patchright benchmarks don't apply). Patchright superseded (0/7 baseline plan 01-06). **Plans 01-03 (IPRoyal pre-register), 01-09 (multi-geo proxy), 01-10 (Tier 3 escalation) all SKIPPED** — fingerprint alone solves the gate, multi-geo VOI ≈ 0. **D-14 revised mid-spike:** goldapple uses inline microdata (`<meta itemprop="price">`), NOT JSON-LD Product schema (only `OfferShippingDetails` JSON-LD present). 99/100 microdata extraction on real product pages. viled.kz stack frozen separately: curl_cffi + selectolax + `__NEXT_DATA__` parser (15/15 HTTP 200 from 01-07). Phase 3 stack = asymmetric (microdata for goldapple, `__NEXT_DATA__` for viled). Phase 7 hosting recommendation = Hetzner CX22 EU + Camoufox+EU smoke gate before locking; IPRoyal KZ residential as fallback (~$2/week, D-08 reactivates only on smoke fail). Phase 3 budget: ~$0/week proxy baseline, ~5.5 hours/week sequential at chosen rate-limits (goldapple 3-5s random, viled 2s). All 4 RECON requirements closed (RECON-01 in Options/Chosen, RECON-02 viled, RECON-03 page-volume, RECON-04 robots/ToS). Spike completed in 2 days of 1-week timebox.
 
 ## Current Position
 
 | Field | Value |
 |-------|-------|
-| Phase | 1 — Goldapple Reconnaissance Spike |
-| Plan | 6/12 complete (`01-01` ✓, `01-02` ✓, `01-04` ✓, `01-05` ✓, `01-06` ✓, `01-07` ✓), 1 to revive (`01-03` IPRoyal — gate empirically failed by 01-06, must run before 01-08) |
-| Status | Wave 1 COMPLETE — next: revive 01-03 (IPRoyal trial) before 01-08, then jump to Wave 2 (01-08 Patchright Tier 2 KZ-laptop with proxy + Camoufox parallel-track per 01-06 escalation reorder) |
-| Progress | `[░░░░░░░░░░░░░░░░░░░░] 0/7 phases` (Phase 1: 6/12 plans executed, 1 to revive) |
+| Phase | 2 — Project Skeleton + viled Crawl + Storage (next) |
+| Plan | (none yet — run `/gsd-discuss-phase 2` or `/gsd-plan-phase 2`) |
+| Status | Phase 1 (spike) signed off 2026-05-06; awaiting Phase 2 discuss |
+| Progress | `[██░░░░░░░░░░░░░░░░░░] 1/7 phases` (Phase 1 complete: 9/12 plans executed, 3 explicitly skipped per Camoufox-solves-gate verdict) |
 | Branch strategy | none (single-trunk) |
-| Resume file | `.planning/phases/01-goldapple-reconnaissance-spike/01-03-PLAN.md` (revival) OR `01-08-PLAN.md` (proceed) |
+| Resume file | `.planning/spikes/01-goldapple/MEMO.md` (signed memo as Phase 3 entry-point) |
 
 ## Performance Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phases planned | 7 |
-| Phases completed | 0 |
+| Phases completed | 1 |
 | v1 requirements mapped | 48/48 |
-| v1 requirements completed | 3/48 (RECON-04, RECON-03, RECON-02) |
+| v1 requirements completed | 4/48 (RECON-01, RECON-02, RECON-03, RECON-04 — all four Phase 1 requirements closed) |
 | Plans created | 12 (Phase 1) |
-| Plans completed | 6 |
-| Spawned agents (this session) | roadmapper, gsd-planner, gsd-plan-checker, gsd-executor |
-| Checkpoints | 0 |
+| Plans completed | 9 (`01-01`, `01-02`, `01-04`, `01-05`, `01-06`, `01-07`, `01-08`, `01-11`, `01-12`) |
+| Plans skipped | 3 (`01-03` IPRoyal, `01-09` multi-geo proxy, `01-10` Tier 3 escalation — explicit SKIP per Camoufox-fingerprint-solves-gate verdict) |
+| Spawned agents (this session) | roadmapper, gsd-planner, gsd-plan-checker, gsd-executor (inline) |
+| Checkpoints | 1 (Phase 1 sign-off) |
 
 ### Plan Execution Metrics
 
@@ -43,6 +44,9 @@
 | 01-05 (sitemap + page-volume) | ~52 min | 3/3 (Task 1 substituted) | 9 created, 1 modified | 2026-05-05 |
 | 01-07 (viled curl_cffi feasibility) | ~25 min | 3/3 (Task 1 substituted) | 7 created, 2 modified | 2026-05-05 |
 | 01-06 (JSON-endpoint hunt) | ~28 min | 3/3 (Task 1 substituted) | 5 created, 1 modified | 2026-05-06 |
+| 01-08 (Camoufox 100-fetch) | ~45 min (incl. plan rewrite + smoke debug) | 4/4 (D-14 revised mid-spike) | 7 created, 4 modified | 2026-05-06 |
+| 01-11 (MEMO finalize) | ~10 min | 3/3 | 0 created, 1 modified | 2026-05-06 |
+| 01-12 (Obsidian + skill + STATE) | ~5 min | 4/4 | 3 created (Obsidian note, project skill, this STATE update), 1 modified (this STATE.md) | 2026-05-06 |
 
 ## Accumulated Context
 
@@ -77,10 +81,16 @@
 | Patchright on KZ-laptop direct (D-06 baseline, no proxy) is empirically INSUFFICIENT to clear goldapple gate (0/7 in 01-06 with 20-25s wait per page) | plan 01-06 empirical | STATE.md gate "if ≥98/100 + challenge<10% — proxy not needed" decisively fails → **01-03 IPRoyal REQUIRES REVIVAL before 01-08**; ungate it. Phase 7 prod-IP-geo flag: EU-Hetzner likely WORSE than KZ-residential (GroupIB likely whitelists local TLD/IP-geo). |
 | goldapple gate API contract: `POST /web/api/v1/settings` (24/24=403 for blocked sessions); telemetry sinks `/front/api/event*` (200) and `https://sp.goldapple.ru/front/api/apm/events` (POST 202) accept blind; `https://ru.id.facct.ru/id.html` iframe loaded for cross-origin device fingerprint | plan 01-06 empirical | 01-08 must poll `/web/api/v1/settings` in background to detect gate-clearance before starting product fetches. May need 5-15min warmup pattern (idle browse, scroll). |
 | D-14 success-criterion verification deferred to 01-08 post-gate-clearance (challenge shell has no `__NEXT_DATA__`/JSON-LD; cannot confirm/deny presence on real product HTML without first passing the gate) | plan 01-06 — challenge shell is the only HTML obtained | Phase 3 parser implementation BLOCKED on 01-08 reaching real product HTML. `sample-payloads/goldapple-jsonld-sample.json` is `[]` with explicit D-14 ALERT pointer. |
+| **Tier 2 = Camoufox direct, no proxy** for goldapple (99/100 D-13 PASS, 0% gate-shell rate, NOT FRAGILE per D-15). D-01 (Patchright start) superseded; D-08 (IPRoyal pre-register) cancelled. Plans 01-03, 01-09, 01-10 SKIPPED. | plan 01-08 empirical (signed-off MEMO 2026-05-06) — see `.planning/spikes/01-goldapple/MEMO.md` | Phase 3 production engine LOCKED. Phase 7 hosting recommendation = Hetzner CX22 EU + smoke gate; IPRoyal KZ residential as fallback if EU+Camoufox combination fails. |
+| **D-14 revised:** goldapple uses inline microdata (`<meta itemprop="price">`), NOT JSON-LD Product schema. Goldapple's only JSON-LD block is `OfferShippingDetails` (shipping policy). Phase 3 parser uses microdata extraction; viled separately uses `__NEXT_DATA__` parser. | plan 01-08 smoke test 2026-05-06 | Phase 3 has TWO parser strategies, not symmetric. Parser dispatch by site. |
 
 ### Active Todos
 
-(none — awaiting Phase 1 plan)
+- Run `/gsd-discuss-phase 2` — Project Skeleton + viled Crawl + Storage (viled stack already hot-data ready from 01-07)
+- After Phase 2 → `/gsd-discuss-phase 3` (Goldapple Crawl) — picks up `.claude/skills/spike-01-goldapple/SKILL.md` automatically
+- [Phase 7 backlog] Camoufox+EU smoke fetch before locking Hetzner hosting — if regression, revive D-08 (IPRoyal trial)
+- [Phase 7 backlog] KZ-legal review (30 min с юристом) for ToS compliance — bundle = `tos-audit.md` + `viled-privacy.txt` + both `*-robots.txt` snapshots + GroupIB/F.A.C.C.T. vendor flag
+- [Phase 3 ops backlog] Weekly Camoufox-vs-goldapple smoke ("does the gate still pass?") — early-warning threshold = gate-shell rate >5%
 
 ### Active Blockers
 
@@ -90,6 +100,11 @@
 
 ### What Was Just Done
 
+- `/gsd-execute-phase 1` Phase 1 closure session 2026-05-06 (continuation of session that committed `1ff7d4d` Camoufox-spike + `789e51b` re-route session note):
+  - **Plan 01-08 rewritten** Patchright→Camoufox (commit `532b37c`); URL pool collected (`649eb6c`); notebook.py replaced with Camoufox 100-fetch implementation including D-14 revision to microdata-or-JSON-LD (`90f112d`); 100-fetch run executed at 99/100 success, 0% gate-shell, NOT FRAGILE (`f9ace33`); MEMO Options-tested table updated with both Patchright (historical 0/7) and Camoufox (actual 99/100) rows + Open Risks (post 01-08) subsection (`e13e47a`); SUMMARY → `.planning/phases/01-goldapple-reconnaissance-spike/01-08-SUMMARY.md` (`175d6de`).
+  - **Plan 01-11 finalized** MEMO sign-off (commit `70fdffa`) — TL;DR + Chosen + robots/ToS rate-limits + Next-step impact + Open risks + Appendix Challenge-rate + Sign-off block; all 12 obligatory sections populated, zero TBDs; SUMMARY → `01-11-SUMMARY.md` (`e4a5a1b`).
+  - **Plan 01-12 wrap-up** (this commit) — Obsidian decision note `knowledge/decisions/Goldapple — Tier 2 Camoufox без proxy, 99 из 100.md` created with frontmatter (tags, date, project, phase, tier, source_memo); project-local skill `.claude/skills/spike-01-goldapple/SKILL.md` created for Phase 3 discuss/plan auto-discovery; STATE.md (this file) updated — Phase 1 closed, Tier 2 in Key Decisions, Phase 2 next; SUMMARY pending.
+  - **Plans skipped (formal):** 01-03 (IPRoyal trial — D-08 cancelled), 01-09 (multi-geo proxy — VOI ≈ 0), 01-10 (Tier 3 escalation — trigger never fires). Documented in MEMO Options-tested status block.
 - `/gsd-execute-phase 1` plan 01-06 executed (sequential mode, Task 1 substituted by programmatic Patchright network capture per user pre-authorization in spawn prompt):
   - **Task 1 (substituted):** `scripts/01-06-network-hunt.py` — Patchright (chromium persistent context per D-04, headless=False, KZ-laptop direct per D-06, no proxy) probes 7 URLs (home, brands index, 2 brand listings, 3 product/facet pages from selected brands per D-12) at 3-5s rate-limit per 01-04. Page-on-request/page-on-response captures 256 events. Initial 5s wait extended to 20s poll-loop watching for title change off "checking device" + 5s networkidle settle. Commit `0439cb2`.
   - **Loud-flag finding:** 0/7 pages cleared the gate even at 20-25s wait. Deferral gate "≥98/100 + challenge<10%" decisively fails. **Anti-bot vendor identified as GroupIB / F.A.C.C.T.** (Russian-market rebrand of Singapore-based GroupIB) via inline `window.gib.init({cid:'w-goldapple', gafUrl:'ru.id.facct.ru/id.html'})` in challenge HTML — material reorder of escalation tree.
@@ -136,15 +151,14 @@
 
 ### What's Next
 
-1. **REVIVE plan 01-03 (IPRoyal trial).** STATE deferral logic empirically failed by 01-06 (Patchright direct on KZ-laptop = 0/7). Sign up for IPRoyal trial (KZ residential primary, RU fallback per D-08) BEFORE 01-08 starts to avoid losing a day to KYC.
-2. Wave 2 (Patchright + escalations 100-fetch) reconfigured per 01-06 findings:
-   - **01-08:** Patchright + (proxy from revived 01-03) parallel-tracked with **Camoufox** (different fingerprint surface — Firefox vs Chromium — orthogonal to GroupIB Chromium signatures). Consider 5-15min warmup pattern (idle browse, scroll) before first product fetch. Pre-flight `/web/api/v1/settings` polling to detect gate-clearance.
-   - **01-09 (multi-geo):** test BOTH EU-IPRoyal AND KZ-IPRoyal (new candidate motivated by GroupIB local-whitelist hypothesis); EU-Hetzner baseline likely WORSE than KZ-residential.
-   - **01-10 (conditional Tier-3):** original plan was residential proxy as primary escalation; now Camoufox is primary, proxy is orthogonal axis.
-3. **Phase 3 parser implementation BLOCKED** on 01-08+ reaching real product HTML. `__NEXT_DATA__` / JSON-LD presence on real product page is unverified; D-14 success criterion may need revision.
-4. Spike outcome (decision memo `.planning/spikes/01-goldapple/MEMO.md`) feeds Phase 3 stack selection. MEMO must reference 01-04 audit summary + committed rate-limits + 01-05 sitemap plain-delivery + 01-06 GroupIB/F.A.C.C.T. vendor + 01-07 viled __NEXT_DATA__ schema + ~600 MB/week budget as Phase 3 config constants.
-5. **Phase 2 hot-start ready:** viled stack frozen (curl_cffi + selectolax + json.parse on `__NEXT_DATA__`), 8 canonical field paths documented, sitemap-driven enumeration, was_price field located, currency mapping defined. Phase 2 can start immediately after spike wrap-up without further reconnaissance — it does NOT depend on 01-08+ outcome.
-6. Open follow-ups (Phase 7): KZ-legal review with bundle = `tos-audit.md` + `viled-privacy.txt` + both `*-robots.txt` snapshots + flag «goldapple ToS not obtainable in spike» + new flag «GroupIB/F.A.C.C.T. is anti-bot vendor — managed-unblocker fallback economics if 01-08+01-10 fail».
+1. **`/gsd-discuss-phase 2`** — Project Skeleton + viled Crawl + Storage. Phase 2 viled stack is hot-data ready from 01-07 (curl_cffi + selectolax + `__NEXT_DATA__` parser; 8 canonical field paths; sitemap-driven enumeration; was_price via realPrice; currency map "₸"→"KZT"). Phase 2 does NOT depend on Phase 3 anti-bot decision and can run in parallel.
+2. **`/gsd-discuss-phase 3`** (Goldapple Crawl) — Phase 3 picks up `.claude/skills/spike-01-goldapple/SKILL.md` automatically. Stack locked: Camoufox + selectolax + microdata extraction. Rate-limit 3-5s random uniform. Persistent context warm. Page-volume budget ~4,000 fetches/week → ~600 MB → $0/week proxy baseline → ~4.4h sequential.
+3. **Phase 7 hosting decision (pending one smoke fetch):** Hetzner CX22 EU is the working hypothesis. Before locking, one Camoufox+EU smoke fetch against goldapple. If gate passes → no proxy, $0/week. If gate fails → revive D-08 (IPRoyal KZ residential, ~$2/week steady-state). If both fail → managed unblocker (ZenRows / Bright Data Web Unlocker, pay-per-page; reframes economics per D-02).
+4. **Phase 3 ops playbook items (deferred to Phase 7):**
+   - Weekly Camoufox-vs-goldapple smoke ("does the gate still pass?") — alert if pass-rate <90% or gate-shell rate >5%
+   - Camoufox upstream check (daijro releases vs coryking fork) — switch fork if daijro stalls
+   - Stale-SKU 200-but-9.5KB rate tracking — if >5%, sitemap may have stale entries needing prune
+5. Open follow-ups (Phase 7 backlog): KZ-legal review (30 min с юристом) with bundle = `tos-audit.md` + `viled-privacy.txt` + both `*-robots.txt` snapshots + GroupIB/F.A.C.C.T. vendor flag + Camoufox-fingerprint-spoof note for legal nuance.
 
 ### Resume Instructions
 
@@ -152,7 +166,9 @@ To continue this project from a fresh session:
 1. Read `.planning/PROJECT.md` for core value and constraints.
 2. Read `.planning/ROADMAP.md` for phase structure.
 3. Read this STATE.md for current position.
-4. Run `/gsd-execute-phase 1` to revive plan 01-03 (IPRoyal) FIRST (per 01-06 finding), then proceed to 01-08 (Patchright Tier 2 + proxy + Camoufox parallel-track).
+4. Read `.planning/spikes/01-goldapple/MEMO.md` — signed-off decision memo, source-of-truth for Phase 3 stack constraints.
+5. Read `.claude/skills/spike-01-goldapple/SKILL.md` — quick-reference Phase 3 entry-point.
+6. Run `/gsd-discuss-phase 2` (viled crawl + storage) OR `/gsd-discuss-phase 3` (goldapple crawl). Phase 2 and Phase 3 are independent — order is operator preference.
 
 ---
-*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05; updated by gsd-executor (plan 01-04) 2026-05-05; updated by gsd-executor (plan 01-05) 2026-05-05; updated by gsd-executor (plan 01-07) 2026-05-05; updated by gsd-executor (plan 01-06) 2026-05-06*
+*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05; updated by gsd-executor (plan 01-04) 2026-05-05; updated by gsd-executor (plan 01-05) 2026-05-05; updated by gsd-executor (plan 01-07) 2026-05-05; updated by gsd-executor (plan 01-06) 2026-05-06; updated by gsd-executor (plans 01-08, 01-11, 01-12) 2026-05-06 — Phase 1 CLOSED*
