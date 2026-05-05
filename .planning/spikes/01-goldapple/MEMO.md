@@ -36,7 +36,73 @@ Goldapple.kz anti-bot tier — defining unknown проекта (см. research/S
 
 ## JSON-endpoint hunt verdict (D-09, D-10)
 
-_TBD — found / not found. Если found: какие эндпоинты, как используются, влияет на сценарий Tier 0._
+**Verdict:** **No usable Tier 0 endpoint** found in the network-hunt phase. **AND** Tier 2 (Patchright direct on KZ-laptop, no proxy) was empirically confirmed **insufficient** to clear the goldapple gate — escalation beyond originally planned Tier-2 baseline is required for Phase 3.
+
+### Method (substituted)
+
+Plan 01-06 Task 1 originally specified a manual Chrome DevTools session. Substituted with a programmatic Patchright capture (script: `.planning/spikes/01-goldapple/scripts/01-06-network-hunt.py`) per user pre-authorization: 01-04 had already established that every goldapple HTML route is JS-gated, so DevTools would require loading the same gate-blocked browser session. Programmatic `page.on("request")` / `page.on("response")` capture exposes the same endpoints in machine-readable form. **7 URLs** probed (home, brands index, 2 brand listings, 3 product/facet pages from selected brands per CONTEXT.md D-12). 256 events captured. Sleep budget 3-5s per page per 01-04 committed rate-limit. Persistent context per D-04. KZ-laptop direct, no proxy per D-06.
+
+See `sample-payloads/goldapple-network-trace.md` for the full investigation; `sample-payloads/goldapple-network-trace.json` for raw 256-event trace; `sample-payloads/goldapple-product-html-1.html` for one evidence challenge-shell sample.
+
+### What was checked
+
+- **5 page types** investigated via Patchright Network capture (home, brands index, 2 brand listings, 3 product pages from Givenchy/Tom Ford/Creed). **7 URLs total.**
+- **20-25s per-page wait** (poll loop until title changes off "Gold Apple — checking device" + 5s `networkidle` settle). Total ~21s wall-clock per page.
+
+### What was found (or NOT found)
+
+- **`__NEXT_DATA__`:** **NOT present in any of the 7 fetched HTMLs.** Reason: every page returned the GUN challenge shell, not the real Next.js app. **Tier-0 viability via __NEXT_DATA__ is unverifiable** without first passing the gate.
+- **JSON-LD:** **NOT present in any of the 7 fetched HTMLs.** Same root cause as above. **D-14 ALERT:** D-14 success-criterion verification (`HTML 200 + JSON-LD product schema present`) is **deferred to plan 01-08 post-gate-clearance**. We cannot revise D-14 yet without evidence of the post-gate page structure.
+- **GraphQL endpoint:** **NOT detected** — neither in challenge HTML scripts nor in observed XHR.
+- **Magento `/rest/V1/...`:** **NOT observed** in any frontend code path. Consistent with 01-04's `Disallow: /rest/` finding — the frontend genuinely doesn't call it.
+- **Catalog API (Tier-0 candidate):** **NOT detected.**
+
+### What WAS observed (XHR contract behind the gate)
+
+| Endpoint | Method | Status | Role |
+|---|---|---|---|
+| `/web/api/v1/settings` | GET | **403 (24/24 attempts)** | The gate-clearance API. Frontend retries every 10s; 200 → `location.reload()`. |
+| `/front/api/event?u=<uuid>&cfidsw-goldapple=<base64>` | GET | 200 | GUN telemetry beacon (per-event fingerprint blob). |
+| `/front/api/event/idw-goldapple` | GET | 200 | Initial telemetry handshake. |
+| `https://ru.id.facct.ru/id.html` | GET | 200 | F.A.C.C.T. iframe origin (cross-origin device fingerprint harvest). |
+| `https://sp.goldapple.ru/front/api/apm/events` | POST | 202 | Elastic APM telemetry sink (logs denied visitors). |
+
+These are anti-bot infrastructure endpoints, NOT a usable catalog API.
+
+### Critical new intel: anti-bot vendor is GroupIB / F.A.C.C.T. (NOT Cloudflare/DataDome)
+
+The challenge HTML reveals the vendor that 01-04 could only describe as "DataDome-style":
+
+- `window.gib.init({cid: 'w-goldapple', gafUrl: '//ru.id.facct.ru/id.html'})` — `gib` = **GroupIB** (https://www.group-ib.com — Singapore-based fraud-prevention vendor; **rebranded to F.A.C.C.T. for Russian market** in 2023).
+- `cid: 'w-goldapple'` confirms goldapple is a paid GroupIB customer.
+- Internal frontend log: `error.name = 'GUN_INIT_PAGE'; '403 ошибка нет кук'` — they call the challenge state "GUN init", logged via Elastic APM at `sp.goldapple.ru/front/api/apm/events`.
+
+**Implication for tier escalation:** the 2026 Patchright pass-rate benchmarks cited in CLAUDE.md and research/STACK.md target Cloudflare / DataDome / Akamai. **GroupIB / F.A.C.C.T. is not in those benchmarks.** The "Patchright + residential proxy" path may not be the right escalation tree; **Camoufox** (different fingerprint surface — Firefox-based vs Chromium) becomes a more likely candidate than originally placed at Tier-4 last resort.
+
+### JSON-LD presence in product HTML
+
+**Unverifiable in this phase.** Sample file `sample-payloads/goldapple-jsonld-sample.json` is `[]` (empty). See **D-14 ALERT** above; verification deferred to 01-08.
+
+### Implications for Phase 3
+
+- **Tier 2 stack confirmed INSUFFICIENT on the originally planned baseline (Patchright + KZ-laptop direct, no proxy).** 0/7 successful HTML loads = 0% gate-clearance rate. STATE.md "if ≥98/100 + challenge<10% — proxy not needed" gate is decisively failed at this exploratory step.
+- **Required escalation** (to be empirically tested in 01-08): one or more of:
+  1. Patchright + IPRoyal residential proxy (revive deferred plan 01-03 — sign up before 01-08 starts to avoid losing a day to KYC).
+  2. Camoufox (different fingerprint surface; Firefox-based likely orthogonal to GroupIB Chromium signatures).
+  3. Long warmup session (5-15 minutes idle browsing, then start product fetches).
+  4. Combinations of the above.
+- **Bandwidth estimate** (per `## Page-volume estimate (RECON-03)` section): unchanged at ~600 MB/week through Patchright per the 01-05 anchor.
+- **Proxy budget if Tier-3 IPRoyal residential is required:** ~$2.10/week (per 01-05 estimate, IPRoyal Tier-3 KZ residential).
+- **Phase 7 prod IP-geo (D-07):** the EU Hetzner baseline likely WORSE than KZ-laptop — GroupIB is a Russian-market vendor likely whitelisting local TLD/IP-geo combinations. Hetzner-EU Phase 7 may need IPRoyal-KZ proxy as a hard requirement, not optional.
+
+**Patchright remains the engine candidate for Phase 3** (vs vanilla Playwright per D-01); we are escalating up the Patchright config space (proxy / Camoufox / warmup), not abandoning Patchright.
+
+### Risks / open questions
+
+- We did NOT observe a real product page; **Phase 3 parser implementation is blocked on 01-08** finding a path past the gate before we can confirm the data-extraction contract (`__NEXT_DATA__` shape, JSON-LD presence, schema.org markup).
+- The GroupIB vendor finding may push the project into **Tier 4 / managed unblocker (ZenRows / Bright Data Web Unlocker)** territory if 01-08 also fails — D-02 timebox protection then triggers project re-scoping per CONTEXT.md.
+
+See `sample-payloads/goldapple-network-trace.md` for the full investigation, all 5 implications-for-01-08, and re-run instructions.
 
 ## Page-volume estimate (RECON-03)
 
