@@ -135,7 +135,7 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 |-------------|-------|--------|
 | RECON-01 | Phase 1 | Pending |
 | RECON-02 | Phase 1 | Pending |
-| RECON-03 | Phase 1 | Pending |
+| RECON-03 | Phase 1 | Partial — page-volume Done (plan 01-05, 2026-05-05); JSON-endpoint hunt pending (plan 01-06) |
 | RECON-04 | Phase 1 | Done (plan 01-04, 2026-05-05) |
 | CRAWL-01 | Phase 2 | Pending |
 | CRAWL-02 | Phase 3 | Pending |

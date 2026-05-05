@@ -39,7 +39,7 @@
 - [x] 01-02-PLAN.md - uv init + Python 3.12 + spike deps (curl_cffi, patchright, selectolax, structlog, python-dotenv) + Patchright Chromium
 - [ ] 01-03-PLAN.md - IPRoyal trial registration + .env.local + proxy smoke-test (D-08 pre-registration)
 - [x] 01-04-PLAN.md - robots.txt + ToS audit (RECON-04) + committed rate-limits per site
-- [ ] 01-05-PLAN.md - sitemap.xml + page-volume estimate for 3-5 brands (RECON-03 part 1)
+- [x] 01-05-PLAN.md - sitemap.xml + page-volume estimate for 3-5 brands (RECON-03 part 1)
 - [ ] 01-06-PLAN.md - JSON-endpoint hunt via DevTools (RECON-03 part 2; D-09/D-10 Tier 0 candidate check)
 - [ ] 01-07-PLAN.md - viled curl_cffi feasibility, >=10 fetches (RECON-02) + side-deliverables for Phase 2
 - [ ] 01-08-PLAN.md - Patchright Tier 2 100-fetch from KZ-laptop baseline (RECON-01; D-01/D-04/D-13/D-14/D-15)
