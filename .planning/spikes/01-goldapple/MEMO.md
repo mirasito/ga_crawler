@@ -22,9 +22,20 @@ Goldapple.kz anti-bot tier — defining unknown проекта (см. research/S
 
 ## Options tested
 
-| Tier | Engine | Proxy | Result | Notes |
-|------|--------|-------|--------|-------|
-| _TBD_ | _TBD_ | _TBD_ | _TBD/100 fetches, X challenges_ | _TBD_ |
+| Tier | Engine | Proxy | Geo (IP) | Result | Notes |
+|------|--------|-------|----------|--------|-------|
+| 2 | Patchright (warm context, headless=False, 21s gate-wait) | none | KZ (laptop, D-06) | 0/7 success, 7/7 gate-shells (0 auto-cleared) | Plan 01-06 — fingerprint-based 403 на `/web/api/v1/settings`. **Patchright superseded for goldapple.** |
+| 2 | **Camoufox** v135.0.1-beta.24 (warm `persistent_context`, geoip+humanize, headless=True) | none | KZ (laptop, D-06) | **99/100 success**, 0/100 gate-shells, 1 block (stale `/7681000002-...` SKU returns 200 + 9.5 KB shell, not anti-bot) | Plan 01-08 — gate cleared 100/100 (1× 1000ms wait, 99 instant). Microdata `<meta itemprop="price">` extracted 99/100. **D-13 PASS, D-15 NOT FRAGILE.** |
+
+**Tier 2 Camoufox KZ-laptop: PASS.** Phase 3 production engine = Camoufox direct, no proxy. Plans 01-09 (multi-geo proxy comparison) и 01-10 (Tier 3 escalation) **SKIPPED** — fingerprint alone solves the gate, multi-geo VOI ≈ 0, Tier 3 не triggered. D-08 (IPRoyal pre-register) **CANCELLED**. Plan 01-11 finalize MEMO с verdict "Tier 2 Camoufox direct, no proxy".
+
+### Open Risks (post 01-08)
+
+- **goldapple is microdata-only, NOT JSON-LD.** D-14 originally specified "HTML 200 + JSON-LD product schema present" but goldapple's only JSON-LD block is `OfferShippingDetails` (shipping policy). Pricing comes from inline microdata `<meta itemprop="price" content="..."><meta itemprop="priceCurrency" content="...">`. Phase 3 parser uses `selectolax` + microdata extraction, NOT JSON-LD. Different from viled.kz which uses `__NEXT_DATA__`. Phase 3 stack has TWO parser strategies, not one.
+- **Brand-precision shortfall on Tom Ford / Jo Malone London:** numeric-id sitemap (`/<digits>-<slug>`) does not contain product URLs for these 2 brands at all (only `/brands/<slug>/...` facet routes). Spike substituted 51 random product URLs from the sitemap. Phase 4 brand-alias YAML built separately — does not affect "Camoufox passes the gate at scale" hypothesis.
+- **Camoufox upstream maintenance:** daijro/camoufox v135.0.1-beta.24 used. CLAUDE.md flagged daijro as "unmaintained as of mid-2025"; we observed fresher releases. Phase 3 ops playbook: weekly check "does Camoufox still pass goldapple?" + alternate to coryking/camoufox fork если daijro stalls.
+- **Hetzner-EU + Camoufox compatibility (D-07 lookahead):** не проверено. GroupIB is a Russian-market vendor likely whitelisting local TLD/IP-geo combos. If Phase 7 hosts on EU and the gate-pass regresses → revive D-08 (IPRoyal trial) for KZ-residential. One Camoufox+EU smoke fetch before locking Phase 7 hosting is recommended.
+- **Stale-SKU 200-but-9.5KB pattern:** `/7681000002-givenchy-pour-homme-blue-label` returned status 200 with the GUN-shell-sized payload (9.5 KB) but title cleared away from "checking device". This is NOT gate-shell behavior — it's likely a de-listed SKU rendering an empty product page. Phase 3 parser must distinguish "no microdata" (de-listed SKU) from "gate not cleared" (anti-bot block) — match-rate pipeline should not treat de-listed pages as scrape failures.
 
 ## Chosen
 
