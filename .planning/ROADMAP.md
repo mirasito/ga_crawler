@@ -154,7 +154,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Goldapple Reconnaissance Spike | 0/12 | Planned | - |
+| 1. Goldapple Reconnaissance Spike | 1/12 | In Progress | - |
 | 2. Project Skeleton + viled Crawl + Storage | 0/0 | Not started | - |
 | 3. Goldapple Crawl | 0/0 | Not started | - |
 | 4. Matcher + Match-Rate KPI | 0/0 | Not started | - |
