@@ -1,0 +1,25 @@
+User-agent: *
+Disallow: /*/*search?
+Disallow: /*/wishlist
+Disallow: /*/rss
+Disallow: /*/cart/
+Disallow: /*/terms/
+Disallow: /*/auth/
+Disallow: /*/embed
+Disallow: *openstat=
+Disallow: /*/checkout/
+Disallow: /*/profile/
+Disallow: /cn/
+Disallow: /*srsltid*
+Disallow: /*?*page=1
+Disallow: /*?page=1*
+Disallow: /*&page=1
+Disallow: /*&page=1*
+Disallow: /*page=1*
+Disallow: /*/*?*page=1
+Disallow: /*/*?page=1*
+Disallow: /*/*&page=1
+Disallow: /*/*&page=1*
+Disallow: /*/*page=1*
+
+Sitemap: https://viled.kz/sitemap.xml
