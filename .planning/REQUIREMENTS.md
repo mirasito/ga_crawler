@@ -129,25 +129,65 @@ Explicitly excluded. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
+Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RECON-01 — RECON-04 | TBD | Pending |
-| CRAWL-01 — CRAWL-06 | TBD | Pending |
-| PARSE-01 — PARSE-06 | TBD | Pending |
-| NORM-01 — NORM-06 | TBD | Pending |
-| MATCH-01 — MATCH-04 | TBD | Pending |
-| DATA-01 — DATA-06 | TBD | Pending |
-| REPORT-01 — REPORT-06 | TBD | Pending |
-| DELIVER-01 — DELIVER-05 | TBD | Pending |
-| SCHED-01 — SCHED-05 | TBD | Pending |
+| RECON-01 | Phase 1 | Pending |
+| RECON-02 | Phase 1 | Pending |
+| RECON-03 | Phase 1 | Pending |
+| RECON-04 | Phase 1 | Pending |
+| CRAWL-01 | Phase 2 | Pending |
+| CRAWL-02 | Phase 3 | Pending |
+| CRAWL-03 | Phase 2 | Pending |
+| CRAWL-04 | Phase 2 | Pending |
+| CRAWL-05 | Phase 2 (viled threshold) + Phase 3 (goldapple threshold added to same gate) | Pending |
+| CRAWL-06 | Phase 2 | Pending |
+| PARSE-01 | Phase 2 (modules shared with Phase 3) | Pending |
+| PARSE-02 | Phase 2 (modules shared with Phase 3) | Pending |
+| PARSE-03 | Phase 2 (modules shared with Phase 3) | Pending |
+| PARSE-04 | Phase 2 (modules shared with Phase 3) | Pending |
+| PARSE-05 | Phase 2 (modules shared with Phase 3) | Pending |
+| PARSE-06 | Phase 2 (modules shared with Phase 3) | Pending |
+| NORM-01 | Phase 2 (seeded with viled top-50; goldapple variants added in Phase 3) | Pending |
+| NORM-02 | Phase 2 (modules shared with Phase 3) | Pending |
+| NORM-03 | Phase 2 (modules shared with Phase 3) | Pending |
+| NORM-04 | Phase 2 (modules shared with Phase 3) | Pending |
+| NORM-05 | Phase 2 (modules shared with Phase 3) | Pending |
+| NORM-06 | Phase 2 (log defined; populated by real goldapple run in Phase 3) | Pending |
+| MATCH-01 | Phase 4 | Pending |
+| MATCH-02 | Phase 4 | Pending |
+| MATCH-03 | Phase 4 | Pending |
+| MATCH-04 | Phase 4 | Pending |
+| DATA-01 | Phase 2 | Pending |
+| DATA-02 | Phase 2 | Pending |
+| DATA-03 | Phase 2 | Pending |
+| DATA-04 | Phase 2 | Pending |
+| DATA-05 | Phase 2 | Pending |
+| DATA-06 | Phase 2 | Pending |
+| REPORT-01 | Phase 5 | Pending |
+| REPORT-02 | Phase 5 | Pending |
+| REPORT-03 | Phase 5 | Pending |
+| REPORT-04 | Phase 5 | Pending |
+| REPORT-05 | Phase 5 | Pending |
+| REPORT-06 | Phase 5 | Pending |
+| DELIVER-01 | Phase 6 | Pending |
+| DELIVER-02 | Phase 6 | Pending |
+| DELIVER-03 | Phase 6 | Pending |
+| DELIVER-04 | Phase 6 | Pending |
+| DELIVER-05 | Phase 6 | Pending |
+| SCHED-01 | Phase 7 | Pending |
+| SCHED-02 | Phase 7 | Pending |
+| SCHED-03 | Phase 7 | Pending |
+| SCHED-04 | Phase 7 | Pending |
+| SCHED-05 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 47 total
-- Mapped to phases: 0 (filled during roadmap creation)
-- Unmapped: 47 ⚠️ (will be resolved by gsd-roadmapper)
+- v1 requirements: 48 total (RECON 4 + CRAWL 6 + PARSE 6 + NORM 6 + MATCH 4 + DATA 6 + REPORT 6 + DELIVER 5 + SCHED 5)
+- Mapped to phases: 48
+- Unmapped: 0
+- Note: previous "47 total" count was an off-by-one in the initial summary; the enumerated IDs above sum to 48.
 
 ---
 *Requirements defined: 2026-05-05*
-*Last updated: 2026-05-05 after initial definition*
+*Last updated: 2026-05-05 — traceability filled by gsd-roadmapper*
