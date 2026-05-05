@@ -9,7 +9,7 @@
 
 - [ ] **RECON-01**: Спайк-проверка goldapple.kz определяет необходимый anti-bot-tier (1/2/3/4) и провайдера прокси
 - [x] **RECON-02**: Спайк-проверка viled.kz подтверждает осуществимость парсинга через `curl_cffi` без headless-браузера
-- [ ] **RECON-03**: Спайк документирует объём страниц у типичного бренда на goldapple (для бюджета прокси) и наличие/отсутствие JSON-эндпоинтов каталога
+- [x] **RECON-03**: Спайк документирует объём страниц у типичного бренда на goldapple (для бюджета прокси) и наличие/отсутствие JSON-эндпоинтов каталога
 - [x] **RECON-04**: Robots.txt и ToS обоих сайтов прочитаны; зафиксирован минимальный и приемлемый rate-limit для каждого
 
 ### Crawl
@@ -135,7 +135,7 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 |-------------|-------|--------|
 | RECON-01 | Phase 1 | Pending |
 | RECON-02 | Phase 1 | Done (plan 01-07, 2026-05-05) |
-| RECON-03 | Phase 1 | Partial — page-volume Done (plan 01-05, 2026-05-05); JSON-endpoint hunt pending (plan 01-06) |
+| RECON-03 | Phase 1 | Done — page-volume in plan 01-05 (2026-05-05); JSON-endpoint hunt in plan 01-06 (2026-05-06, finding: NO Tier-0 endpoint, vendor identified as GroupIB/F.A.C.C.T., D-14 verification deferred to 01-08) |
 | RECON-04 | Phase 1 | Done (plan 01-04, 2026-05-05) |
 | CRAWL-01 | Phase 2 | Pending |
 | CRAWL-02 | Phase 3 | Pending |

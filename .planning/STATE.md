@@ -1,24 +1,24 @@
 # State: GA Crawler
 
-**Last updated:** 2026-05-05
-**Mode:** Phase 1 executing — Wave 0 partial (01-01, 01-02 done; 01-03 IPRoyal **deferred** до результата 01-08), Wave 1 in progress (01-04 ✓, 01-05 ✓, 01-07 ✓ — viled CONFIRMED Tier 0 with __NEXT_DATA__ schema; next 01-06 DevTools-человек)
+**Last updated:** 2026-05-06
+**Mode:** Phase 1 executing — Wave 0 partial (01-01, 01-02 done; **01-03 IPRoyal REQUIRES REVIVAL** before 01-08 per 01-06 finding), Wave 1 COMPLETE (01-04 ✓, 01-05 ✓, 01-06 ✓, 01-07 ✓); next plan = revive 01-03 OR 01-08 with Camoufox parallel-track
 
 ## Project Reference
 
 **Core value:** Команда viled.kz один раз в неделю получает детализированный, сопоставленный по позициям отчёт о ценах конкурента (goldapple.kz) и может корректировать собственное ценообразование, видеть ассортиментные разрывы и отслеживать чужие промо-акции.
 
-**Current focus:** Phase 1 executing — Wave 0 партиал, 01-03 IPRoyal **отложен** (user decision: проверим Tier 2 с KZ-лэптопа, если ≥98/100 + challenge<10% — прокси не нужен; иначе вернёмся к 01-03 после 01-08). Wave 1 идёт: 01-04 (robots/ToS audit) ✓, 01-05 (sitemap + page-volume) ✓, 01-07 (viled curl_cffi feasibility) ✓ — **viled CONFIRMED Tier 0** (15/15 HTTP 200, avg 485ms, no anti-bot); critical Phase 2 finding: viled has zero JSON-LD on product pages, instead uses `__NEXT_DATA__` Next.js SSR blob; canonical field paths extracted (price/realPrice/brandName/name/sizeType/Размер/currency); viled sitemap also plain-deliverable (42,294 product URLs under `/item/<numeric_id>` route across 9 sub-sitemaps split by gender). Phase 2 viled stack frozen: curl_cffi + selectolax + json.parse on `__NEXT_DATA__`, sitemap-driven enumeration, no HTML pagination. **goldapple sitemap.xml IS plain-deliverable via curl_cffi** (HTTP 200, no JS-challenge — exempt from anti-bot layer); catalog enumerated: 112,317 URLs total, 100,779 product-numeric URLs across 1,461 brand slugs (~69 products/brand catalog-wide). 5 niche-perfumery brands selected for 01-08 (Jo Malone London, Tom Ford, Creed, Frederic Malle, Givenchy) после autonomous probe viled.kz (luxury fashion + niche perfumery, NOT mass-market — default plan_context list rejected). Phase 3 budget anchor: ~600 MB/week, ~$2.10 proxy, ~4.4h duration.
+**Current focus:** Phase 1 executing — Wave 1 COMPLETE. **01-06 (JSON-endpoint hunt) loud-flag finding:** Patchright direct on KZ-laptop (no proxy) FAILS goldapple gate 0/7 even with 20-25s wait → STATE deferral gate ("≥98/100 + challenge<10%") decisively fails → **01-03 IPRoyal REQUIRES REVIVAL before 01-08.** Anti-bot vendor identified as **GroupIB / F.A.C.C.T.** (Russian-market fraud-prevention vendor; rebrand of Singapore-based GroupIB), NOT Cloudflare/DataDome — material reorder of escalation tree: Camoufox now a primary 01-08 candidate (different fingerprint surface) not Tier-4 last resort. D-14 verification deferred to 01-08 (challenge shell has no schema.org markup; cannot confirm/deny `__NEXT_DATA__`/JSON-LD on real product HTML without first passing the gate). Earlier in this session: 01-04 (robots/ToS audit) ✓, 01-05 (sitemap + page-volume) ✓, 01-07 (viled curl_cffi feasibility) ✓ — **viled CONFIRMED Tier 0** (15/15 HTTP 200, avg 485ms, no anti-bot); critical Phase 2 finding: viled has zero JSON-LD on product pages, instead uses `__NEXT_DATA__` Next.js SSR blob; canonical field paths extracted (price/realPrice/brandName/name/sizeType/Размер/currency); viled sitemap also plain-deliverable (42,294 product URLs under `/item/<numeric_id>` route across 9 sub-sitemaps split by gender). Phase 2 viled stack frozen: curl_cffi + selectolax + json.parse on `__NEXT_DATA__`, sitemap-driven enumeration, no HTML pagination. **goldapple sitemap.xml IS plain-deliverable via curl_cffi** (HTTP 200, no JS-challenge — exempt from anti-bot layer); catalog enumerated: 112,317 URLs total, 100,779 product-numeric URLs across 1,461 brand slugs (~69 products/brand catalog-wide). 5 niche-perfumery brands selected for 01-08 (Jo Malone London, Tom Ford, Creed, Frederic Malle, Givenchy) после autonomous probe viled.kz (luxury fashion + niche perfumery, NOT mass-market — default plan_context list rejected). Phase 3 budget anchor: ~600 MB/week, ~$2.10 proxy, ~4.4h duration.
 
 ## Current Position
 
 | Field | Value |
 |-------|-------|
 | Phase | 1 — Goldapple Reconnaissance Spike |
-| Plan | 5/12 complete (`01-01` ✓, `01-02` ✓, `01-04` ✓, `01-05` ✓, `01-07` ✓), 1 deferred (`01-03` IPRoyal — revisit gate at 01-08) |
-| Status | Executing Wave 1 — next plan 01-06 (DevTools JSON-endpoint hunt with human) or jump to Wave 2 (01-08 Patchright Tier 2 KZ-laptop 100-fetch) |
-| Progress | `[░░░░░░░░░░░░░░░░░░░░] 0/7 phases` (Phase 1: 5/12 plans executed, 1 deferred) |
+| Plan | 6/12 complete (`01-01` ✓, `01-02` ✓, `01-04` ✓, `01-05` ✓, `01-06` ✓, `01-07` ✓), 1 to revive (`01-03` IPRoyal — gate empirically failed by 01-06, must run before 01-08) |
+| Status | Wave 1 COMPLETE — next: revive 01-03 (IPRoyal trial) before 01-08, then jump to Wave 2 (01-08 Patchright Tier 2 KZ-laptop with proxy + Camoufox parallel-track per 01-06 escalation reorder) |
+| Progress | `[░░░░░░░░░░░░░░░░░░░░] 0/7 phases` (Phase 1: 6/12 plans executed, 1 to revive) |
 | Branch strategy | none (single-trunk) |
-| Resume file | `.planning/phases/01-goldapple-reconnaissance-spike/01-06-PLAN.md` |
+| Resume file | `.planning/phases/01-goldapple-reconnaissance-spike/01-03-PLAN.md` (revival) OR `01-08-PLAN.md` (proceed) |
 
 ## Performance Metrics
 
@@ -29,7 +29,7 @@
 | v1 requirements mapped | 48/48 |
 | v1 requirements completed | 3/48 (RECON-04, RECON-03, RECON-02) |
 | Plans created | 12 (Phase 1) |
-| Plans completed | 5 |
+| Plans completed | 6 |
 | Spawned agents (this session) | roadmapper, gsd-planner, gsd-plan-checker, gsd-executor |
 | Checkpoints | 0 |
 
@@ -42,6 +42,7 @@
 | 01-04 (robots/ToS audit) | ~38 min | 2/2 | 9 created, 1 modified | 2026-05-05 |
 | 01-05 (sitemap + page-volume) | ~52 min | 3/3 (Task 1 substituted) | 9 created, 1 modified | 2026-05-05 |
 | 01-07 (viled curl_cffi feasibility) | ~25 min | 3/3 (Task 1 substituted) | 7 created, 2 modified | 2026-05-05 |
+| 01-06 (JSON-endpoint hunt) | ~28 min | 3/3 (Task 1 substituted) | 5 created, 1 modified | 2026-05-06 |
 
 ## Accumulated Context
 
@@ -72,6 +73,10 @@
 | Phase 2 viled enumeration = sitemap-only (42,294 product URLs across 9 sub-sitemaps under /item/<numeric_id>); no HTML pagination crawl needed | plan 01-07 empirical | Phase 2 CRAWL-01 simplified: sitemap-index → sub-sitemaps → product URLs. Incremental delta available via sitemap `<lastmod>` |
 | viled was_price requirement (v1 schema) directly satisfiable from week 1 via realPrice field — no retroactive backfill | plan 01-07 empirical | STATE.md "was_price captured in v1 schema" decision now has data-supporting field path |
 | viled currency mapping for Phase 2 NORMALIZE-01: "₸" (display unicode) → "KZT" (programmatic); single-currency site, hardcode | plan 01-07 empirical | Phase 2 normalizer constant |
+| goldapple anti-bot vendor identified as **GroupIB / F.A.C.C.T.** (Russian-market rebrand of Singapore-based GroupIB), NOT Cloudflare/DataDome | plan 01-06 empirical (challenge HTML reveals `window.gib.init({cid:'w-goldapple', gafUrl:'ru.id.facct.ru/id.html'})`) | Material reorder of Phase 1 escalation tree: **Camoufox is now a primary 01-08 candidate** (different fingerprint surface, Firefox-based vs Chromium), not Tier-4 last resort. 2026 Patchright benchmarks target Cloudflare/DataDome/Akamai, not GroupIB — uncharted territory. |
+| Patchright on KZ-laptop direct (D-06 baseline, no proxy) is empirically INSUFFICIENT to clear goldapple gate (0/7 in 01-06 with 20-25s wait per page) | plan 01-06 empirical | STATE.md gate "if ≥98/100 + challenge<10% — proxy not needed" decisively fails → **01-03 IPRoyal REQUIRES REVIVAL before 01-08**; ungate it. Phase 7 prod-IP-geo flag: EU-Hetzner likely WORSE than KZ-residential (GroupIB likely whitelists local TLD/IP-geo). |
+| goldapple gate API contract: `POST /web/api/v1/settings` (24/24=403 for blocked sessions); telemetry sinks `/front/api/event*` (200) and `https://sp.goldapple.ru/front/api/apm/events` (POST 202) accept blind; `https://ru.id.facct.ru/id.html` iframe loaded for cross-origin device fingerprint | plan 01-06 empirical | 01-08 must poll `/web/api/v1/settings` in background to detect gate-clearance before starting product fetches. May need 5-15min warmup pattern (idle browse, scroll). |
+| D-14 success-criterion verification deferred to 01-08 post-gate-clearance (challenge shell has no `__NEXT_DATA__`/JSON-LD; cannot confirm/deny presence on real product HTML without first passing the gate) | plan 01-06 — challenge shell is the only HTML obtained | Phase 3 parser implementation BLOCKED on 01-08 reaching real product HTML. `sample-payloads/goldapple-jsonld-sample.json` is `[]` with explicit D-14 ALERT pointer. |
 
 ### Active Todos
 
@@ -85,7 +90,14 @@
 
 ### What Was Just Done
 
-- `/gsd-execute-phase 1` plan 01-07 executed (sequential mode, autonomous, 3 tasks; Task 1 substituted by autonomous viled-sitemap probe per user YOLO preference + 01-05 precedent):
+- `/gsd-execute-phase 1` plan 01-06 executed (sequential mode, Task 1 substituted by programmatic Patchright network capture per user pre-authorization in spawn prompt):
+  - **Task 1 (substituted):** `scripts/01-06-network-hunt.py` — Patchright (chromium persistent context per D-04, headless=False, KZ-laptop direct per D-06, no proxy) probes 7 URLs (home, brands index, 2 brand listings, 3 product/facet pages from selected brands per D-12) at 3-5s rate-limit per 01-04. Page-on-request/page-on-response captures 256 events. Initial 5s wait extended to 20s poll-loop watching for title change off "checking device" + 5s networkidle settle. Commit `0439cb2`.
+  - **Loud-flag finding:** 0/7 pages cleared the gate even at 20-25s wait. Deferral gate "≥98/100 + challenge<10%" decisively fails. **Anti-bot vendor identified as GroupIB / F.A.C.C.T.** (Russian-market rebrand of Singapore-based GroupIB) via inline `window.gib.init({cid:'w-goldapple', gafUrl:'ru.id.facct.ru/id.html'})` in challenge HTML — material reorder of escalation tree.
+  - **Task 2:** `goldapple-network-trace.md` (human-readable summary: per-page metrics, anti-bot vendor identification, XHR endpoint table including `/web/api/v1/settings` 24/24=403 + telemetry sinks, D-14 ALERT, 5 implications for 01-08, re-run instructions); `goldapple-jsonld-sample.json` is `[]` per D-14 ALERT (challenge shell has no schema.org markup). Commit `42763ca`.
+  - **Task 3:** MEMO `## JSON-endpoint hunt verdict (D-09, D-10)` populated — Variant B (Tier 0 not viable, Tier 2+ required) PLUS additional finding that Tier 2 baseline is itself insufficient. 5 explicit implications for 01-08 captured. Commit `a22034a`.
+  - 5 files created (1 helper script + 4 sample payloads), 1 modified (`MEMO.md`), 3 deviations (1 blocking-issue resolution = checkpoint substitution; 1 bug-fix = wait-loop logic; 1 artifact-hygiene = byte-equivalent challenge-shell dedup), self-check PASSED.
+  - SUMMARY → `.planning/phases/01-goldapple-reconnaissance-spike/01-06-SUMMARY.md`
+- Earlier this session: `/gsd-execute-phase 1` plan 01-07 executed (sequential mode, autonomous, 3 tasks; Task 1 substituted by autonomous viled-sitemap probe per user YOLO preference + 01-05 precedent):
   - Task 1 (substituted): `_fetch_viled_urls.py` fetches viled.kz/sitemap.xml via curl_cffi → sitemapindex with 9 sub-sitemaps → 42,294 product URLs (women=22,378 / men=11,845 / kids=8,071 + collection/lookbook/news) under `/item/<numeric_id>` route → step-stride sample of 15 diversified URLs (IDs 148026 oldest → 409206 newest). Sitemap plain-deliverable confirmed (1.2 KB index, 200 OK). Commit `021c354`.
   - Task 2: `notebook-viled.py` replaced 01-01 stub with real feasibility script; ran 15 fetches at 2s pause: **15/15 HTTP 200, avg 485ms (min 300, max 671), 35.3s wall-clock**. Critical finding: **0/15 product pages have JSON-LD** (D-14-style proxy НЕ применим к viled), but **15/15 have `__NEXT_DATA__`** Next.js SSR blob. `_inspect_viled_nextdata.py` extracted Phase 2 PARSE-02 hot-data from 4 cross-category samples (apparel/perfumery/cosmetics/watch): canonical paths `props.pageProps.attributes[0].{price, realPrice, currency}` + `props.pageProps.item.{brandName, name, sizeType}` + nested `attributes[].name=='Размер'` for beauty volume. Currency display `"₸"` (unicode tenge); pricing integer KZT (no decimal). Commit `a7f6d43`.
   - Task 3: MEMO `## viled.kz feasibility (RECON-02)` populated — verdict CONFIRMED (Tier 0), per-URL outcomes, timing, critical findings, Phase 2 schema hot-data table (8 v1-schema fields → __NEXT_DATA__ paths), side-deliverables table (pagination = sitemap-driven, URL pattern, UA strictness, was_price availability via realPrice, pricing format). Commit `28d7ee5`.
@@ -124,11 +136,15 @@
 
 ### What's Next
 
-1. Continue Phase 1 — Wave 1 has 01-06 (DevTools JSON-endpoint hunt с человеком, RECON-03 part 2 — D-09/D-10) remaining; OR jump to Wave 2 Patchright work since RECON-02 is now closed.
-2. Wave 2 (Patchright Tier-2 100-fetch): 01-08 KZ-laptop (sitemap.xml plain-delivery pre-flight already validated in 01-05; brand list ready: Jo Malone London / Tom Ford / Creed / Frederic Malle / Givenchy; URL pool source = `goldapple-all-urls.txt` numeric-product URLs), 01-09 EU-proxy. Conditional Wave 3 (01-10 Tier 3 escalation if fails). Wave 4 (01-11 MEMO finalize, 01-12 wrap-up).
-3. Spike outcome (decision memo `.planning/spikes/01-goldapple/MEMO.md`) feeds Phase 3 stack selection. MEMO must reference 01-04 audit summary + committed rate-limits + 01-05 sitemap plain-delivery + 01-07 viled __NEXT_DATA__ schema + ~600 MB/week budget as Phase 3 config constants.
-4. **Phase 2 hot-start ready:** viled stack frozen (curl_cffi + selectolax + json.parse on `__NEXT_DATA__`), 8 canonical field paths documented, sitemap-driven enumeration, was_price field located, currency mapping defined. Phase 2 can start immediately after spike wrap-up without further reconnaissance.
-5. Open follow-ups (Phase 7): KZ-legal review with bundle = `tos-audit.md` + `viled-privacy.txt` + both `*-robots.txt` snapshots + flag «goldapple ToS not obtainable in spike».
+1. **REVIVE plan 01-03 (IPRoyal trial).** STATE deferral logic empirically failed by 01-06 (Patchright direct on KZ-laptop = 0/7). Sign up for IPRoyal trial (KZ residential primary, RU fallback per D-08) BEFORE 01-08 starts to avoid losing a day to KYC.
+2. Wave 2 (Patchright + escalations 100-fetch) reconfigured per 01-06 findings:
+   - **01-08:** Patchright + (proxy from revived 01-03) parallel-tracked with **Camoufox** (different fingerprint surface — Firefox vs Chromium — orthogonal to GroupIB Chromium signatures). Consider 5-15min warmup pattern (idle browse, scroll) before first product fetch. Pre-flight `/web/api/v1/settings` polling to detect gate-clearance.
+   - **01-09 (multi-geo):** test BOTH EU-IPRoyal AND KZ-IPRoyal (new candidate motivated by GroupIB local-whitelist hypothesis); EU-Hetzner baseline likely WORSE than KZ-residential.
+   - **01-10 (conditional Tier-3):** original plan was residential proxy as primary escalation; now Camoufox is primary, proxy is orthogonal axis.
+3. **Phase 3 parser implementation BLOCKED** on 01-08+ reaching real product HTML. `__NEXT_DATA__` / JSON-LD presence on real product page is unverified; D-14 success criterion may need revision.
+4. Spike outcome (decision memo `.planning/spikes/01-goldapple/MEMO.md`) feeds Phase 3 stack selection. MEMO must reference 01-04 audit summary + committed rate-limits + 01-05 sitemap plain-delivery + 01-06 GroupIB/F.A.C.C.T. vendor + 01-07 viled __NEXT_DATA__ schema + ~600 MB/week budget as Phase 3 config constants.
+5. **Phase 2 hot-start ready:** viled stack frozen (curl_cffi + selectolax + json.parse on `__NEXT_DATA__`), 8 canonical field paths documented, sitemap-driven enumeration, was_price field located, currency mapping defined. Phase 2 can start immediately after spike wrap-up without further reconnaissance — it does NOT depend on 01-08+ outcome.
+6. Open follow-ups (Phase 7): KZ-legal review with bundle = `tos-audit.md` + `viled-privacy.txt` + both `*-robots.txt` snapshots + flag «goldapple ToS not obtainable in spike» + new flag «GroupIB/F.A.C.C.T. is anti-bot vendor — managed-unblocker fallback economics if 01-08+01-10 fail».
 
 ### Resume Instructions
 
@@ -136,7 +152,7 @@ To continue this project from a fresh session:
 1. Read `.planning/PROJECT.md` for core value and constraints.
 2. Read `.planning/ROADMAP.md` for phase structure.
 3. Read this STATE.md for current position.
-4. Run `/gsd-execute-phase 1` to continue Phase 1 execution from plan 01-06 (DevTools JSON-endpoint hunt) or jump to 01-08 (Patchright Tier 2 KZ-laptop).
+4. Run `/gsd-execute-phase 1` to revive plan 01-03 (IPRoyal) FIRST (per 01-06 finding), then proceed to 01-08 (Patchright Tier 2 + proxy + Camoufox parallel-track).
 
 ---
-*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05; updated by gsd-executor (plan 01-04) 2026-05-05; updated by gsd-executor (plan 01-05) 2026-05-05; updated by gsd-executor (plan 01-07) 2026-05-05*
+*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05; updated by gsd-executor (plan 01-04) 2026-05-05; updated by gsd-executor (plan 01-05) 2026-05-05; updated by gsd-executor (plan 01-07) 2026-05-05; updated by gsd-executor (plan 01-06) 2026-05-06*
