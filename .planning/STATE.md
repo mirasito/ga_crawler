@@ -1,24 +1,24 @@
 # State: GA Crawler
 
 **Last updated:** 2026-05-05
-**Mode:** Phase 1 executing — plan 01-01 complete (skeleton); next plan 01-02 (uv project init)
+**Mode:** Phase 1 executing — plans 01-01..01-02 complete; next plan 01-03 (IPRoyal trial signup)
 
 ## Project Reference
 
 **Core value:** Команда viled.kz один раз в неделю получает детализированный, сопоставленный по позициям отчёт о ценах конкурента (goldapple.kz) и может корректировать собственное ценообразование, видеть ассортиментные разрывы и отслеживать чужие промо-акции.
 
-**Current focus:** Phase 1 executing — plan 01-01 (spike skeleton) committed; next: plan 01-02 (uv project init).
+**Current focus:** Phase 1 executing — plan 01-02 (uv project init) committed; next: plan 01-03 (IPRoyal trial + .env.local).
 
 ## Current Position
 
 | Field | Value |
 |-------|-------|
 | Phase | 1 — Goldapple Reconnaissance Spike |
-| Plan | 1/12 complete (`01-01-PLAN.md` ✓) |
-| Status | Executing — plan 01-01 done; next plan 01-02 |
-| Progress | `[░░░░░░░░░░░░░░░░░░░░] 0/7 phases` (Phase 1: 1/12 plans executed) |
+| Plan | 2/12 complete (`01-01-PLAN.md` ✓, `01-02-PLAN.md` ✓) |
+| Status | Executing — plans 01-01, 01-02 done; next plan 01-03 |
+| Progress | `[░░░░░░░░░░░░░░░░░░░░] 0/7 phases` (Phase 1: 2/12 plans executed) |
 | Branch strategy | none (single-trunk) |
-| Resume file | `.planning/phases/01-goldapple-reconnaissance-spike/01-02-PLAN.md` |
+| Resume file | `.planning/phases/01-goldapple-reconnaissance-spike/01-03-PLAN.md` |
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@
 | Phases completed | 0 |
 | v1 requirements mapped | 48/48 |
 | Plans created | 12 (Phase 1) |
-| Plans completed | 1 |
+| Plans completed | 2 |
 | Spawned agents (this session) | roadmapper, gsd-planner, gsd-plan-checker, gsd-executor |
 | Checkpoints | 0 |
 
@@ -37,6 +37,7 @@
 | Plan | Duration | Tasks | Files | Date |
 |------|----------|-------|-------|------|
 | 01-01 (spike skeleton) | ~3 min | 3/3 | 7 created | 2026-05-05 |
+| 01-02 (uv init + spike deps) | ~5 min | 3/3 | 4 created | 2026-05-05 |
 
 ## Accumulated Context
 
@@ -67,12 +68,13 @@
 
 ### What Was Just Done
 
-- `/gsd-execute-phase 1` plan 01-01 executed (sequential mode):
-  - Task 1: создан `.planning/spikes/01-goldapple/README.md` с throwaway-scope (D-16) + `sample-payloads/.gitkeep` → commit `c2da755`
-  - Task 2: stub-файлы `MEMO.md` (decision-memo template), `notebook.py` (Patchright header), `notebook-viled.py` (curl_cffi header), `tos-audit.md` (RECON-04 skeleton) → commit `02e8cf5`
-  - Task 3: `.gitignore` создан с защитой `.env.local` (D-08 IPRoyal credentials), spike browser-state, *.db → commit `8a2d5c5`
-- 7 файлов создано, 0 deviations, self-check PASSED
-- Earlier: `/gsd-plan-phase 1` создал 12 атомарных плана (01-01..01-12) в 5 волнах; gsd-plan-checker VERIFICATION PASSED
+- `/gsd-execute-phase 1` plan 01-02 executed (sequential mode):
+  - Task 1 (checkpoint:human-verify «установить uv»): auto-skipped — `uv 0.11.7` уже установлен, YOLO/auto_advance allows skip
+  - Task 2: `uv init` в repo root + Python 3.12.13 + 5 spike deps (curl_cffi 0.15.0, patchright 1.59.1, selectolax 0.3.34, structlog 25.5.0, python-dotenv 1.2.2) → commit `d47b800`
+  - Task 3: Patchright Chromium 147.0.7727.15 v1217 (~290 MB) скачан в `%USERPROFILE%\AppData\Local\ms-playwright\`; smoke-test против example.com → `TITLE: Example Domain`; `SETUP-NOTES.md` записан с реальными версиями + Phase 2 warning → commit `0b98407`
+- 4 файла создано (pyproject.toml, uv.lock, .python-version, SETUP-NOTES.md), 0 deviations, self-check PASSED
+- Earlier (this session): plan 01-01 (spike skeleton) → 7 файлов, 3 коммита (c2da755, 02e8cf5, 8a2d5c5)
+- Earlier (planning): `/gsd-plan-phase 1` создал 12 атомарных плана (01-01..01-12) в 5 волнах; gsd-plan-checker VERIFICATION PASSED
 
 ### Earlier (this session)
 
@@ -92,7 +94,7 @@
 
 ### What's Next
 
-1. Continue Phase 1 execution — plan 01-02 (uv project init in repo root). Then 01-03 (IPRoyal trial signup), then Wave 1 (cheap recon: 01-04 robots/ToS, 01-05 sitemap/page-volume, 01-06 JSON-endpoint hunt, 01-07 viled curl_cffi).
+1. Continue Phase 1 execution — plan 01-03 (IPRoyal trial registration + `.env.local` + proxy smoke-test, D-08 pre-registration). Then Wave 1 (cheap recon: 01-04 robots/ToS, 01-05 sitemap/page-volume, 01-06 JSON-endpoint hunt, 01-07 viled curl_cffi).
 2. Wave 2 (Patchright Tier-2 100-fetch): 01-08 KZ-laptop, 01-09 EU-proxy. Conditional Wave 3 (01-10 Tier 3 escalation if fails). Wave 4 (01-11 MEMO finalize, 01-12 wrap-up).
 3. Spike outcome (decision memo `.planning/spikes/01-goldapple/MEMO.md`) feeds Phase 3 stack selection.
 
@@ -102,7 +104,7 @@ To continue this project from a fresh session:
 1. Read `.planning/PROJECT.md` for core value and constraints.
 2. Read `.planning/ROADMAP.md` for phase structure.
 3. Read this STATE.md for current position.
-4. Run `/gsd-execute-phase 1` to continue Phase 1 execution from plan 01-02.
+4. Run `/gsd-execute-phase 1` to continue Phase 1 execution from plan 01-03.
 
 ---
-*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05*
+*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05*

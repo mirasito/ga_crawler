@@ -35,8 +35,8 @@
   4. viled.kz feasibility with `curl_cffi` impersonate is empirically confirmed against ≥10 product fetches.
   5. `robots.txt` and ToS for both sites are reviewed; an acceptable rate-limit per site is documented and committed to the repo.
 **Plans**: 12 plans across 5 waves (Wave 0 setup -> Wave 1 cheap recon -> Wave 2 Tier 2 measurement -> Wave 3 conditional Tier 3 -> Wave 4 finalization)
-- [ ] 01-01-PLAN.md - Spike skeleton (.planning/spikes/01-goldapple/ directory + stub files + .gitignore)
-- [ ] 01-02-PLAN.md - uv init + Python 3.12 + spike deps (curl_cffi, patchright, selectolax, structlog, python-dotenv) + Patchright Chromium
+- [x] 01-01-PLAN.md - Spike skeleton (.planning/spikes/01-goldapple/ directory + stub files + .gitignore)
+- [x] 01-02-PLAN.md - uv init + Python 3.12 + spike deps (curl_cffi, patchright, selectolax, structlog, python-dotenv) + Patchright Chromium
 - [ ] 01-03-PLAN.md - IPRoyal trial registration + .env.local + proxy smoke-test (D-08 pre-registration)
 - [ ] 01-04-PLAN.md - robots.txt + ToS audit (RECON-04) + committed rate-limits per site
 - [ ] 01-05-PLAN.md - sitemap.xml + page-volume estimate for 3-5 brands (RECON-03 part 1)
