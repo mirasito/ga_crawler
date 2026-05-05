@@ -41,7 +41,7 @@
 - [x] 01-04-PLAN.md - robots.txt + ToS audit (RECON-04) + committed rate-limits per site
 - [x] 01-05-PLAN.md - sitemap.xml + page-volume estimate for 3-5 brands (RECON-03 part 1)
 - [ ] 01-06-PLAN.md - JSON-endpoint hunt via DevTools (RECON-03 part 2; D-09/D-10 Tier 0 candidate check)
-- [ ] 01-07-PLAN.md - viled curl_cffi feasibility, >=10 fetches (RECON-02) + side-deliverables for Phase 2
+- [x] 01-07-PLAN.md - viled curl_cffi feasibility, >=10 fetches (RECON-02) + side-deliverables for Phase 2
 - [ ] 01-08-PLAN.md - Patchright Tier 2 100-fetch from KZ-laptop baseline (RECON-01; D-01/D-04/D-13/D-14/D-15)
 - [ ] 01-09-PLAN.md - Patchright Tier 2 100-fetch through EU/RU residential proxy (RECON-01; D-05 multi-geo)
 - [ ] 01-10-PLAN.md - CONDITIONAL Tier 3 escalation if 01-08/01-09 fail or fragile (RECON-01)
@@ -154,7 +154,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Goldapple Reconnaissance Spike | 1/12 | In Progress | - |
+| 1. Goldapple Reconnaissance Spike | 5/12 | In Progress | - |
 | 2. Project Skeleton + viled Crawl + Storage | 0/0 | Not started | - |
 | 3. Goldapple Crawl | 0/0 | Not started | - |
 | 4. Matcher + Match-Rate KPI | 0/0 | Not started | - |
