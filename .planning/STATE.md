@@ -1,7 +1,21 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-05-05T21:29:58.437Z"
+progress:
+  total_phases: 7
+  completed_phases: 1
+  total_plans: 12
+  completed_plans: 12
+  percent: 100
+---
+
 # State: GA Crawler
 
 **Last updated:** 2026-05-06
-**Mode:** Phase 1 COMPLETE (signed off 2026-05-06). Tier 2 = Camoufox direct, no proxy. Ready for `/gsd-discuss-phase 2` (viled crawl + storage) OR `/gsd-discuss-phase 3` (goldapple crawl).
+**Mode:** Phase 1 COMPLETE (signed off 2026-05-06). **Phase 3 context gathered** 2026-05-06 (`03-CONTEXT.md` committed `b100932`, 13 decisions D-301..D-313). Phase 2 not yet discussed — independent of Phase 3 per ROADMAP. Next: `/gsd-plan-phase 3` (Phase 3 plan ready, может стартовать параллельно с Phase 2 discuss).
 
 ## Project Reference
 
@@ -13,12 +27,12 @@
 
 | Field | Value |
 |-------|-------|
-| Phase | 2 — Project Skeleton + viled Crawl + Storage (next) |
-| Plan | (none yet — run `/gsd-discuss-phase 2` or `/gsd-plan-phase 2`) |
-| Status | Phase 1 (spike) signed off 2026-05-06; awaiting Phase 2 discuss |
-| Progress | `[██░░░░░░░░░░░░░░░░░░] 1/7 phases` (Phase 1 complete: 9/12 plans executed, 3 explicitly skipped per Camoufox-solves-gate verdict) |
+| Phase | 3 — Goldapple Crawl (context gathered, awaiting plan) |
+| Plan | (none yet — run `/gsd-plan-phase 3`) |
+| Status | Phase 1 (spike) signed off 2026-05-06; Phase 3 context committed 2026-05-06; awaiting `/gsd-plan-phase 3`. Phase 2 discuss/plan still pending — independent of Phase 3 |
+| Progress | `[██░░░░░░░░░░░░░░░░░░] 1/7 phases` (Phase 1 complete: 9/12 plans executed; Phase 3 context done, no plan yet) |
 | Branch strategy | none (single-trunk) |
-| Resume file | `.planning/spikes/01-goldapple/MEMO.md` (signed memo as Phase 3 entry-point) |
+| Resume file | `.planning/phases/03-goldapple-crawl/03-CONTEXT.md` |
 
 ## Performance Metrics
 
@@ -86,11 +100,11 @@
 
 ### Active Todos
 
-- Run `/gsd-discuss-phase 2` — Project Skeleton + viled Crawl + Storage (viled stack already hot-data ready from 01-07)
-- After Phase 2 → `/gsd-discuss-phase 3` (Goldapple Crawl) — picks up `.claude/skills/spike-01-goldapple/SKILL.md` automatically
+- Run `/gsd-plan-phase 3` — Phase 3 context gathered, ready for planning. Picks up `.claude/skills/spike-01-goldapple/SKILL.md` + `.planning/phases/03-goldapple-crawl/03-CONTEXT.md` automatically
+- Run `/gsd-discuss-phase 2` — Project Skeleton + viled Crawl + Storage (viled stack hot-data ready from 01-07; can run in parallel with Phase 3 plan/exec since Phase 3 contracts to Phase 2 modules)
 - [Phase 7 backlog] Camoufox+EU smoke fetch before locking Hetzner hosting — if regression, revive D-08 (IPRoyal trial)
 - [Phase 7 backlog] KZ-legal review (30 min с юристом) for ToS compliance — bundle = `tos-audit.md` + `viled-privacy.txt` + both `*-robots.txt` snapshots + GroupIB/F.A.C.C.T. vendor flag
-- [Phase 3 ops backlog] Weekly Camoufox-vs-goldapple smoke ("does the gate still pass?") — early-warning threshold = gate-shell rate >5%
+- [Phase 3 ops backlog] Weekly Camoufox-vs-goldapple smoke ("does the gate still pass?") — covered by D-312 integrated smoke probe; threshold = gate-shell rate >5% per spike-skill
 
 ### Active Blockers
 
@@ -100,6 +114,7 @@
 
 ### What Was Just Done
 
+- `/gsd-discuss-phase 3` 2026-05-06 — 4 gray areas обсуждены (URL-pool, Brand-alias coverage, Sanity-gate threshold M, Camoufox profile lifecycle). 13 implementation decisions D-301..D-313 locked: sitemap-only URL pool, full re-crawl weekly, slug-эвристика bilingual exact-match, NORM-06 viled-side + week-over-week NEW goldapple-slug diff, M=1000 static + run-to-completion + auto-suggest after 4 weeks, fresh Camoufox profile per run + integrated smoke probe before crawl + pinned Camoufox version. Created `.planning/phases/03-goldapple-crawl/03-CONTEXT.md` (canonical refs to spike-MEMO + spike-skill + research/* + Phase 1 context, code_context with reusable assets/patterns/integration points, deferred ideas list including v2 incremental + fuzzy + persistent-profile-warm). Created `.planning/phases/03-goldapple-crawl/03-DISCUSSION-LOG.md` audit trail. Committed `b100932`.
 - `/gsd-execute-phase 1` Phase 1 closure session 2026-05-06 (continuation of session that committed `1ff7d4d` Camoufox-spike + `789e51b` re-route session note):
   - **Plan 01-08 rewritten** Patchright→Camoufox (commit `532b37c`); URL pool collected (`649eb6c`); notebook.py replaced with Camoufox 100-fetch implementation including D-14 revision to microdata-or-JSON-LD (`90f112d`); 100-fetch run executed at 99/100 success, 0% gate-shell, NOT FRAGILE (`f9ace33`); MEMO Options-tested table updated with both Patchright (historical 0/7) and Camoufox (actual 99/100) rows + Open Risks (post 01-08) subsection (`e13e47a`); SUMMARY → `.planning/phases/01-goldapple-reconnaissance-spike/01-08-SUMMARY.md` (`175d6de`).
   - **Plan 01-11 finalized** MEMO sign-off (commit `70fdffa`) — TL;DR + Chosen + robots/ToS rate-limits + Next-step impact + Open risks + Appendix Challenge-rate + Sign-off block; all 12 obligatory sections populated, zero TBDs; SUMMARY → `01-11-SUMMARY.md` (`e4a5a1b`).
@@ -163,6 +178,7 @@
 ### Resume Instructions
 
 To continue this project from a fresh session:
+
 1. Read `.planning/PROJECT.md` for core value and constraints.
 2. Read `.planning/ROADMAP.md` for phase structure.
 3. Read this STATE.md for current position.
