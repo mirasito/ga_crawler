@@ -1,7 +1,7 @@
 # State: GA Crawler
 
 **Last updated:** 2026-05-05
-**Mode:** Initialized — ready for Phase 1 planning
+**Mode:** Phase 1 context gathered — ready for `/gsd-plan-phase 1`
 
 ## Project Reference
 
@@ -15,9 +15,10 @@
 |-------|-------|
 | Phase | 1 — Goldapple Reconnaissance Spike |
 | Plan | (none yet — run `/gsd-plan-phase 1`) |
-| Status | Not started |
+| Status | Context gathered (2026-05-05); awaiting plan |
 | Progress | `[░░░░░░░░░░░░░░░░░░░░] 0/7 phases` |
 | Branch strategy | none (single-trunk) |
+| Resume file | `.planning/phases/01-goldapple-reconnaissance-spike/01-CONTEXT.md` |
 
 ## Performance Metrics
 
@@ -58,6 +59,13 @@
 ## Session Continuity
 
 ### What Was Just Done
+
+- Phase 1 discuss session: 4 gray areas обсуждены (Tier escalation & timebox, IP-гео, JSON-endpoint hunt, success criteria)
+- Locked-in 16 implementation decisions (D-01..D-16) для recon-спайка
+- Создан `.planning/phases/01-goldapple-reconnaissance-spike/01-CONTEXT.md` с canonical refs на research/* и project docs
+- Создан `.planning/phases/01-goldapple-reconnaissance-spike/01-DISCUSSION-LOG.md` (audit trail)
+
+### Earlier (initialization)
 
 - Read PROJECT.md and REQUIREMENTS.md
 - Read research/SUMMARY.md, STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md
