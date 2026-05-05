@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "primary_sitemap_url": "https://goldapple.kz/sitemap.xml",
+    "sub_sitemaps": [
+      "https://goldapple.kz/sitemap-1.xml",
+      "https://goldapple.kz/sitemap-2.xml",
+      "https://goldapple.kz/sitemap-3.xml"
+    ],
+    "method_primary": "sitemap.xml + classify by URL pattern",
+    "method_secondary": "n/a (sitemap reachable plain)",
+    "fetched_at": "2026-05-05",
+    "rate_limit_honored": "3-5s random uniform between fetches",
+    "key_finding": "goldapple.kz sitemap.xml IS reachable plain via curl_cffi impersonate=chrome (HTTP 200, no JS-challenge). This is significantly different from HTML routes (per 01-04). Total catalog ~100,779 numeric-id product URLs across 1,461 brand slugs.",
+    "important_caveat": "Per-brand facet count (the 'url_count' field) reflects /brands/<slug>* sitemap entries (catalog sub-views), NOT SKU count. Actual SKU count per brand requires rendering brand listing pages, which are JS-gated. Defer real SKU counts to plan 01-08 warm-Patchright session."
+  },
+  "aggregates": {
+    "total_urls_in_sitemap": 112317,
+    "product_numeric_urls_total": 100779,
+    "distinct_brand_slugs_in_sitemap": 1461,
+    "catalog_wide_avg_products_per_brand": 69.0,
+    "selected_brands_count": 5,
+    "selected_brands_facet_total": 101,
+    "selected_brands_facet_avg": 20.2,
+    "selected_brands_facet_min": 1,
+    "selected_brands_facet_median": 19,
+    "selected_brands_facet_max": 40
+  }
+}

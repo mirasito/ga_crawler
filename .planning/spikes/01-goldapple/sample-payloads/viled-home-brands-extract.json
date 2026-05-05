@@ -1,0 +1,350 @@
+[
+  {
+    "section_index": 6,
+    "item_index": 0,
+    "brandName": "Yuzefi",
+    "title": "Кожаная сумка на плечо Oyster"
+  },
+  {
+    "section_index": 6,
+    "item_index": 1,
+    "brandName": "Alice+Olivia",
+    "title": "Мини-юбка с пайетками"
+  },
+  {
+    "section_index": 6,
+    "item_index": 2,
+    "brandName": "Ex Nihilo",
+    "title": "Парфюмерная вода Blue Talisman"
+  },
+  {
+    "section_index": 6,
+    "item_index": 3,
+    "brandName": "Christian Louboutin",
+    "title": "Туфли со стразами Miss Z"
+  },
+  {
+    "section_index": 6,
+    "item_index": 4,
+    "brandName": "Givenchy",
+    "title": "Платье-рубашка с драпировкой"
+  },
+  {
+    "section_index": 6,
+    "item_index": 5,
+    "brandName": "Givenchy",
+    "title": "Шёлковый платок с принтом"
+  },
+  {
+    "section_index": 6,
+    "item_index": 6,
+    "brandName": "Saint Laurent",
+    "title": "Браслет-манжета Cassandre"
+  },
+  {
+    "section_index": 6,
+    "item_index": 7,
+    "brandName": "Gucci",
+    "title": "Сумка на плечо Softbit"
+  },
+  {
+    "section_index": 6,
+    "item_index": 8,
+    "brandName": "Lorena Antoniazzi",
+    "title": "Хлопковая рубашка в полоску"
+  },
+  {
+    "section_index": 6,
+    "item_index": 9,
+    "brandName": "Saint Laurent",
+    "title": "Солнцезащитные очки"
+  },
+  {
+    "section_index": 6,
+    "item_index": 10,
+    "brandName": "Gucci",
+    "title": "Шелковая повязка GG"
+  },
+  {
+    "section_index": 6,
+    "item_index": 11,
+    "brandName": "Lorena Antoniazzi",
+    "title": "Хлопковые широкие брюки"
+  },
+  {
+    "section_index": 8,
+    "item_index": 0,
+    "brandName": "SHUSHU/TONG ",
+    "title": "Платье с рюшами"
+  },
+  {
+    "section_index": 8,
+    "item_index": 1,
+    "brandName": "YVMIN",
+    "title": "Солнцезащитные очки"
+  },
+  {
+    "section_index": 8,
+    "item_index": 2,
+    "brandName": "SHUSHU/TONG ",
+    "title": "Шерстяные гольфы с логотипом"
+  },
+  {
+    "section_index": 8,
+    "item_index": 3,
+    "brandName": "Maison Margiela",
+    "title": "Кожаные балетки-таби"
+  },
+  {
+    "section_index": 8,
+    "item_index": 4,
+    "brandName": "Aje",
+    "title": "Топ Ophelia"
+  },
+  {
+    "section_index": 8,
+    "item_index": 5,
+    "brandName": "Aje",
+    "title": "Широкие брюки Ophelia"
+  },
+  {
+    "section_index": 8,
+    "item_index": 6,
+    "brandName": "Valentino Garavani",
+    "title": "Шелковый платок с принтом"
+  },
+  {
+    "section_index": 8,
+    "item_index": 7,
+    "brandName": "Gia Borghini",
+    "title": "Кожаные мюли Melanie"
+  },
+  {
+    "section_index": 8,
+    "item_index": 8,
+    "brandName": "AMI PARIS",
+    "title": "Джинсовая рубашка с логотипом"
+  },
+  {
+    "section_index": 8,
+    "item_index": 9,
+    "brandName": "Tom Ford",
+    "title": "Бра с логотипом"
+  },
+  {
+    "section_index": 8,
+    "item_index": 10,
+    "brandName": "AMI PARIS",
+    "title": "Широкие джинсы с логотипом"
+  },
+  {
+    "section_index": 8,
+    "item_index": 11,
+    "brandName": "Balenciaga",
+    "title": "Сумка на плечо Rodeo"
+  },
+  {
+    "section_index": 10,
+    "item_index": 0,
+    "brandName": "Dolce&Gabbana",
+    "title": "Меховые тапочки с принтом"
+  },
+  {
+    "section_index": 10,
+    "item_index": 1,
+    "brandName": "Inuikii",
+    "title": "Замшевые мюли с логотипом"
+  },
+  {
+    "section_index": 10,
+    "item_index": 2,
+    "brandName": "Veja",
+    "title": "Замшевые шлепанцы Arpoador"
+  },
+  {
+    "section_index": 10,
+    "item_index": 3,
+    "brandName": "MM6 MAISON MARGIELA",
+    "title": "Кожаные шлепанцы"
+  },
+  {
+    "section_index": 10,
+    "item_index": 4,
+    "brandName": "Dolce&Gabbana",
+    "title": "Замшевые мюли DG"
+  },
+  {
+    "section_index": 10,
+    "item_index": 5,
+    "brandName": "Inuikii",
+    "title": "Замшевые шлепанцы с принтом"
+  },
+  {
+    "section_index": 10,
+    "item_index": 6,
+    "brandName": "Valentino Garavani",
+    "title": "Замшевые мюли V-logo"
+  },
+  {
+    "section_index": 10,
+    "item_index": 7,
+    "brandName": "Loewe",
+    "title": "Кожаные мюли Flamenco"
+  },
+  {
+    "section_index": 10,
+    "item_index": 8,
+    "brandName": "Saint Laurent",
+    "title": "Замшевые мюли"
+  },
+  {
+    "section_index": 10,
+    "item_index": 9,
+    "brandName": "Dolce&Gabbana",
+    "title": "Меховые тапочки с логотипом"
+  },
+  {
+    "section_index": 10,
+    "item_index": 10,
+    "brandName": "Doucal's",
+    "title": "Замшевые мюли с подвесками"
+  },
+  {
+    "section_index": 10,
+    "item_index": 11,
+    "brandName": "Jude",
+    "title": "Кожаные мюли"
+  },
+  {
+    "section_index": 12,
+    "item_index": 0,
+    "brandName": "Ex Nihilo",
+    "title": "Парфюмерный экстракт Lust In Paradise"
+  },
+  {
+    "section_index": 12,
+    "item_index": 1,
+    "brandName": "Jo Malone London",
+    "title": "Одеколон Wood Sage & Sea Salt Cologne"
+  },
+  {
+    "section_index": 12,
+    "item_index": 2,
+    "brandName": "Amouage",
+    "title": "Парфюмерная вода Lineage, 100 мл"
+  },
+  {
+    "section_index": 12,
+    "item_index": 3,
+    "brandName": "Creed",
+    "title": "Парфюмерная вода Wild Vetiver"
+  },
+  {
+    "section_index": 12,
+    "item_index": 4,
+    "brandName": "Frederic Malle",
+    "title": "Парфюмерная вода Contre-Jour"
+  },
+  {
+    "section_index": 12,
+    "item_index": 5,
+    "brandName": "Jo Malone London",
+    "title": "Одеколон Myrrh & Tonka Cologne Intense Limited Edition, 100 мл"
+  },
+  {
+    "section_index": 12,
+    "item_index": 6,
+    "brandName": "Kilian Paris",
+    "title": "Парфюмерная вода Good Girl Gone Bad By Kilian"
+  },
+  {
+    "section_index": 12,
+    "item_index": 7,
+    "brandName": "Armani Beauty",
+    "title": "Парфюмерная вода Privé Cuir Nu"
+  },
+  {
+    "section_index": 12,
+    "item_index": 8,
+    "brandName": "Frederic Malle",
+    "title": "Парфюмерная вода Heaven Can Wait"
+  },
+  {
+    "section_index": 12,
+    "item_index": 9,
+    "brandName": "Tom Ford Beauty",
+    "title": "Парфюмерная вода Figue"
+  },
+  {
+    "section_index": 12,
+    "item_index": 10,
+    "brandName": "Zielinski & Rozen",
+    "title": "Духи концентрированные Персик, Маракуйя, Мускус, 50 мл"
+  },
+  {
+    "section_index": 14,
+    "item_index": 0,
+    "brandName": "Daum",
+    "title": "Ваза Passion"
+  },
+  {
+    "section_index": 14,
+    "item_index": 1,
+    "brandName": "Villeroy & Boch",
+    "title": "Тарелка Audun Ferme"
+  },
+  {
+    "section_index": 14,
+    "item_index": 2,
+    "brandName": "Baccarat",
+    "title": "Статуэтка Лошадь Marengo"
+  },
+  {
+    "section_index": 14,
+    "item_index": 3,
+    "brandName": "Villeroy & Boch",
+    "title": "Набор из 2 бокалов для шампанского Grand Royal"
+  },
+  {
+    "section_index": 14,
+    "item_index": 4,
+    "brandName": "Ginori 1735",
+    "title": "Тортница Oriente Italiano"
+  },
+  {
+    "section_index": 14,
+    "item_index": 5,
+    "brandName": "Villeroy & Boch",
+    "title": "Салфетка под тарелку Colourful Spring"
+  },
+  {
+    "section_index": 14,
+    "item_index": 6,
+    "brandName": "Lladro",
+    "title": "Подсвечник Snakes"
+  },
+  {
+    "section_index": 14,
+    "item_index": 7,
+    "brandName": "ITALAMP",
+    "title": "Люстра Margot"
+  },
+  {
+    "section_index": 14,
+    "item_index": 8,
+    "brandName": "Lladro",
+    "title": "Статуэтка Origami"
+  },
+  {
+    "section_index": 14,
+    "item_index": 9,
+    "brandName": "Baccarat",
+    "title": "Ваза Octogone"
+  },
+  {
+    "section_index": 14,
+    "item_index": 10,
+    "brandName": "Christofle",
+    "title": "Столовый набор на 6 персон"
+  }
+]

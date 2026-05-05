@@ -1,0 +1,65 @@
+{
+  "Jo Malone London": {
+    "url_count": 1,
+    "source": "sitemap",
+    "method": "/brands/<slug>* facet count from sitemap-1/2/3.xml",
+    "slug": "jo-malone-london",
+    "product_keyword_hits": 0,
+    "facet_url_sample": [
+      "https://goldapple.kz/brands/jo-malone-london/s/pomegranate-noir"
+    ],
+    "notes": "Brand has minimal sitemap presence — likely most products indexed under category routes rather than /brands/<slug>. Refer to product_keyword_hits as backup signal."
+  },
+  "Tom Ford": {
+    "url_count": 33,
+    "source": "sitemap",
+    "method": "/brands/<slug>* facet count from sitemap-1/2/3.xml",
+    "slug": "tom-ford",
+    "product_keyword_hits": 0,
+    "facet_url_sample": [
+      "https://goldapple.kz/brands/tom-ford",
+      "https://goldapple.kz/brands/tom-ford/makijazh/glaza",
+      "https://goldapple.kz/brands/tom-ford/makijazh/rumjana-i-pudry"
+    ],
+    "notes": "Facet count = brand sub-category pages indexed in sitemap (not SKU count). Real SKU count per brand requires fetching brand listing page (JS-gated; deferred to 01-08 warm-Patchright)."
+  },
+  "Creed": {
+    "url_count": 8,
+    "source": "sitemap",
+    "method": "/brands/<slug>* facet count from sitemap-1/2/3.xml",
+    "slug": "creed",
+    "product_keyword_hits": 21,
+    "facet_url_sample": [
+      "https://goldapple.kz/brands/creed/nabory/dlja-nee",
+      "https://goldapple.kz/brands/creed/nabory/podarochnye-nabory",
+      "https://goldapple.kz/brands/creed"
+    ],
+    "notes": "Facet count = brand sub-category pages indexed in sitemap (not SKU count). Real SKU count per brand requires fetching brand listing page (JS-gated; deferred to 01-08 warm-Patchright)."
+  },
+  "Frederic Malle": {
+    "url_count": 19,
+    "source": "sitemap",
+    "method": "/brands/<slug>* facet count from sitemap-1/2/3.xml",
+    "slug": "frederic-malle",
+    "product_keyword_hits": 3,
+    "facet_url_sample": [
+      "https://goldapple.kz/brands/frederic-malle",
+      "https://goldapple.kz/brands/frederic-malle/aromaty",
+      "https://goldapple.kz/brands/frederic-malle/dlja-doma"
+    ],
+    "notes": "Facet count = brand sub-category pages indexed in sitemap (not SKU count). Real SKU count per brand requires fetching brand listing page (JS-gated; deferred to 01-08 warm-Patchright)."
+  },
+  "Givenchy": {
+    "url_count": 40,
+    "source": "sitemap",
+    "method": "/brands/<slug>* facet count from sitemap-1/2/3.xml",
+    "slug": "givenchy",
+    "product_keyword_hits": 41,
+    "facet_url_sample": [
+      "https://goldapple.kz/brands/givenchy/all",
+      "https://goldapple.kz/brands/givenchy/zhenskaja-parfjumerija/ange-ou-demon",
+      "https://goldapple.kz/brands/givenchy/uhod/dlja-molodoj-kozhi"
+    ],
+    "notes": "Facet count = brand sub-category pages indexed in sitemap (not SKU count). Real SKU count per brand requires fetching brand listing page (JS-gated; deferred to 01-08 warm-Patchright)."
+  }
+}
