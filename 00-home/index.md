@@ -22,13 +22,14 @@ date: 2026-05-05
 ## Knowledge
 
 - **Интеграции:** [[goldapple.kz — источник цен конкурента]] · [[viled.kz — собственный каталог и источник пересекающихся брендов]] · [[Telegram Bot API — канал доставки отчёта]] · [[Healthchecks.io — dead-mans-switch для weekly cron]] · [[Residential proxies — нужны только для goldapple]]
-- **Решения:** [[Парсим viled целиком, goldapple только по пересекающимся брендам]] · [[Strict-key матчинг вместо fuzzy в v1]] · [[Хранить полную историю снапшотов, не только текущий срез]] · [[Brand-alias YAML — это v1 deliverable, не v2]] · [[Match-rate — KPI с первой недели]] · [[Stock state — enum в схеме, bool в отчёте]]
+- **Решения:** [[Парсим viled целиком, goldapple только по пересекающимся брендам]] · [[Strict-key матчинг вместо fuzzy в v1]] · [[Хранить полную историю снапшотов, не только текущий срез]] · [[Brand-alias YAML — это v1 deliverable, не v2]] · [[Match-rate — KPI с первой недели]] · [[Stock state — enum в схеме, bool в отчёте]] · [[Tier 2 Patchright — стартовый tier для goldapple]] · [[Multi-geo измерение в спайке — laptop KZ плюс один proxy]] · [[JSON-endpoint hunt — явный deliverable Phase 1]] · [[Спайковый fetch-OK = HTML 200 плюс product JSON-LD]]
 - **Паттерны:** [[JSON-LD первый, CSS резервный в парсерах]] · [[Per-SKU isolation вместо fail-on-first]] · [[Run-level sanity-gate перед доставкой]] · [[Volume как value-object с multipack-флагом]] · [[Тиры anti-bot эскалации]]
 - **Debugging:** [[Goldapple показывает Cloudflare-челлендж — эскалация tier]] · [[Match-rate резко упал — проверь brand-alias таблицу]] · [[Парсер тихо вернул 0 продуктов — sanity-gate должен был сработать]]
 
 ## Сессии
 
 - [[2026-05-05 — инициализация проекта]]
+- [[2026-05-05 — Phase 1 контекст зафиксирован]]
 
 ## Inbox
 
