@@ -1,0 +1,335 @@
+{
+  "url": "https://viled.kz/item/407682",
+  "next_data_top_keys": [
+    "props",
+    "page",
+    "query",
+    "buildId",
+    "isFallback",
+    "isExperimentalCompile",
+    "gssp",
+    "locale",
+    "locales",
+    "defaultLocale",
+    "scriptLoader"
+  ],
+  "pageProps_shape": {
+    "item": {
+      "_type": "dict",
+      "keys": [
+        "id",
+        "name",
+        "brandName",
+        "groupName",
+        "season",
+        "brandId",
+        "catalogId",
+        "groupId",
+        "images",
+        "description",
+        "sizeType",
+        "hasGift",
+        "isForKaspiJuma",
+        "kaspiJumaNameplateUrl",
+        "selectAttributes",
+        "itemPriceIds",
+        "isFavourite",
+        "purchaseType",
+        "count",
+        "sizeSystem"
+      ]
+    },
+    "attributes": {
+      "_type": "list",
+      "len": 2,
+      "sample_first": [
+        "id",
+        "price",
+        "realPrice",
+        "currency",
+        "itemImages",
+        "enableDiscount",
+        "attributes",
+        "article",
+        "namePlates"
+      ]
+    },
+    "sizeChart": {
+      "_type": "dict",
+      "keys": [
+        "id",
+        "name",
+        "brandName",
+        "catalogName",
+        "itemGroupName",
+        "sizeSystemName",
+        "sizeSystemCode",
+        "gender",
+        "priority",
+        "isActive",
+        "measurements",
+        "allMappings",
+        "sizeSystemsUsed",
+        "sizeChartNote",
+        "measurementNote"
+      ]
+    },
+    "url": "https://viled.kz",
+    "namespacesRequired": {
+      "_type": "list",
+      "len": 3,
+      "sample_first": "common"
+    },
+    "openGraph": {
+      "_type": "dict",
+      "keys": [
+        "title",
+        "description",
+        "type",
+        "image"
+      ]
+    },
+    "_nextI18Next": {
+      "_type": "dict",
+      "keys": [
+        "initialI18nStore",
+        "initialLocale",
+        "ns",
+        "userConfig"
+      ]
+    },
+    "initialState": {
+      "_type": "dict",
+      "keys": [
+        "auth",
+        "user",
+        "item",
+        "sizeChart",
+        "popoverItem",
+        "product",
+        "cart",
+        "wishlist",
+        "checkout",
+        "orders",
+        "loyalty",
+        "catalogs",
+        "oldCatalogs",
+        "categoryFilters",
+        "globalSearch",
+        "shopInShop",
+        "navigation",
+        "header",
+        "menu",
+        "notifications"
+      ]
+    }
+  },
+  "price_field_paths": [
+    {
+      "path": "props.pageProps.item.selectAttributes[0].values[0].itemPriceId",
+      "value": 908208
+    },
+    {
+      "path": "props.pageProps.item.selectAttributes[0].values[1].itemPriceId",
+      "value": 908206
+    },
+    {
+      "path": "props.pageProps.item.itemPriceIds",
+      "value": "<list>"
+    },
+    {
+      "path": "props.pageProps.attributes[0].price",
+      "value": 187700
+    },
+    {
+      "path": "props.pageProps.attributes[0].realPrice",
+      "value": 187700
+    },
+    {
+      "path": "props.pageProps.attributes[1].price",
+      "value": 187700
+    },
+    {
+      "path": "props.pageProps.attributes[1].realPrice",
+      "value": 187700
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.cart.price",
+      "value": "Цена"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.cart.deliveryCost",
+      "value": "Стоимость доставки"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.checkout.priceDifferences",
+      "value": "<dict>"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.checkout.orderAmount",
+      "value": "Сумма заказа"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.product.price",
+      "value": "Цена"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.product.priceLowToHigh",
+      "value": "Цена от меньшего к большему"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.product.priceHighToLow",
+      "value": "Цена от большего к меньшему"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.profile.price",
+      "value": "Цена"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.profile.purchaseAmount",
+      "value": "Сумма заказа"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.profile.enterProductNameOrOrderAmount",
+      "value": "Введите наименование товара или сумму заказа"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.profile.cost",
+      "value": "Стоимость"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.wishlist.price",
+      "value": "Цена"
+    },
+    {
+      "path": "props.pageProps.initialState.cart.item.itemPriceId",
+      "value": null
+    }
+  ],
+  "brand_field_paths": [
+    {
+      "path": "props.pageProps.item.brandName",
+      "value": "Alice+Olivia"
+    },
+    {
+      "path": "props.pageProps.item.brandId",
+      "value": 3184
+    },
+    {
+      "path": "props.pageProps.sizeChart.brandName",
+      "value": null
+    },
+    {
+      "path": "props.pageProps.sizeChart.sizeSystemsUsed[0].isBranded",
+      "value": false
+    },
+    {
+      "path": "props.pageProps.sizeChart.sizeSystemsUsed[1].isBranded",
+      "value": false
+    },
+    {
+      "path": "props.pageProps.sizeChart.sizeSystemsUsed[2].isBranded",
+      "value": false
+    },
+    {
+      "path": "props.pageProps.sizeChart.sizeSystemsUsed[3].isBranded",
+      "value": false
+    },
+    {
+      "path": "props.pageProps.sizeChart.sizeSystemsUsed[4].isBranded",
+      "value": false
+    },
+    {
+      "path": "props.pageProps.sizeChart.sizeSystemsUsed[5].isBranded",
+      "value": false
+    },
+    {
+      "path": "props.pageProps.sizeChart.sizeSystemsUsed[6].isBranded",
+      "value": false
+    }
+  ],
+  "title_field_paths": [
+    {
+      "path": "props.pageProps.item.name",
+      "value": "Кружевное боди"
+    },
+    {
+      "path": "props.pageProps.item.selectAttributes[0].name",
+      "value": "Размер"
+    },
+    {
+      "path": "props.pageProps.attributes[0].attributes[0].name",
+      "value": "Размер"
+    },
+    {
+      "path": "props.pageProps.attributes[0].attributes[1].name",
+      "value": "Цвет"
+    },
+    {
+      "path": "props.pageProps.attributes[0].attributes[2].name",
+      "value": "пол"
+    },
+    {
+      "path": "props.pageProps.attributes[0].attributes[3].name",
+      "value": "Состав"
+    },
+    {
+      "path": "props.pageProps.attributes[0].attributes[4].name",
+      "value": "Материал"
+    },
+    {
+      "path": "props.pageProps.attributes[0].attributes[5].name",
+      "value": "Вид "
+    },
+    {
+      "path": "props.pageProps.attributes[0].namePlates[0].title",
+      "value": "Рассрочка"
+    },
+    {
+      "path": "props.pageProps.attributes[1].attributes[0].name",
+      "value": "Размер"
+    }
+  ],
+  "currency_field_paths": [
+    {
+      "path": "props.pageProps.attributes[0].currency",
+      "value": "₸"
+    },
+    {
+      "path": "props.pageProps.attributes[1].currency",
+      "value": "₸"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.common.currency",
+      "value": "Валюта"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.header.selectedCurrencyIsInformational",
+      "value": "Выбранный курс валют несет ознакомительный характер. Оплата заказа будет произведена в казахстанских тенге."
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.profile.currency",
+      "value": "Валюта"
+    },
+    {
+      "path": "props.pageProps._nextI18Next.initialI18nStore.ru.profile.selectCurrency",
+      "value": "Выберите валюту"
+    },
+    {
+      "path": "props.pageProps.initialState.user.currency",
+      "value": null
+    },
+    {
+      "path": "props.pageProps.initialState.cart.cart.currency",
+      "value": ""
+    },
+    {
+      "path": "props.pageProps.initialState.checkout.cart.currency",
+      "value": "KZT"
+    },
+    {
+      "path": "props.pageProps.initialState.menu.isOpenedCurrency",
+      "value": false
+    }
+  ]
+}
