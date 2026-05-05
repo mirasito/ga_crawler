@@ -1,0 +1,1822 @@
+[
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/",
+    "status": 200,
+    "content_type": "text/html"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/_static/js/5ae5d1cd-7037-4ce7-9a67-dc2ed4d4e6ea.umd.min.js",
+    "method": "GET",
+    "resource_type": "script"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/_static/0861c5f0-d6b7-11f0-b6fe-3626100000001.js",
+    "method": "GET",
+    "resource_type": "script"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "method": "GET",
+    "resource_type": "manifest"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "status": 200,
+    "content_type": "application/manifest+json"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/_static/js/5ae5d1cd-7037-4ce7-9a67-dc2ed4d4e6ea.umd.min.js",
+    "status": 200,
+    "content_type": "application/javascript; charset=UTF-8"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://mc.yandex.ru/metrika/tag.js",
+    "method": "GET",
+    "resource_type": "script"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/_static/0861c5f0-d6b7-11f0-b6fe-3626100000001.js",
+    "status": 200,
+    "content_type": "application/javascript; charset=UTF-8"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "method": "GET",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=si24XH2bw72MUUnBHSgwFeT7xW8YHxzD2v4F7eqCFgRzletKMl2dAYD7smoZL1apa0nxihO5L2Lj0XMQV6G8zORCJ2Yt4j1hFdWGxQydpgEmc1pID7BZ1dcCX7DECPoTwB4m%2FpvJQVpWMAe6myz8p9Sc",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=si24XH2bw72MUUnBHSgwFeT7xW8YHxzD2v4F7eqCFgRzletKMl2dAYD7smoZL1apa0nxihO5L2Lj0XMQV6G8zORCJ2Yt4j1hFdWGxQydpgEmc1pID7BZ1dcCX7DECPoTwB4m%2FpvJQVpWMAe6myz8p9Sc",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://mc.yandex.ru/metrika/tag.js",
+    "status": 200,
+    "content_type": "application/javascript"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://mc.yandex.ru/metrika/advert.gif?t=gdpr(14)ti(4)",
+    "method": "GET",
+    "resource_type": "image"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://mc.yandex.ru/watch/102707039?wmode=7&page-url=https%3A%2F%2Fgoldapple.kz%2F&charset=utf-8&uah=chu%0A%22Chromium%22%3Bv%3D%22147%22%2C%22Not.A%2FBrand%22%3Bv%3D%228%22%0Acha%0Ax86%0Achb%0A64%0Achf%0A147.0.7727.15%0Achl%0A%22Chromium%22%3Bv%3D%22147.0.7727.15%22%2C%22Not.A%2FBrand%22%3Bv%3D%228.0.0.0%22%0Achm%0A%3F0%0Achp%0AWindows%0Achv%0A15.0.0&browser-info=pv%3A1%3Avf%3Acx6xvbw7xl95kxwwlds6b8rqaj1lr%3Afu%3A0%3Aen%3Autf-8%3Ala%3Aru-RU%3Av%3A2490%3Acn%3A1%3Adp%3A0%3Als%3A1407180406417%3Ahid%3A633872665%3Az%3A300%3Ai%3A20260506000656%3Aet%3A1778008016%3Ac%3A1%3Arn%3A598699302%3Arqn%3A1%3Au%3A1778008016277875005%3Aw%3A1366x900%3As%3A1366x900x32%3Ask%3A1%3Awv%3A2%3Ads%3A69%2C137%2C92%2C0%2C1%2C0%2C%2C309%2C0%2C%2C%2C%2C629%3Aco%3A0%3Acpf%3A1%3Ans%3A1778008015036%3Arqnl%3A1%3Ast%3A1778008016%3At%3AGold%20Apple%20%E2%80%94%20checking%20device&t=clt(554)gdpr(14)clc(0-0-0)rqnt(1)aw(1)rcm(1)cdl(na)eco(42272260)ti(1)",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://mc.yandex.ru/metrika/advert.gif?t=gdpr(14)ti(4)",
+    "status": 200,
+    "content_type": "image/gif"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/_static/favicons/favicon-32x32.png",
+    "method": "GET",
+    "resource_type": "other"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://mc.yandex.ru/watch/102707039?wmode=7&page-url=https%3A%2F%2Fgoldapple.kz%2F&charset=utf-8&uah=chu%0A%22Chromium%22%3Bv%3D%22147%22%2C%22Not.A%2FBrand%22%3Bv%3D%228%22%0Acha%0Ax86%0Achb%0A64%0Achf%0A147.0.7727.15%0Achl%0A%22Chromium%22%3Bv%3D%22147.0.7727.15%22%2C%22Not.A%2FBrand%22%3Bv%3D%228.0.0.0%22%0Achm%0A%3F0%0Achp%0AWindows%0Achv%0A15.0.0&browser-info=pv%3A1%3Avf%3Acx6xvbw7xl95kxwwlds6b8rqaj1lr%3Afu%3A0%3Aen%3Autf-8%3Ala%3Aru-RU%3Av%3A2490%3Acn%3A1%3Adp%3A0%3Als%3A1407180406417%3Ahid%3A633872665%3Az%3A300%3Ai%3A20260506000656%3Aet%3A1778008016%3Ac%3A1%3Arn%3A598699302%3Arqn%3A1%3Au%3A1778008016277875005%3Aw%3A1366x900%3As%3A1366x900x32%3Ask%3A1%3Awv%3A2%3Ads%3A69%2C137%2C92%2C0%2C1%2C0%2C%2C309%2C0%2C%2C%2C%2C629%3Aco%3A0%3Acpf%3A1%3Ans%3A1778008015036%3Arqnl%3A1%3Ast%3A1778008016%3At%3AGold%20Apple%20%E2%80%94%20checking%20device&t=clt(554)gdpr(14)clc(0-0-0)rqnt(1)aw(1)rcm(1)cdl(na)eco(42272260)ti(1)",
+    "status": 302,
+    "content_type": ""
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://mc.yandex.ru/watch/102707039/1?wmode=7&page-url=https%3A%2F%2Fgoldapple.kz%2F&charset=utf-8&uah=chu%0A%22Chromium%22%3Bv%3D%22147%22%2C%22Not.A%2FBrand%22%3Bv%3D%228%22%0Acha%0Ax86%0Achb%0A64%0Achf%0A147.0.7727.15%0Achl%0A%22Chromium%22%3Bv%3D%22147.0.7727.15%22%2C%22Not.A%2FBrand%22%3Bv%3D%228.0.0.0%22%0Achm%0A%3F0%0Achp%0AWindows%0Achv%0A15.0.0&browser-info=pv%3A1%3Avf%3Acx6xvbw7xl95kxwwlds6b8rqaj1lr%3Afu%3A0%3Aen%3Autf-8%3Ala%3Aru-RU%3Av%3A2490%3Acn%3A1%3Adp%3A0%3Als%3A1407180406417%3Ahid%3A633872665%3Az%3A300%3Ai%3A20260506000656%3Aet%3A1778008016%3Ac%3A1%3Arn%3A598699302%3Arqn%3A1%3Au%3A1778008016277875005%3Aw%3A1366x900%3As%3A1366x900x32%3Ask%3A1%3Awv%3A2%3Ads%3A69%2C137%2C92%2C0%2C1%2C0%2C%2C309%2C0%2C%2C%2C%2C629%3Aco%3A0%3Acpf%3A1%3Ans%3A1778008015036%3Arqnl%3A1%3Ast%3A1778008016%3At%3AGold%20Apple%20%E2%80%94%20checking%20device&t=clt%28554%29gdpr%2814%29clc%280-0-0%29rqnt%281%29aw%281%29rcm%281%29cdl%28na%29eco%2842272260%29ti%281%29&redirnss=1",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://mc.yandex.ru/watch/102707039/1?wmode=7&page-url=https%3A%2F%2Fgoldapple.kz%2F&charset=utf-8&uah=chu%0A%22Chromium%22%3Bv%3D%22147%22%2C%22Not.A%2FBrand%22%3Bv%3D%228%22%0Acha%0Ax86%0Achb%0A64%0Achf%0A147.0.7727.15%0Achl%0A%22Chromium%22%3Bv%3D%22147.0.7727.15%22%2C%22Not.A%2FBrand%22%3Bv%3D%228.0.0.0%22%0Achm%0A%3F0%0Achp%0AWindows%0Achv%0A15.0.0&browser-info=pv%3A1%3Avf%3Acx6xvbw7xl95kxwwlds6b8rqaj1lr%3Afu%3A0%3Aen%3Autf-8%3Ala%3Aru-RU%3Av%3A2490%3Acn%3A1%3Adp%3A0%3Als%3A1407180406417%3Ahid%3A633872665%3Az%3A300%3Ai%3A20260506000656%3Aet%3A1778008016%3Ac%3A1%3Arn%3A598699302%3Arqn%3A1%3Au%3A1778008016277875005%3Aw%3A1366x900%3As%3A1366x900x32%3Ask%3A1%3Awv%3A2%3Ads%3A69%2C137%2C92%2C0%2C1%2C0%2C%2C309%2C0%2C%2C%2C%2C629%3Aco%3A0%3Acpf%3A1%3Ans%3A1778008015036%3Arqnl%3A1%3Ast%3A1778008016%3At%3AGold%20Apple%20%E2%80%94%20checking%20device&t=clt%28554%29gdpr%2814%29clc%280-0-0%29rqnt%281%29aw%281%29rcm%281%29cdl%28na%29eco%2842272260%29ti%281%29&redirnss=1",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/_static/favicons/favicon-32x32.png",
+    "status": 200,
+    "content_type": "image/png"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://mc.yandex.ru/metrika/tag_phono.js",
+    "method": "GET",
+    "resource_type": "script"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://mc.yandex.ru/metrika/tag_phono.js",
+    "status": 200,
+    "content_type": "application/javascript"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://ru.id.facct.ru/id.html",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://ru.id.facct.ru/id.html",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://mc.yandex.ru/watch/102707039?page-url=https%3A%2F%2Fgoldapple.kz%2F&charset=utf-8&hidv2=2396210446611251242&hittoken=1778008017_6d6addb63a77033db4d591e05ff9a8492893c87e99f48c8bce9e7884e42c928f&browser-info=nb%3A1%3Acl%3A419%3Aar%3A1%3Avf%3Acx6xvbw7xl95kxwwlds6b8rqaj1lr%3Afu%3A0%3Aen%3Autf-8%3Ala%3Aru-RU%3Av%3A2490%3Acn%3A1%3Adp%3A1%3Als%3A1407180406417%3Ahid%3A633872665%3Az%3A300%3Ai%3A20260506000711%3Aet%3A1778008031%3Ac%3A1%3Arn%3A397251736%3Arqn%3A2%3Au%3A1778008016277875005%3Aw%3A1366x900%3As%3A1366x900x32%3Ask%3A1%3Awv%3A2%3Ads%3A%2C%2C%2C%2C%2C%2C%2C%2C%2C1192%2C1192%2C0%2C%3Aco%3A0%3Acpf%3A1%3Aeu%3A0%3Ans%3A1778008015036%3Aadb%3A2%3App%3A3629563401%3Arqnl%3A1%3Ast%3A1778008031&t=gdpr(14)clc(0-0-0)rqnt(2)aw(1)rcm(1)ecs(0)cdl(na)eco(42272260)prs(2)wss(2)w2s(0)evt(420)ti(1)",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://mc.yandex.ru/watch/102707039?page-url=https%3A%2F%2Fgoldapple.kz%2F&charset=utf-8&hidv2=2396210446611251242&hittoken=1778008017_6d6addb63a77033db4d591e05ff9a8492893c87e99f48c8bce9e7884e42c928f&browser-info=nb%3A1%3Acl%3A419%3Aar%3A1%3Avf%3Acx6xvbw7xl95kxwwlds6b8rqaj1lr%3Afu%3A0%3Aen%3Autf-8%3Ala%3Aru-RU%3Av%3A2490%3Acn%3A1%3Adp%3A1%3Als%3A1407180406417%3Ahid%3A633872665%3Az%3A300%3Ai%3A20260506000711%3Aet%3A1778008031%3Ac%3A1%3Arn%3A397251736%3Arqn%3A2%3Au%3A1778008016277875005%3Aw%3A1366x900%3As%3A1366x900x32%3Ask%3A1%3Awv%3A2%3Ads%3A%2C%2C%2C%2C%2C%2C%2C%2C%2C1192%2C1192%2C0%2C%3Aco%3A0%3Acpf%3A1%3Aeu%3A0%3Ans%3A1778008015036%3Aadb%3A2%3App%3A3629563401%3Arqnl%3A1%3Ast%3A1778008031&t=gdpr(14)clc(0-0-0)rqnt(2)aw(1)rcm(1)ecs(0)cdl(na)eco(42272260)prs(2)wss(2)w2s(0)evt(420)ti(1)",
+    "status": 200,
+    "content_type": "image/gif"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=%2FpojjfSbfZQFSCELuxKaE8vCAk1VQf6KdDItCKN6PBfJ8Db%2B80gYw8v4TwsVttEs0t%2FmrO2ebYZY8WBVhwln%2FADeVGhapxzCnv9WNxCsJbqDlIjniooqKq7GVDoCg5Aw7jlXzHIcDdMM3%2Byn8IE4BLv%2BpH3KaCQt%2FJ%2FA",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "home",
+    "phase": "render-marker",
+    "url": "https://goldapple.kz/",
+    "title": "Gold Apple — checking device",
+    "html_size": 18238,
+    "has_next_data": false,
+    "has_jsonld": false,
+    "still_challenge": true,
+    "render_seconds": 21.81
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=%2FpojjfSbfZQFSCELuxKaE8vCAk1VQf6KdDItCKN6PBfJ8Db%2B80gYw8v4TwsVttEs0t%2FmrO2ebYZY8WBVhwln%2FADeVGhapxzCnv9WNxCsJbqDlIjniooqKq7GVDoCg5Aw7jlXzHIcDdMM3%2Byn8IE4BLv%2BpH3KaCQt%2FJ%2FA",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=TQ3km5FbERglH1XopmMUUOhSs%2FyyAZTbBMydA5kpO5sSHhaVLjnf3qRUkgTNI4frh2Wa6ffy3otgbwAFvC8kiC5mzRuBlFS7t3%2BO9BirZR701vwD34vwdNaEUEVszTdg0CUtlHCSLD%2F681paHdz8NErdWREjqsm7RPSB",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=TQ3km5FbERglH1XopmMUUOhSs%2FyyAZTbBMydA5kpO5sSHhaVLjnf3qRUkgTNI4frh2Wa6ffy3otgbwAFvC8kiC5mzRuBlFS7t3%2BO9BirZR701vwD34vwdNaEUEVszTdg0CUtlHCSLD%2F681paHdz8NErdWREjqsm7RPSB",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "home",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "home",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=kIVC43P%2BRJ1xaY8eW35gWyadjfI2cnSAJWw1stmSKvlwaDBN7GoKWRrFNov%2FQtdACZdqNEnpA2fisS3KdJJp0xwA8jGxfjn3zHv0O9mf%2BEeAqn9B1SnAatN5zV1T5LNv9Ad1YaP3%2BeaPR7U24LCI4NWjt0YqIHu7d07W",
+    "method": "POST",
+    "resource_type": "ping"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/brands/",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/brands/",
+    "status": 301,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/brands",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=kIVC43P%2BRJ1xaY8eW35gWyadjfI2cnSAJWw1stmSKvlwaDBN7GoKWRrFNov%2FQtdACZdqNEnpA2fisS3KdJJp0xwA8jGxfjn3zHv0O9mf%2BEeAqn9B1SnAatN5zV1T5LNv9Ad1YaP3%2BeaPR7U24LCI4NWjt0YqIHu7d07W",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/brands",
+    "status": 200,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "method": "GET",
+    "resource_type": "manifest"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "method": "GET",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "status": 200,
+    "content_type": "application/manifest+json"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=vM%2B8eD%2Fj9%2BSpAWHg5PoSry68tF0%2FxXpajRVteW8uCHIeQhZBu%2BP84Rk7INkHDAAqGXa%2F3m1F5m3AXj6mJGHSQVUK7KfH5JQ4qj2LQyNRTj%2BdlQYZgmL6k2404ZgiY63uZY%2F1uYhSpKz%2FizNgIggepMpr74wJ9dXyUqp5",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=vM%2B8eD%2Fj9%2BSpAWHg5PoSry68tF0%2FxXpajRVteW8uCHIeQhZBu%2BP84Rk7INkHDAAqGXa%2F3m1F5m3AXj6mJGHSQVUK7KfH5JQ4qj2LQyNRTj%2BdlQYZgmL6k2404ZgiY63uZY%2F1uYhSpKz%2FizNgIggepMpr74wJ9dXyUqp5",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://ru.id.facct.ru/id.html",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://ru.id.facct.ru/id.html",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=Un2Ic%2BONq2aE3r0Snzk0we9SlsAbn2Sw9Vn40gUS1neQpmifqlPsxvJ9gbwrsZw%2Fjda%2BBYPPCoo2qN51AXCoLKUGGmZFkGNAyy7EfN5vRRIKwyFU7VMsQmOETxebYNKhUfhXRM%2BMwPis%2FCYyAF03eTwjQR4nBqTWfYPu",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=Un2Ic%2BONq2aE3r0Snzk0we9SlsAbn2Sw9Vn40gUS1neQpmifqlPsxvJ9gbwrsZw%2Fjda%2BBYPPCoo2qN51AXCoLKUGGmZFkGNAyy7EfN5vRRIKwyFU7VMsQmOETxebYNKhUfhXRM%2BMwPis%2FCYyAF03eTwjQR4nBqTWfYPu",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brands-index",
+    "phase": "render-marker",
+    "url": "https://goldapple.kz/brands/",
+    "title": "Gold Apple — checking device",
+    "html_size": 18057,
+    "has_next_data": false,
+    "has_jsonld": false,
+    "still_challenge": true,
+    "render_seconds": 21.41
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=RDJkg7c3tXTme7JQz1zMVgjMcx6xx%2FqL%2FFERdnhylt%2Fw9JMVupc48p0Vl9M2bOKPZmctGtebOpL9D3OSTl1%2Be4aBJSyp7oO41vaL5AVNVW3QOLGnSmHB3FWKdMsHP9WWdko6%2FAg5kV7q0AKVKiYTVcsE2bJsdP6oaQZv",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=RDJkg7c3tXTme7JQz1zMVgjMcx6xx%2FqL%2FFERdnhylt%2Fw9JMVupc48p0Vl9M2bOKPZmctGtebOpL9D3OSTl1%2Be4aBJSyp7oO41vaL5AVNVW3QOLGnSmHB3FWKdMsHP9WWdko6%2FAg5kV7q0AKVKiYTVcsE2bJsdP6oaQZv",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brands-index",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brands-index",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=a91SkHv0bsRDNPqekDapgjxBg1D5sUZGWTZb0Pu5KYxQwt09sX3t%2BpVXOnwkC%2FOLHmU1vMLxr2oyoiKk8sGO2XglrXmBj5oaVHaxYja2hlkYkM5agF%2B%2B1QJ3EZJPkh9OCIc0S1mqeXsrjt2H3QItsb7qUZmz0emosDCa",
+    "method": "POST",
+    "resource_type": "ping"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/brands/tom-ford",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/brands/tom-ford",
+    "status": 200,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "method": "GET",
+    "resource_type": "manifest"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "method": "GET",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "status": 200,
+    "content_type": "application/manifest+json"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=380f3ieDYjiPaLyOE6s76pRhZgYyji7N4HlDKxF3h%2FelUo%2B115tE61AqTUViuf4V9e9hWg2f6R3zmY1%2Fcq5LAZAXSXqqdJNyefZpx4wPQu7Qxm3AZIX37p3FnvXDSszUroZsKn6CIZWSgbHzZSCfV8gy5ieGxeZ8auug",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=380f3ieDYjiPaLyOE6s76pRhZgYyji7N4HlDKxF3h%2FelUo%2B115tE61AqTUViuf4V9e9hWg2f6R3zmY1%2Fcq5LAZAXSXqqdJNyefZpx4wPQu7Qxm3AZIX37p3FnvXDSszUroZsKn6CIZWSgbHzZSCfV8gy5ieGxeZ8auug",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://ru.id.facct.ru/id.html",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://ru.id.facct.ru/id.html",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=ZjqcDFZmZ8dQBskT6QqGl4vWWScD7YUN6a8KT%2FUGepDpZT%2FyrmMoBHumXzdlWMUJak%2FvaSYy1WKPjaVmGRteYhirKRkgwXF5%2BUIj%2BdMSMdRmiQeaIbjcJZRG6JfLl0R9jzMqGKeEurJcvxmQCRacQVpIEz3F2uwaCYfR1A%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=ZjqcDFZmZ8dQBskT6QqGl4vWWScD7YUN6a8KT%2FUGepDpZT%2FyrmMoBHumXzdlWMUJak%2FvaSYy1WKPjaVmGRteYhirKRkgwXF5%2BUIj%2BdMSMdRmiQeaIbjcJZRG6JfLl0R9jzMqGKeEurJcvxmQCRacQVpIEz3F2uwaCYfR1A%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "render-marker",
+    "url": "https://goldapple.kz/brands/tom-ford",
+    "title": "Gold Apple — checking device",
+    "html_size": 18057,
+    "has_next_data": false,
+    "has_jsonld": false,
+    "still_challenge": true,
+    "render_seconds": 21.31
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=77WtwSxyH01wvi22UfDUG6wVvruxupWpoXF0qO%2BURq5n0kT0UETn%2BnhVD9NXPLJK52aRYcyrX9z36v6UX6gzuAqXoslT0VnIloIlh1qEyVjyZSRYiaDZW5QZgRo5O1m1pTG3CYG2wCM9gZp1%2Bi1YN%2Fn8ZE0uHuzbqU8pDQ%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=77WtwSxyH01wvi22UfDUG6wVvruxupWpoXF0qO%2BURq5n0kT0UETn%2BnhVD9NXPLJK52aRYcyrX9z36v6UX6gzuAqXoslT0VnIloIlh1qEyVjyZSRYiaDZW5QZgRo5O1m1pTG3CYG2wCM9gZp1%2Bi1YN%2Fn8ZE0uHuzbqU8pDQ%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=NGR%2B6CvTx8%2FlfJRpUg%2BGFkkA%2FFnJn%2FjJrBXsqdAYD%2FQ19FGEu3hEiSXxtVtEAoRKTIvQukXZc2HH5eeqqHC4LCZTqYVKqv4mvmPWgz%2FNkvL403OmAXMvUMyJ31vrk0CGYQvAVapCwydHPKqmyHi4hneMEEf%2B4WnyVMCTKg%3D%3D",
+    "method": "POST",
+    "resource_type": "ping"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/brands/givenchy",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/brands/givenchy",
+    "status": 200,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "method": "GET",
+    "resource_type": "manifest"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "method": "GET",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "status": 200,
+    "content_type": "application/manifest+json"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=mOrfFtTnemtCZGxijI7NtcNA57%2FSS09Xe2QtaCgc0VrlEN09w6IjoaPZiERYeYJlDtQgd0Xomj8F2aDSrgBo75HyS4zlwbBL96Bqa8cb6wSg35321JwGGB69Ihn1KOPXn2ydaY9OQzmWyRGrvZ4%2BDm1NkECZjY1%2FBDIk6g%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=mOrfFtTnemtCZGxijI7NtcNA57%2FSS09Xe2QtaCgc0VrlEN09w6IjoaPZiERYeYJlDtQgd0Xomj8F2aDSrgBo75HyS4zlwbBL96Bqa8cb6wSg35321JwGGB69Ihn1KOPXn2ydaY9OQzmWyRGrvZ4%2BDm1NkECZjY1%2FBDIk6g%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://ru.id.facct.ru/id.html",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://ru.id.facct.ru/id.html",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=78U3OF%2BKg3YFaGnSH2SLhAmcHYKhKWOnvI5Gq1PCOzDCfcBy48zuK9Qzfrm73btqlyfIkEBQZLsdwn376L6bFV%2BLseUilx%2FZn0251wKUwBmfuU042%2Br71xWHQ8AQG%2BXEgIee%2FN5S%2Fa4do2f7tjgRbBFD%2BNWvMEPjIEJHkw%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=78U3OF%2BKg3YFaGnSH2SLhAmcHYKhKWOnvI5Gq1PCOzDCfcBy48zuK9Qzfrm73btqlyfIkEBQZLsdwn376L6bFV%2BLseUilx%2FZn0251wKUwBmfuU042%2Br71xWHQ8AQG%2BXEgIee%2FN5S%2Fa4do2f7tjgRbBFD%2BNWvMEPjIEJHkw%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "render-marker",
+    "url": "https://goldapple.kz/brands/givenchy",
+    "title": "Gold Apple — checking device",
+    "html_size": 18057,
+    "has_next_data": false,
+    "has_jsonld": false,
+    "still_challenge": true,
+    "render_seconds": 21.33
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=6Qp8em24BoLLxLs7ii7Y7TLdKRDJ0gYXy5mQ8p%2F5hXFnhYu7SaVEypri1nCmKQZSwVPJ6HAYySubL0gIOgaBXBlAD7cm4drvWX3bQ%2FkA2%2FPYtegwFnvdMMsFKP34cDdn%2BFvfvIHKRBkbg9PRJ%2Fd2x2G2gS%2BWBKESB%2B2XEw%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=6Qp8em24BoLLxLs7ii7Y7TLdKRDJ0gYXy5mQ8p%2F5hXFnhYu7SaVEypri1nCmKQZSwVPJ6HAYySubL0gIOgaBXBlAD7cm4drvWX3bQ%2FkA2%2FPYtegwFnvdMMsFKP34cDdn%2BFvfvIHKRBkbg9PRJ%2Fd2x2G2gS%2BWBKESB%2B2XEw%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "brand-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=pKe3emWUBUD%2F%2BWFsehpDxbIGpfFUsMGfPQW6haNq7WZsjDYNGuRfeMIX1KKLLxLbDSP%2FYBcQG1OpDaVyJHnOyD8PW6g7uTC%2FwqAENcCe626yznFF7QNZ5djAVHI2r1%2BBdM3Ig2GCkQ2nLs9vyFHxciTJaeT%2FQ6j%2BkGfy7g%3D%3D",
+    "method": "POST",
+    "resource_type": "ping"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/19000032744-givenchy-gentleman-reserve-privee-eau-de-parfum",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/19000032744-givenchy-gentleman-reserve-privee-eau-de-parfum",
+    "status": 200,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "method": "GET",
+    "resource_type": "manifest"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "method": "GET",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "status": 200,
+    "content_type": "application/manifest+json"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=m9ylI65z5kEqbxG5Ogkt%2BHF88ij8n6AwscExoLjQMf5d4V80TJYrWK8F%2FBZiqwq8PNkdg5gpkpJnJih9cVU4rf05DBTTVFssNCEG1PKLnNLXSYMS0yTS8GW1shWklLWJ5YIeiSbJ%2BtxbP154BvkDscmfsJVnUSSCBiqrog%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=m9ylI65z5kEqbxG5Ogkt%2BHF88ij8n6AwscExoLjQMf5d4V80TJYrWK8F%2FBZiqwq8PNkdg5gpkpJnJih9cVU4rf05DBTTVFssNCEG1PKLnNLXSYMS0yTS8GW1shWklLWJ5YIeiSbJ%2BtxbP154BvkDscmfsJVnUSSCBiqrog%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://ru.id.facct.ru/id.html",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://ru.id.facct.ru/id.html",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=m6bz7mVNzNG88sP5gYpzLu8g3kWM3e3Qh7HvQeRqamA2K06ytnooo682a%2BwZ%2FGYLoIdmaB7bzp4oHxy4%2F4QpGvwgM4ZcPgZdxuATg%2BelhcYP2EkoNwgL503bmCrzwfg%2Fxt7%2BSWq54NFzjBJR8phqc7NPmjnVXPJTyy1Ohw%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=m6bz7mVNzNG88sP5gYpzLu8g3kWM3e3Qh7HvQeRqamA2K06ytnooo682a%2BwZ%2FGYLoIdmaB7bzp4oHxy4%2F4QpGvwgM4ZcPgZdxuATg%2BelhcYP2EkoNwgL503bmCrzwfg%2Fxt7%2BSWq54NFzjBJR8phqc7NPmjnVXPJTyy1Ohw%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "render-marker",
+    "url": "https://goldapple.kz/19000032744-givenchy-gentleman-reserve-privee-eau-de-parfum",
+    "title": "Gold Apple — checking device",
+    "html_size": 18057,
+    "has_next_data": false,
+    "has_jsonld": false,
+    "still_challenge": true,
+    "render_seconds": 21.31
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=I5ADQ4JRReDkpheK91Ke5lpwakMpx5FqZ1SNvnMZ2cj6YsauTV5xvDiKTDLYHbSWll%2BP5BAATI6PAo2ofCORrb63nIcGoclibcD0%2BooxployKbkur5CThOrBqZMIDdcKnNtHGo%2FmIo%2FqcfFL5myaPWzrsdUtCEO6aZ8%2Bvw%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=I5ADQ4JRReDkpheK91Ke5lpwakMpx5FqZ1SNvnMZ2cj6YsauTV5xvDiKTDLYHbSWll%2BP5BAATI6PAo2ofCORrb63nIcGoclibcD0%2BooxployKbkur5CThOrBqZMIDdcKnNtHGo%2FmIo%2FqcfFL5myaPWzrsdUtCEO6aZ8%2Bvw%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-givenchy",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=tBLJGH1ujQ0xeA%2BvjQTzdUu7Y3UBJHmISc9uaqXTpAKvHsuJqnQFmbvFNKAIom7%2BQ9nJqcbTRHzBHIe199VsStZviQNu57qY%2BklABYHrcYPr7jcP%2F6wrf8q6rgQqeSTAqWg1zylumFrS1lcawOa635pnKTA2XEwk%2Bu4t1Q%3D%3D",
+    "method": "POST",
+    "resource_type": "ping"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/f/tom-ford-tualetnaja-voda",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/f/tom-ford-tualetnaja-voda",
+    "status": 200,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "method": "GET",
+    "resource_type": "manifest"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "method": "GET",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "status": 200,
+    "content_type": "application/manifest+json"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=gOHL9pi2zFhhWXj5x4hr%2Bx2xz5vojk%2FCVTP28Diafhp2GKnLtkQkg1llBrC8cs4u%2BTxlRNnOP47CTZ1EWzBBfB2JSk%2FG5UNI41GVjOaagE8u6bfVomcd0SnDpIWSxiDwS3sADWYQQdORC44S5A9pquabxOB3%2Fhoc2Eiihw%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=gOHL9pi2zFhhWXj5x4hr%2Bx2xz5vojk%2FCVTP28Diafhp2GKnLtkQkg1llBrC8cs4u%2BTxlRNnOP47CTZ1EWzBBfB2JSk%2FG5UNI41GVjOaagE8u6bfVomcd0SnDpIWSxiDwS3sADWYQQdORC44S5A9pquabxOB3%2Fhoc2Eiihw%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://ru.id.facct.ru/id.html",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://ru.id.facct.ru/id.html",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=ZP%2FqZajtn2hp0sUk5K4XNrh2LZiInzrFjvY4b5PzFv7oIGl9S%2FCjBBzE4JcVhtsKzXeXY%2Ffqw%2BDB0iostOYfnV440M5fvjHB95N3IYun766aoLczHPkrMox8Nf1P5LPkDk3KlT6EwdpNtd1qW27qOIOnUutQxcqTRKJpow%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "render-marker",
+    "url": "https://goldapple.kz/f/tom-ford-tualetnaja-voda",
+    "title": "Gold Apple — checking device",
+    "html_size": 18057,
+    "has_next_data": false,
+    "has_jsonld": false,
+    "still_challenge": true,
+    "render_seconds": 21.31
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=ZP%2FqZajtn2hp0sUk5K4XNrh2LZiInzrFjvY4b5PzFv7oIGl9S%2FCjBBzE4JcVhtsKzXeXY%2Ffqw%2BDB0iostOYfnV440M5fvjHB95N3IYun766aoLczHPkrMox8Nf1P5LPkDk3KlT6EwdpNtd1qW27qOIOnUutQxcqTRKJpow%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=eK23GCE7knUdVnwlVb3zc%2FXgpecyUd8l4X7bvBb2oOzA7%2FPaAhzBKmuvCQtl8H8LXiMxpu199ToOIt2O0hNTHDE78VbRLT3ujlW6W3upho9vL1Pa1vqb%2FhLar07WmOpu9YyRL7ZoGCG%2Bi%2B%2BkYVYOkffTvA5mlna9ZFVSHg%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=eK23GCE7knUdVnwlVb3zc%2FXgpecyUd8l4X7bvBb2oOzA7%2FPaAhzBKmuvCQtl8H8LXiMxpu199ToOIt2O0hNTHDE78VbRLT3ujlW6W3upho9vL1Pa1vqb%2FhLar07WmOpu9YyRL7ZoGCG%2Bi%2B%2BkYVYOkffTvA5mlna9ZFVSHg%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-tom-ford",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=deUS5LKjDJ5y44%2BeVISKr5hItKxYIx5H6YMZ%2Fu0cgn4GSf%2BB%2Fzq33rW4S2Xmj%2FtG1Ds74i87KgNKxlT%2B8zG6eioIfxd5CwwjbcmbzvCFYnQWsdz3FmDA0sBdy65R7HtjMWC%2BtMkEubu3wPqXk1rgG%2Bk8FKLxk7y3g69F0w%3D%3D",
+    "method": "POST",
+    "resource_type": "ping"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://goldapple.kz/26543200002-creed-royal-water",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://goldapple.kz/26543200002-creed-royal-water",
+    "status": 200,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "method": "GET",
+    "resource_type": "manifest"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "method": "GET",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://goldapple.kz/_static/site.webmanifest",
+    "status": 200,
+    "content_type": "application/manifest+json"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event/idw-goldapple",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=4BhXJDPXhKQDx1EYJVlFa8B4w%2F6IqLJMqFBap3hLQ8GG%2BZ1%2FHAf6ofdTrPNItKru53xo%2FXMwl2WbrieYtvTtxuebppZkFggTeY6aHjsGiElBiY8%2BUVljvqkBA9jDgLLlegBKPgKoBpOKclIVNbGgu%2BsYUOHQBNMO2SQU%2Fg%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=4BhXJDPXhKQDx1EYJVlFa8B4w%2F6IqLJMqFBap3hLQ8GG%2BZ1%2FHAf6ofdTrPNItKru53xo%2FXMwl2WbrieYtvTtxuebppZkFggTeY6aHjsGiElBiY8%2BUVljvqkBA9jDgLLlegBKPgKoBpOKclIVNbGgu%2BsYUOHQBNMO2SQU%2Fg%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://ru.id.facct.ru/id.html",
+    "method": "GET",
+    "resource_type": "document"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://ru.id.facct.ru/id.html",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "method": "GET",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://goldapple.kz/web/api/v1/settings",
+    "status": 403,
+    "content_type": "text/html"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=nAgr7GkYPttpTFK%2BW9VIfZfb%2Fg4cpQE6rjYMV5uLDzIXp5tZcQ0hcV5yHC6PKMmS4O%2BKSjYjOUnC9S1W%2FMr1Bk8yp2TKADDXYBYA2cqo%2BOu1AzcxLYetGB8QukydXVXP63r57%2B37pnqHsWAWZK79%2Bsvxv%2FASsG8ZjNP9mA%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=nAgr7GkYPttpTFK%2BW9VIfZfb%2Fg4cpQE6rjYMV5uLDzIXp5tZcQ0hcV5yHC6PKMmS4O%2BKSjYjOUnC9S1W%2FMr1Bk8yp2TKADDXYBYA2cqo%2BOu1AzcxLYetGB8QukydXVXP63r57%2B37pnqHsWAWZK79%2Bsvxv%2FASsG8ZjNP9mA%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-creed",
+    "phase": "render-marker",
+    "url": "https://goldapple.kz/26543200002-creed-royal-water",
+    "title": "Gold Apple — checking device",
+    "html_size": 18057,
+    "has_next_data": false,
+    "has_jsonld": false,
+    "still_challenge": true,
+    "render_seconds": 21.26
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=SX3tI7UC3HlnDKnPll1qn%2FYkxWKx0XzgSK%2ByNl8aS8U7pP1N6F%2BsTfmhS1TyNMI4w4lMsH45jRTtbD9F3xMRXM0qeut1ubqxwLtmTUw972lN28bHl8%2B9wQAc5HUuz488yD6tmDfOHrYy%2B7WOddJ%2Bvr7d5MvJBU8G3Lrcqg%3D%3D",
+    "method": "POST",
+    "resource_type": "xhr"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://goldapple.kz/front/api/event?u=0861c5f0-d6b7-11f0-b6fe-3626100000001&cfidsw-goldapple=SX3tI7UC3HlnDKnPll1qn%2FYkxWKx0XzgSK%2ByNl8aS8U7pP1N6F%2BsTfmhS1TyNMI4w4lMsH45jRTtbD9F3xMRXM0qeut1ubqxwLtmTUw972lN28bHl8%2B9wQAc5HUuz488yD6tmDfOHrYy%2B7WOddJ%2Bvr7d5MvJBU8G3Lrcqg%3D%3D",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8"
+  },
+  {
+    "label": "product-creed",
+    "phase": "request",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "method": "POST",
+    "resource_type": "fetch"
+  },
+  {
+    "label": "product-creed",
+    "phase": "response",
+    "url": "https://sp.goldapple.ru/front/api/apm/events",
+    "status": 202,
+    "content_type": ""
+  }
+]
