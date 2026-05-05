@@ -28,6 +28,7 @@ Thumbs.db
 
 # Spike browser state (D-04: persistent context — не коммитим cookie)
 .planning/spikes/01-goldapple/browser-state/
+.planning/spikes/01-goldapple/.camoufox-state/
 .planning/spikes/01-goldapple/.cache/
 
 # DBs (Phase 2+ artifact, добавляем превентивно)

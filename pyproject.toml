@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.12"
 dependencies = [
+    "camoufox[geoip]>=0.4.11",
     "curl-cffi>=0.15,<0.16",
     "patchright>=1.55",
     "python-dotenv>=1.0,<2.0",
