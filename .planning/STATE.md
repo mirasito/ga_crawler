@@ -1,24 +1,24 @@
 # State: GA Crawler
 
 **Last updated:** 2026-05-05
-**Mode:** Phase 1 executing — Wave 0 partial (01-01, 01-02 done; 01-03 IPRoyal **deferred** до результата 01-08); starting Wave 1 (01-04 robots/ToS → 01-05 sitemap → 01-07 viled → 01-06 DevTools человек)
+**Mode:** Phase 1 executing — Wave 0 partial (01-01, 01-02 done; 01-03 IPRoyal **deferred** до результата 01-08), Wave 1 in progress (01-04 ✓, next 01-05 sitemap → 01-07 viled → 01-06 DevTools человек)
 
 ## Project Reference
 
 **Core value:** Команда viled.kz один раз в неделю получает детализированный, сопоставленный по позициям отчёт о ценах конкурента (goldapple.kz) и может корректировать собственное ценообразование, видеть ассортиментные разрывы и отслеживать чужие промо-акции.
 
-**Current focus:** Phase 1 executing — Wave 0 партиал, 01-03 IPRoyal **отложен** (user decision: проверим Tier 2 с KZ-лэптопа, если ≥98/100 + challenge<10% — прокси не нужен; иначе вернёмся к 01-03 после 01-08). Сейчас Wave 1.
+**Current focus:** Phase 1 executing — Wave 0 партиал, 01-03 IPRoyal **отложен** (user decision: проверим Tier 2 с KZ-лэптопа, если ≥98/100 + challenge<10% — прокси не нужен; иначе вернёмся к 01-03 после 01-08). Wave 1 идёт: 01-04 (robots/ToS audit) завершён — committed rate-limits зафиксированы (viled=2s, goldapple=3-5s random uniform), sitemap URLs переданы в 01-05, **goldapple anti-bot подтверждён глобальным** (все HTML-routes под JS-challenge'ем).
 
 ## Current Position
 
 | Field | Value |
 |-------|-------|
 | Phase | 1 — Goldapple Reconnaissance Spike |
-| Plan | 2/12 complete (`01-01` ✓, `01-02` ✓), 1 deferred (`01-03` IPRoyal — revisit gate at 01-08) |
-| Status | Executing Wave 1 — next plan 01-04 (robots/ToS audit) |
-| Progress | `[░░░░░░░░░░░░░░░░░░░░] 0/7 phases` (Phase 1: 2/12 plans executed, 1 deferred) |
+| Plan | 3/12 complete (`01-01` ✓, `01-02` ✓, `01-04` ✓), 1 deferred (`01-03` IPRoyal — revisit gate at 01-08) |
+| Status | Executing Wave 1 — next plan 01-05 (sitemap.xml + page-volume estimate) |
+| Progress | `[░░░░░░░░░░░░░░░░░░░░] 0/7 phases` (Phase 1: 3/12 plans executed, 1 deferred) |
 | Branch strategy | none (single-trunk) |
-| Resume file | `.planning/phases/01-goldapple-reconnaissance-spike/01-04-PLAN.md` |
+| Resume file | `.planning/phases/01-goldapple-reconnaissance-spike/01-05-PLAN.md` |
 
 ## Performance Metrics
 
@@ -27,8 +27,9 @@
 | Phases planned | 7 |
 | Phases completed | 0 |
 | v1 requirements mapped | 48/48 |
+| v1 requirements completed | 1/48 (RECON-04) |
 | Plans created | 12 (Phase 1) |
-| Plans completed | 2 |
+| Plans completed | 3 |
 | Spawned agents (this session) | roadmapper, gsd-planner, gsd-plan-checker, gsd-executor |
 | Checkpoints | 0 |
 
@@ -38,6 +39,7 @@
 |------|----------|-------|-------|------|
 | 01-01 (spike skeleton) | ~3 min | 3/3 | 7 created | 2026-05-05 |
 | 01-02 (uv init + spike deps) | ~5 min | 3/3 | 4 created | 2026-05-05 |
+| 01-04 (robots/ToS audit) | ~38 min | 2/2 | 9 created, 1 modified | 2026-05-05 |
 
 ## Accumulated Context
 
@@ -55,6 +57,11 @@
 | SQLite + WAL on v1; Postgres only if SQLite hits limits | research/STACK.md | Single-writer batch fit; defers infra complexity |
 | System cron with `CRON_TZ=Asia/Almaty`; no APScheduler/Celery/Prefect | research/STACK.md | Phase 7 minimum; one weekly job |
 | Backend-only — no UI / dashboard / API | PROJECT.md (Out of Scope) | All phases `UI hint: no` |
+| viled.kz committed rate-limit = 2s sequential | plan 01-04 (RECON-04) | Phase 2 viled crawler config constant; courtesy-only (no Crawl-delay, no anti-scraping clauses in Privacy Policy) |
+| goldapple.kz committed rate-limit = 3-5s random uniform, concurrency=1 | plan 01-04 + D-04 + Pitfall 13 | Phase 3 goldapple crawler config; starting point for 01-08 experiment, validated/adjusted there |
+| Stealth UA strategy for goldapple (NOT honest UA) | plan 01-04 — robots.txt blocks SemrushBot/MJ12bot/BLEXBot/DotBot | Phase 3 fetch layer uses curl_cffi/Patchright realistic-browser impersonation; no `ViledPriceMonitor/1.0`-style self-identification |
+| goldapple anti-bot is GLOBAL (every HTML route gated, not just product pages) | plan 01-04 empirical — 11 ToS-slug candidates all return identical 18 912-byte JS-challenge shell | Strengthens D-01 (start at Tier 2 / Patchright); vanilla Playwright will likely fail too; goldapple ToS text deferred to post-01-08 warm Patchright re-fetch |
+| `/rest/` Magento API is robots-Disallowed on goldapple | plan 01-04 (robots.txt §Rest API block) | plan 01-06 JSON-endpoint hunt must avoid `/rest/`; focus on `__NEXT_DATA__`/JSON-LD/non-`/rest/` ajax routes |
 
 ### Active Todos
 
@@ -68,12 +75,13 @@
 
 ### What Was Just Done
 
-- `/gsd-execute-phase 1` plan 01-02 executed (sequential mode):
-  - Task 1 (checkpoint:human-verify «установить uv»): auto-skipped — `uv 0.11.7` уже установлен, YOLO/auto_advance allows skip
-  - Task 2: `uv init` в repo root + Python 3.12.13 + 5 spike deps (curl_cffi 0.15.0, patchright 1.59.1, selectolax 0.3.34, structlog 25.5.0, python-dotenv 1.2.2) → commit `d47b800`
-  - Task 3: Patchright Chromium 147.0.7727.15 v1217 (~290 MB) скачан в `%USERPROFILE%\AppData\Local\ms-playwright\`; smoke-test против example.com → `TITLE: Example Domain`; `SETUP-NOTES.md` записан с реальными версиями + Phase 2 warning → commit `0b98407`
-- 4 файла создано (pyproject.toml, uv.lock, .python-version, SETUP-NOTES.md), 0 deviations, self-check PASSED
-- Earlier (this session): plan 01-01 (spike skeleton) → 7 файлов, 3 коммита (c2da755, 02e8cf5, 8a2d5c5)
+- `/gsd-execute-phase 1` plan 01-04 executed (sequential mode, autonomous, 2 tasks):
+  - Task 1 (snapshot robots.txt): viled (508 B HTTP 200, no Crawl-delay, sitemap declared) + goldapple (7303 B HTTP 200, Magento-style, no Crawl-delay, blocks 38 bots incl. SemrushBot/MJ12bot/BLEXBot/DotBot, sitemap declared) — commit `198f579`
+  - Task 2 (ToS audit + committed rate-limits): viled `/privacy` extracted via Next.js `__NEXT_DATA__` (16066 chars, **no anti-scraping clauses**, only KZ Law 94-V personal-data); goldapple — all 11 ToS-slug candidates return identical 18 912-byte JS-challenge shell ("Gold Apple — checking device", DataDome-style UUID JS bundle), text deferred to post-01-08 — commit `83c5150`
+  - Committed rate-limits: viled=2s sequential, goldapple=3-5s random uniform concurrency=1
+  - 9 files created (4 helper scripts + 5 sample payloads), 1 modified (`tos-audit.md`), 3 deviations (all artifact-hygiene cleanups, zero scope creep), self-check PASSED
+  - SUMMARY → `.planning/phases/01-goldapple-reconnaissance-spike/01-04-SUMMARY.md`
+- Earlier (this session): plan 01-02 → 4 файла, 2 коммита (`d47b800`, `0b98407`); plan 01-01 (spike skeleton) → 7 файлов, 3 коммита (c2da755, 02e8cf5, 8a2d5c5)
 - Earlier (planning): `/gsd-plan-phase 1` создал 12 атомарных плана (01-01..01-12) в 5 волнах; gsd-plan-checker VERIFICATION PASSED
 
 ### Earlier (this session)
@@ -94,9 +102,10 @@
 
 ### What's Next
 
-1. Continue Phase 1 execution — plan 01-03 (IPRoyal trial registration + `.env.local` + proxy smoke-test, D-08 pre-registration). Then Wave 1 (cheap recon: 01-04 robots/ToS, 01-05 sitemap/page-volume, 01-06 JSON-endpoint hunt, 01-07 viled curl_cffi).
-2. Wave 2 (Patchright Tier-2 100-fetch): 01-08 KZ-laptop, 01-09 EU-proxy. Conditional Wave 3 (01-10 Tier 3 escalation if fails). Wave 4 (01-11 MEMO finalize, 01-12 wrap-up).
-3. Spike outcome (decision memo `.planning/spikes/01-goldapple/MEMO.md`) feeds Phase 3 stack selection.
+1. Continue Phase 1 Wave 1 — plan 01-05 (sitemap.xml + page-volume estimate for 3-5 brands; consume sitemap URLs delivered by 01-04). Then 01-07 (viled curl_cffi) → 01-06 (DevTools JSON-endpoint hunt с человеком).
+2. Wave 2 (Patchright Tier-2 100-fetch): 01-08 KZ-laptop (apply committed rate-limit 3-5s random uniform from 01-04; pre-flight verify sitemap.xml plain delivery), 01-09 EU-proxy. Conditional Wave 3 (01-10 Tier 3 escalation if fails). Wave 4 (01-11 MEMO finalize, 01-12 wrap-up).
+3. Spike outcome (decision memo `.planning/spikes/01-goldapple/MEMO.md`) feeds Phase 3 stack selection. MEMO must reference 01-04 audit summary + committed rate-limits as Phase 3 config constants.
+4. Open follow-ups (Phase 7): KZ-legal review with bundle = `tos-audit.md` + `viled-privacy.txt` + both `*-robots.txt` snapshots + flag «goldapple ToS not obtainable in spike».
 
 ### Resume Instructions
 
@@ -104,7 +113,7 @@ To continue this project from a fresh session:
 1. Read `.planning/PROJECT.md` for core value and constraints.
 2. Read `.planning/ROADMAP.md` for phase structure.
 3. Read this STATE.md for current position.
-4. Run `/gsd-execute-phase 1` to continue Phase 1 execution from plan 01-03.
+4. Run `/gsd-execute-phase 1` to continue Phase 1 execution from plan 01-05.
 
 ---
-*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05*
+*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05; updated by gsd-executor (plan 01-04) 2026-05-05*
