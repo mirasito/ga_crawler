@@ -34,7 +34,19 @@
   3. A page-volume estimate for a typical brand's goldapple catalog is documented (informs proxy budget and run duration expectations).
   4. viled.kz feasibility with `curl_cffi` impersonate is empirically confirmed against ≥10 product fetches.
   5. `robots.txt` and ToS for both sites are reviewed; an acceptable rate-limit per site is documented and committed to the repo.
-**Plans**: TBD
+**Plans**: 12 plans across 5 waves (Wave 0 setup -> Wave 1 cheap recon -> Wave 2 Tier 2 measurement -> Wave 3 conditional Tier 3 -> Wave 4 finalization)
+- [ ] 01-01-PLAN.md - Spike skeleton (.planning/spikes/01-goldapple/ directory + stub files + .gitignore)
+- [ ] 01-02-PLAN.md - uv init + Python 3.12 + spike deps (curl_cffi, patchright, selectolax, structlog, python-dotenv) + Patchright Chromium
+- [ ] 01-03-PLAN.md - IPRoyal trial registration + .env.local + proxy smoke-test (D-08 pre-registration)
+- [ ] 01-04-PLAN.md - robots.txt + ToS audit (RECON-04) + committed rate-limits per site
+- [ ] 01-05-PLAN.md - sitemap.xml + page-volume estimate for 3-5 brands (RECON-03 part 1)
+- [ ] 01-06-PLAN.md - JSON-endpoint hunt via DevTools (RECON-03 part 2; D-09/D-10 Tier 0 candidate check)
+- [ ] 01-07-PLAN.md - viled curl_cffi feasibility, >=10 fetches (RECON-02) + side-deliverables for Phase 2
+- [ ] 01-08-PLAN.md - Patchright Tier 2 100-fetch from KZ-laptop baseline (RECON-01; D-01/D-04/D-13/D-14/D-15)
+- [ ] 01-09-PLAN.md - Patchright Tier 2 100-fetch through EU/RU residential proxy (RECON-01; D-05 multi-geo)
+- [ ] 01-10-PLAN.md - CONDITIONAL Tier 3 escalation if 01-08/01-09 fail or fragile (RECON-01)
+- [ ] 01-11-PLAN.md - MEMO.md decision-memo finalization with sign-off (closes RECON-01..04)
+- [ ] 01-12-PLAN.md - Wrap-up: Obsidian copy + project skill + STATE.md update
 **UI hint**: no
 
 ### Phase 2: Project Skeleton + viled Crawl + Storage
@@ -142,7 +154,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Goldapple Reconnaissance Spike | 0/0 | Not started | - |
+| 1. Goldapple Reconnaissance Spike | 0/12 | Planned | - |
 | 2. Project Skeleton + viled Crawl + Storage | 0/0 | Not started | - |
 | 3. Goldapple Crawl | 0/0 | Not started | - |
 | 4. Matcher + Match-Rate KPI | 0/0 | Not started | - |
