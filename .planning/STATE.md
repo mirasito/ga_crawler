@@ -1,24 +1,24 @@
 # State: GA Crawler
 
 **Last updated:** 2026-05-05
-**Mode:** Phase 1 executing — plans 01-01..01-02 complete; next plan 01-03 (IPRoyal trial signup)
+**Mode:** Phase 1 executing — Wave 0 partial (01-01, 01-02 done; 01-03 IPRoyal **deferred** до результата 01-08); starting Wave 1 (01-04 robots/ToS → 01-05 sitemap → 01-07 viled → 01-06 DevTools человек)
 
 ## Project Reference
 
 **Core value:** Команда viled.kz один раз в неделю получает детализированный, сопоставленный по позициям отчёт о ценах конкурента (goldapple.kz) и может корректировать собственное ценообразование, видеть ассортиментные разрывы и отслеживать чужие промо-акции.
 
-**Current focus:** Phase 1 executing — plan 01-02 (uv project init) committed; next: plan 01-03 (IPRoyal trial + .env.local).
+**Current focus:** Phase 1 executing — Wave 0 партиал, 01-03 IPRoyal **отложен** (user decision: проверим Tier 2 с KZ-лэптопа, если ≥98/100 + challenge<10% — прокси не нужен; иначе вернёмся к 01-03 после 01-08). Сейчас Wave 1.
 
 ## Current Position
 
 | Field | Value |
 |-------|-------|
 | Phase | 1 — Goldapple Reconnaissance Spike |
-| Plan | 2/12 complete (`01-01-PLAN.md` ✓, `01-02-PLAN.md` ✓) |
-| Status | Executing — plans 01-01, 01-02 done; next plan 01-03 |
-| Progress | `[░░░░░░░░░░░░░░░░░░░░] 0/7 phases` (Phase 1: 2/12 plans executed) |
+| Plan | 2/12 complete (`01-01` ✓, `01-02` ✓), 1 deferred (`01-03` IPRoyal — revisit gate at 01-08) |
+| Status | Executing Wave 1 — next plan 01-04 (robots/ToS audit) |
+| Progress | `[░░░░░░░░░░░░░░░░░░░░] 0/7 phases` (Phase 1: 2/12 plans executed, 1 deferred) |
 | Branch strategy | none (single-trunk) |
-| Resume file | `.planning/phases/01-goldapple-reconnaissance-spike/01-03-PLAN.md` |
+| Resume file | `.planning/phases/01-goldapple-reconnaissance-spike/01-04-PLAN.md` |
 
 ## Performance Metrics
 
