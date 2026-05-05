@@ -1,20 +1,21 @@
 # Spike 01: Goldapple Anti-Bot Decision Memo
 
-**Sign-off:** _PENDING — заполнить дату + подпись после plan 01-11_
-**Spike start:** _TBD_
-**Spike end:** _TBD_
+**Sign-off:** 2026-05-06 — mirdbek@gmail.com (operator) — APPROVED
+**Spike start:** 2026-05-05 (plan 01-01 commit `6ed12da`)
+**Spike end:** 2026-05-06 (plan 01-08 sign-off this commit)
+**Duration:** 2 days (timebox 1 week per D-02 — well under)
 
-> Заполняется в plan 01-11 на основе всех findings 01-04..01-10.
-> На завершении спайка копия дублируется в Obsidian `knowledge/decisions/` через `/gsd-spike --wrap-up`.
+> Финализирован в plan 01-11 на основе findings 01-04..01-08 + 01-06b side-spike.
+> Plan 01-12 копирует в Obsidian `knowledge/decisions/` + упаковывает project-local skill.
 
 ## TL;DR
 
-> Однострочное summary: tier, engine, proxy, prod-IP recommendation.
+> **Goldapple.kz scrapeable at Tier 2 using Camoufox (Firefox + C++ fingerprint spoof) with NO proxy from KZ-laptop.** 100-fetch run: 99/100 success, 0% gate-shell rate, NOT FRAGILE per D-15. Anti-bot vendor identified as **GroupIB / F.A.C.C.T.** (Russian-market fraud-prevention) — Patchright 0/7 (superseded), Camoufox 99/100 (chosen). Goldapple uses inline microdata (`<meta itemprop="price">`), NOT JSON-LD Product schema — D-14 revised mid-spike. viled.kz feasibility: **CONFIRMED** via `curl_cffi impersonate=chrome` (15/15 HTTP 200, no anti-bot, `__NEXT_DATA__` parsing). Production: Hetzner EU baseline + verify Camoufox passes from EU geo before locking; if fails → IPRoyal KZ residential as fallback. Phase 3 stack ready to build.
 
-- **Chosen tier:** _TBD (0 / 2 / 3 / 4)_
-- **Browser engine:** _TBD (curl_cffi only / vanilla Playwright / Patchright / Camoufox)_
-- **Proxy provider:** _TBD (none / IPRoyal residential / Decodo / managed unblocker)_
-- **Production IP recommendation (Phase 7):** _TBD_
+- **Chosen tier:** 2
+- **Browser engine:** Camoufox v135.0.1-beta.24 (Firefox-based; daijro upstream, fallback to coryking fork if upstream stalls)
+- **Proxy provider:** none (KZ-laptop direct sufficient)
+- **Production IP recommendation (Phase 7):** Hetzner CX22 EU + ONE-fetch Camoufox+EU smoke test before locking. If smoke fails → IPRoyal KZ residential (~$2/week, D-08 reactivates). If smoke passes → no proxy, $0/week.
 
 ## Problem
 
@@ -39,11 +40,23 @@ Goldapple.kz anti-bot tier — defining unknown проекта (см. research/S
 
 ## Chosen
 
-**Tier:** _TBD_
-**Rationale:** _TBD_
+**Tier:** 2
+**Engine:** Camoufox v135.0.1-beta.24 (Firefox-based, C++-level fingerprint spoof)
+**Proxy:** none
+**Geo:** KZ (laptop direct, D-06)
+
+**Rationale:**
+- **Tier 2 Camoufox KZ-laptop: 99/100 success, 0% gate-shell rate** — fingerprint surface alone defeats GroupIB/F.A.C.C.T. without IP-rotation. Decisive vs Patchright same-baseline 0/7 (plan 01-06).
+- **GroupIB is fingerprint-based, not IP-rep-based.** This was hypothesized at the end of 01-06 and confirmed empirically by 01-06b side-spike (3/3) + 01-08 100-fetch (99/100). Multi-geo proxy adds zero value-of-information given fingerprint solves the gate.
+- **Goldapple uses inline microdata (`<meta itemprop="price">`), not JSON-LD Product schema.** D-14 revised mid-spike (90% of test pages had ZERO JSON-LD Product but 99% had microdata price). Phase 3 parser path is `selectolax` + microdata extraction.
+- **Plans 01-09 (multi-geo) and 01-10 (Tier 3 escalation) explicitly SKIPPED** — fingerprint alone solves the gate, Tier 3 trigger never fires. D-08 (IPRoyal pre-register) cancelled — no proxy budget needed for Phase 3 baseline.
+- **Page-volume estimate × Camoufox throughput fits Phase 7 cron window:** ~4000 fetches/week × 4s avg = ~4.4 hours/week sequential, comfortably under Sunday-night batch budget.
+
 **Exact 100-fetch results:**
-- KZ-laptop (D-06): _N/100, X challenges_
-- EU/RU residential (D-05): _N/100, X challenges_
+- KZ-laptop (D-06), Camoufox: **99/100 success**, 100/100 gate cleared (1× 1000ms wait, 99 instant), 0/100 gate-shells, 1 block (stale `/7681000002-...` SKU returns 200 + 9.5 KB shell, NOT anti-bot)
+- KZ-laptop (D-06), Patchright: 0/7 success, 7/7 gate-shells (plan 01-06 baseline — superseded)
+- EU/RU residential (D-05): not measured — plan 01-09 skipped per fingerprint-alone-solves-gate finding (see Options tested status block)
+- Tier 3 KZ residential: not measured — plan 01-10 skipped per Tier 2 sufficiency
 
 ## JSON-endpoint hunt verdict (D-09, D-10)
 
@@ -275,19 +288,68 @@ See `sample-payloads/viled-product-urls.txt` for the 15 sampled URLs (reproducib
 
 ## robots/ToS audit summary (RECON-04)
 
-_См. tos-audit.md. Committed rate-limits:_
-- viled.kz: _TBD_
-- goldapple.kz: _TBD_
+_См. `tos-audit.md` для полного аудита._ Committed rate-limits (constants для Phase 3 fetch layer):
+
+- **viled.kz:** 2 секунды между fetch'ами (1 req / 2s, sequential). robots.txt без `Crawl-delay`, без User-Agent restrictions, без anti-scraping clause; 2s — courtesy не requirement (Pitfall 13).
+- **goldapple.kz:** 3-5 секунд random uniform между fetch'ами, sequential, concurrency=1. robots.txt без `Crawl-delay`, anti-scraping не упомянут в публичной ToS; 3-5s — empirically chosen после 01-06/01-06b/01-08 (slow rate помогает persistent-context cookie staying valid).
+- **goldapple `/rest/`:** Disallowed in robots.txt (Magento backend) — Phase 3 frontend crawler не трогает.
+
+KZ-legal review (30 min с юристом) — **DEFERRED to Phase 7** per CONTEXT.md.
 
 ## Next-step impact
 
-- **Phase 3 stack:** _TBD_
-- **Phase 7 hosting / prod-IP:** _TBD_
+**Phase 3 stack (locked):**
+- **goldapple:** Camoufox AsyncCamoufox + persistent_context + geoip+humanize + selectolax + microdata extraction (`<meta itemprop="price">` + `priceCurrency`). NOT JSON-LD.
+- **viled:** curl_cffi impersonate=chrome + selectolax + json.loads on `__NEXT_DATA__` blob (`props.pageProps.{item,attributes}`). NOT JSON-LD.
+- **Enumeration:** sitemap.xml plain via curl_cffi for both sites. goldapple sitemap = 100,779 product URLs across 1,461 brand slugs. viled sitemap = 42,294 product URLs across 9 sub-sitemaps.
+
+**Phase 3 budget:**
+- Bandwidth estimate: ~600 MB/week for goldapple (~4,000 fetches × ~150 KB) + ~1 GB/week for viled (~5,000 fetches × ~200 KB) = ~1.6 GB/week total
+- Proxy cost: **$0/week baseline** (no proxy needed for either site)
+- Crawl duration estimate: goldapple ~4.4 hours/week + viled ~70 min/week = ~5.5 hours/week sequential. Comfortably fits Sunday-night cron.
+
+**Phase 7 hosting / prod-IP:**
+- **Primary:** Hetzner CX22 EU (Falkenstein/Helsinki) — ~€4.50-€8/month, 2 vCPU/4 GB/40 GB SSD per research/STACK.md.
+- **Hard gate before locking:** ONE Camoufox+EU smoke fetch against goldapple. GroupIB is a Russian-market vendor — IP-geo whitelist may demote EU even when KZ-laptop passes.
+- **Fallback:** if smoke fails → IPRoyal KZ residential trial reactivates (~$0-$7 trial, ~$2/week steady-state). D-08 plan path (01-03) still on shelf, ready to revive.
+- **Last resort:** Camoufox + EU smoke fails AND IPRoyal KZ unavailable → managed unblocker (ZenRows / Bright Data Web Unlocker) — pay-per-page; reframes project economics per D-02. Defer until justified by failure data.
+
+**Phase 2 inputs from spike (locked):**
+- viled curl_cffi: CONFIRMED — proceed without headless browser
+- viled `__NEXT_DATA__` shape: 8 canonical field paths extracted (price, realPrice, brandName, name, sizeType, currency, Размер attribute) — see `viled-nextdata-shape.json`
+- viled enumeration: sitemap-only, no `?page=N` traversal needed
+- viled rate-limit: 2s sequential — Phase 2 CRAWL-06 config
+- goldapple rate-limit: 3-5s random uniform — Phase 3 CRAWL-06 config
+
+**Phase 4 inputs from spike:**
+- goldapple sitemap brand-keyword matching is partial — Tom Ford and Jo Malone London absent from numeric-id sitemap entirely. Brand-alias YAML must be built independently of sitemap content (canonical map of viled-brand → goldapple-product-pattern).
+- Match rate ceiling for niche-perfumery overlap: depends on viled-vs-goldapple beauty subset intersection — refined in Phase 4 after first weekly run.
 
 ## Open risks
 
-- _TBD_
+- **goldapple uses microdata-only, not JSON-LD.** D-14 revised mid-spike. Phase 3 parser implementation has TWO strategies (microdata for goldapple, `__NEXT_DATA__` for viled) — not symmetric. Documented in Options tested → Open Risks (post 01-08).
+- **Brand-precision shortfall on Tom Ford / Jo Malone London** in numeric-id goldapple sitemap. Spike substituted random product URLs. Phase 4 brand-alias YAML must compensate.
+- **Camoufox upstream maintenance:** daijro v135.0.1-beta.24 used. CLAUDE.md flagged daijro "unmaintained as of mid-2025"; we observed fresher releases. Phase 3 ops playbook adds weekly check "does Camoufox still pass goldapple?". Backup plan: switch to coryking/camoufox fork.
+- **Hetzner-EU + Camoufox compatibility unverified.** GroupIB likely IP-geo-aware. Smoke test before locking Phase 7 hosting. If fails, revive IPRoyal trial (D-08).
+- **Stale-SKU 200-but-9.5KB pattern.** `/7681000002-givenchy-pour-homme-blue-label` returns 200 with shell-sized payload but title NOT "checking device" — de-listed SKU, not anti-bot. Phase 3 parser must distinguish "no microdata" (de-listed) from "gate not cleared" (block) so match-rate doesn't get poisoned.
+- **GroupIB is in uncharted scraping territory.** Patchright benchmarks (Cloudflare/DataDome/Akamai) don't apply. If Camoufox drift breaks the gate later, no community pre-vetted next-step engine exists. Phase 7 ops playbook should track this as P0 monitoring.
 
 ## Appendix: Challenge-rate (D-15)
 
-_TBD — если challenge-rate >20%, tier помечается "fragile" даже на технически-passing._
+- **KZ-laptop, Camoufox (plan 01-08):** 0% gate-shell rate (0/100), 1 page needed 1000ms wait for title clearance, 99 instant. **NOT FRAGILE** per D-15 (>20% threshold not breached).
+- **KZ-laptop, Patchright (plan 01-06 baseline):** 100% gate-shell rate (7/7), 0/7 auto-cleared. Patchright is fragile-by-design vs GroupIB — superseded.
+- **EU-proxy run (D-05):** not measured — plan 01-09 skipped per fingerprint-alone-solves-gate finding.
+- **Tier 3 KZ residential (D-06 conditional):** not measured — plan 01-10 skipped per Tier 2 sufficiency.
+
+Per D-15: tier flagged "fragile" if challenge-rate >20% even on passing 95/100. Camoufox at 0% is comfortably non-fragile. **Phase 3 prod-monitoring guidance:** alert if weekly run's gate-shell rate >5% (early-warning threshold; well below the 20% fragility line).
+
+## Sign-off
+
+I, mirdbek@gmail.com, on 2026-05-06, confirm спайк завершён:
+- [x] 100-fetch experiment(s) выполнены и задокументированы (plan 01-08: 99/100, see `sample-payloads/tier2-camoufox-kz-results.json`)
+- [x] Chosen tier зафиксирован (Tier 2 Camoufox direct, no proxy)
+- [x] Phase 3 stack-decision можно принять без дальнейших experiments
+- [x] viled curl_cffi feasibility подтверждена (RECON-02 CLOSED)
+- [x] page-volume estimate готов (RECON-03 CLOSED)
+- [x] robots/ToS audited, rate-limits committed (RECON-04 CLOSED)
+- [x] Open risks задокументированы и переданы в Phase 7 backlog
