@@ -74,7 +74,14 @@
   3. The post-crawl sanity-assertion gate marks the run `failed` when `goldapple_count < M` (configurable threshold) — a single gate now protects both retailers.
   4. A 1-hour live run completes without sustained 429/503 spikes or Cloudflare interstitial encounters at the chosen tier; per-page proxy/cookie reuse is verified.
   5. The "brands seen on goldapple but not in alias table" review queue (defined in Phase 2) is populated by a real goldapple run and committed for weekly manual review.
-**Plans**: TBD
+**Plans**: 7 plans across 7 waves (Wave 0 bootstrap -> Wave 1 enumeration -> Wave 2 parser -> Wave 3 fetcher -> Wave 4 gates+stats -> Wave 5 orchestrator+CLI -> Wave 6 live smoke checkpoint)
+- [ ] 03-01-PLAN.md - Wave 0: pyproject.toml pins (Camoufox 135.0.1.beta24, tenacity, sqlmodel, pydantic, pytest), interfaces.py Phase 2 Protocols, conftest.py fixtures, spike sample-payloads as test fixtures
+- [ ] 03-02-PLAN.md - Wave 1: enumeration/slug.py bilingual slug-fy + intersect_brand_pool (CRAWL-02), enumeration/goldapple_sitemap.py curl_cffi Tier 0 + week-over-week NEW slug diff (D-307)
+- [ ] 03-03-PLAN.md - Wave 2: parsers/goldapple_microdata.py priceType-aware extractor (PARSE-01..06) + detect_state three-axis classifier (Pitfall 4 / D-303)
+- [ ] 03-04-PLAN.md - Wave 3: fetchers/goldapple.py Camoufox bootstrap + tenacity retry (CRAWL-04) + per-SKU isolation (CRAWL-03) + run_loop with rate-limit (CRAWL-06)
+- [ ] 03-05-PLAN.md - Wave 4: runner/gates.py smoke probe (D-312) + final M-gate (D-308/D-309) + auto-suggest M (D-310); runner/stats.py 13-key namespace (Pitfall 6) + NORM-06 forward (D-306)
+- [ ] 03-06-PLAN.md - Wave 5: runners/goldapple_run.py orchestrator + cli.py (python -m ga_crawler) + stub Phase 2 protocol implementations + storage integration tests
+- [ ] 03-07-PLAN.md - Wave 6: Manual operator checkpoint - live smoke probe + limited live run on KZ-laptop; Success Criteria 4 and 5 verification
 **UI hint**: no
 
 ### Phase 4: Matcher + Match-Rate KPI
