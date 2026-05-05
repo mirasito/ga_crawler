@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+
+# uv
+.uv-cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (D-08: IPRoyal credentials)
+.env
+.env.local
+.env.*.local
+
+# Spike browser state (D-04: persistent context — не коммитим cookie)
+.planning/spikes/01-goldapple/browser-state/
+.planning/spikes/01-goldapple/.cache/
+
+# DBs (Phase 2+ artifact, добавляем превентивно)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
