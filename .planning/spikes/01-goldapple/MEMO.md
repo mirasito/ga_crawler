@@ -121,7 +121,80 @@ This significantly **simplifies** Phase 3 fetch architecture: enumeration via si
 
 ## viled.kz feasibility (RECON-02)
 
-_TBD — N/10 successful curl_cffi fetches, JSON-LD presence, timing._
+**Status:** **CONFIRMED — curl_cffi viable for Phase 2 (Tier 0).** No headless browser needed.
+
+**Method:** `curl_cffi.requests.get(url, impersonate="chrome", timeout=30)` — single thread, sequential.
+**Sample size:** 15 product URLs (autonomous probe из viled.kz/sitemap.xml — sitemap-index → 9 sub-sitemaps → diversified step-stride sample of 15 across `/item/<numeric_id>` route).
+**Rate-limit used:** **2s pause** between fetches (per `tos-audit.md` viled.kz committed rate-limit; 1 req per 2s sequential).
+**Reproducible script:** `.planning/spikes/01-goldapple/notebook-viled.py`
+**Brand selection script:** `.planning/spikes/01-goldapple/_fetch_viled_urls.py` (sitemap-driven, replaces checkpoint:human-action Task 1).
+
+### Per-URL outcomes
+
+- **HTTP 200:** **15 / 15** (100% success)
+- **JSON-LD present:** 0 / 15 (viled does NOT use JSON-LD schema.org — see "Critical finding" below)
+- **JSON-LD has Product:** 0 / 15
+- **JSON-LD has price (D-14 satisfaction proxy):** 0 / 15 — **D-14 не применим к viled**
+- **`__NEXT_DATA__` present:** **15 / 15** (Next.js SSR JSON blob — Phase 2 PARSE-02 alternative key surface)
+- **Errors:** none — no timeouts, no 403, no 429, no Cloudflare/DataDome challenges.
+
+### Timing
+
+- **Min / Avg / Max:** 300 / 485 / 671 ms per fetch
+- **Wall-clock for 15 fetches @ 2s pause:** 35.3s (≈14 fetches/min effective rate)
+- **Implications:** at avg 485ms response × ~50,000 viled product URLs (full catalog enumeration via sitemap) = ~7 hours sequential. **For weekly run targeting beauty subset** (`sizeType=BEAUTY`, ~10-20% of catalog ≈ 5,000-10,000 SKUs) → ~70 minutes per weekly run. Phase 2 throughput budget comfortably accommodates.
+
+### Critical finding: viled uses `__NEXT_DATA__`, not JSON-LD
+
+This was unexpected and is **load-bearing for Phase 2 PARSE-02**:
+
+- viled.kz is a **Next.js SSR site** — server-side rendered HTML embeds page data in `<script id="__NEXT_DATA__" type="application/json">{...}</script>` (Next.js framework convention).
+- **No `<script type="application/ld+json">` tags in product HTML** — schema.org Product markup is NOT present (likely a deliberate choice or oversight by viled SEO team).
+- Phase 2 PARSE-02 for viled MUST extract price/brand/title/volume from `__NEXT_DATA__` JSON blob, NOT from JSON-LD.
+- This pattern was already validated for viled in 01-04 (privacy page) and 01-05 (homepage); now confirmed for product pages.
+
+### Phase 2 PARSE-02 hot-start: viled `__NEXT_DATA__` schema
+
+Inspected via `_inspect_viled_nextdata.py` on 4 sample products (apparel + perfumery + cosmetics + watch). Canonical field paths for v1 schema:
+
+| v1 schema field | `__NEXT_DATA__` JSON path | Sample value |
+|---|---|---|
+| `current_price` | `props.pageProps.attributes[0].price` | `44300` (integer KZT) |
+| `was_price` | `props.pageProps.attributes[0].realPrice` | `44300` (== price when no sale) |
+| `currency_display` | `props.pageProps.attributes[0].currency` | `"₸"` (unicode tenge) — programmatic mapping → `KZT` |
+| `brand` | `props.pageProps.item.brandName` | `"Jo Malone London"` |
+| `title` (product name) | `props.pageProps.item.name` | `"Одеколон Wood Sage & Sea Salt Cologne"` |
+| `volume` (beauty only) | `props.pageProps.attributes[0].attributes[].name == "Размер"` → `.value` | `"30 мл"` (parse to ml integer in normalizer) |
+| `category enum` | `props.pageProps.item.sizeType` | `BEAUTY` / `APPAREL` / `JEWELLERY` / `null` |
+| `subcategory` | nested `attributes[].name == "Подгруппа"` | `"Одеколоны"`, `"Праймеры/Базы/Фиксаторы"` |
+| `product_id` (URL slug) | `urlparse(url).path.split('/')[-1]` | `407682` (numeric, stable) |
+
+See `sample-payloads/viled-nextdata-shape.json` for the full extracted structure.
+
+### Side-deliverables (Phase 2 hot-start)
+
+| Aspect | Finding |
+|--------|---------|
+| **JSON-LD schema** | **NOT present** on viled product pages. D-14-style success proxy не применим к viled. Use `__NEXT_DATA__` JSON blob instead (see schema table above). |
+| **Pagination shape** | **No HTML pagination needed** — viled.kz/sitemap.xml is plain-deliverable (HTTP 200, application/xml) and contains the full catalog: 42,294 product URLs across 9 sub-sitemaps split by gender (`sitemap-items-women.xml` 22,378 URLs / `sitemap-items-men.xml` 11,845 / `sitemap-items-kids.xml` 8,071) + collection/lookbook/news. Phase 2 uses sitemap as primary enumeration source (no `?page=N` traversal, no infinite-scroll, no AJAX paging discovery needed). |
+| **URL pattern** | All product URLs follow `https://viled.kz/item/<numeric_id>`. ID range observed: 148026 (oldest in sample) → 409206 (newest); IDs are monotonic sequential (Phase 2 can use `Last-Modified` from sitemap entries for incremental delta). |
+| **UA strictness** | curl_cffi default impersonate=chrome works on the first request. No cookies required (no session-warmup). No CAPTCHA, no Cloudflare interstitial, no DataDome challenge. **viled has NO anti-bot layer** — confirmed by 15/15 plain success at 2s pause. |
+| **Cookies / session** | No session-token required; statelessly fetchable. Phase 2 can use `curl_cffi` without persistent context. |
+| **Pricing format** | Integer (`187700` = 187,700 KZT). No decimal. No formatted strings (`"5 990,00"`). Cleanest possible price extraction — no normalization regex needed. |
+| **Currency format** | Display: `"₸"` (single unicode tenge sign). No programmatic `KZT` field in `__NEXT_DATA__`; Phase 2 NORMALIZE-01 hardcodes `"₸" → "KZT"`. All viled prices are denominated in KZT (no multi-currency). |
+| **Robots/UA strictness** | viled.kz/robots.txt has no `Crawl-delay`, no User-Agent restrictions for our purpose (per 01-04 audit). 2s pause is courtesy-only (Pitfall 13). curl_cffi default chrome UA was not challenged. |
+| **Was-price availability** | `realPrice` and `price` are SEPARATE fields in `__NEXT_DATA__`. In our sample they were equal (no active discount), but the dual-field structure means Phase 2 v1 schema's `was_price` requirement is **directly satisfiable** without retroactive backfill (per STATE.md "was_price captured in v1 schema" decision). When `realPrice > price`, that's a sale; report `was_price = realPrice`. |
+| **HTTP fetch size** | ~190-200 KB per product page (gzipped HTTPS). For ~5,000 weekly viled fetches → ~1 GB/week bandwidth (no proxy needed since direct curl_cffi works). |
+
+### Verdict
+
+**Phase 2 stack confirmed: `curl_cffi` (Tier 0) + `selectolax` for HTML walking + Python `json` parsing of `__NEXT_DATA__`.** No headless browser, no proxy, no anti-bot escalation needed for viled.kz. Phase 2 PARSE-02 is **immediately viable** with the `__NEXT_DATA__` field paths above.
+
+**RECON-02 — CLOSED.** All side-deliverables captured. Phase 2 starts with hot data, not cold reconnaissance.
+
+See `sample-payloads/viled-fetch-results.json` for raw per-URL metrics (15 records).
+See `sample-payloads/viled-nextdata-shape.json` for `__NEXT_DATA__` shape extract.
+See `sample-payloads/viled-product-urls.txt` for the 15 sampled URLs (reproducible via `_fetch_viled_urls.py`).
 
 ## robots/ToS audit summary (RECON-04)
 
