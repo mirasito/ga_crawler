@@ -141,6 +141,54 @@ def test_pricetype_gold_card_section_excluded() -> None:
     assert product.current_price == 4990
 
 
+def test_bonus_button_with_login_text_does_not_poison_price() -> None:
+    """Regression for 03-07 live-smoke: a `<button>` containing "при авторизации"
+    inside a bonus-badge subtree must NOT cause adjacent price metas to be
+    classified as Gold Card. Both prices are public; the lower one is current.
+    """
+    filler = "<!-- " + ("x" * 35000) + " -->"
+    html = f"""<!DOCTYPE html><html><head><title>Test</title></head><body>
+{filler}
+<h1>Test Product</h1>
+<div itemprop="offers" itemtype="http://schema.org/Offer">
+  <div class="hidden-availability"><link itemprop="availability" href="http://schema.org/InStock"/></div>
+  <button class="bonus-badge"><div><i class="ico"></i><span>Бонусы при авторизации</span></div></button>
+  <meta itemprop="price" content="72020"/>
+  <meta itemprop="priceCurrency" content="KZT"/>
+  <meta itemprop="price" content="43212"/>
+  <meta itemprop="priceCurrency" content="KZT"/>
+</div>
+</body></html>"""
+    product = parse_pdp(html, "https://goldapple.kz/100-test")
+    assert product is not None
+    # Min-value selection: 43212 (sale) wins over 72020 (was)
+    assert product.current_price == 43212
+    assert product.currency == "KZT"
+
+
+def test_zero_filler_price_is_skipped() -> None:
+    """PARSE-04 sanity range must skip price=0 sentinel filler metas even when
+    they are syntactically valid offer entries (live PDPs sometimes emit
+    `<meta itemprop="price" content="0"/>` for unavailable variants).
+    """
+    filler = "<!-- " + ("x" * 35000) + " -->"
+    html = f"""<!DOCTYPE html><html><head><title>Test</title></head><body>
+{filler}
+<h1>Test</h1>
+<div itemprop="offers" itemtype="https://schema.org/Offer">
+  <link itemprop="availability" href="https://schema.org/InStock"/>
+  <meta itemprop="price" content="5000"/>
+</div>
+<div itemprop="offers" itemtype="https://schema.org/Offer">
+  <link itemprop="availability" href="https://schema.org/InStock"/>
+  <meta itemprop="price" content="0"/>
+</div>
+</body></html>"""
+    product = parse_pdp(html, "https://goldapple.kz/100-test")
+    assert product is not None
+    assert product.current_price == 5000
+
+
 # ---- PARSE-04 sanity range ----
 
 

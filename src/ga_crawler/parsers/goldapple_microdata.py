@@ -157,47 +157,80 @@ def _has_excluded_priceType_sibling(price_meta: Node) -> bool:
     return False
 
 
-def _is_in_gold_card_section(price_meta: Node) -> bool:
-    """Heuristic: walks up from price_meta within the SAME [itemprop='offers']
-    subtree, looking for a label "при авторизации" (Gold Card / loyalty pricing).
-    Returns True if the label is co-located with this price block.
+_GOLD_CARD_LABEL_TAGS = {"span", "div", "p", "label", "small", "h1", "h2", "h3", "h4", "h5", "h6"}
 
-    Scope is bounded by the nearest [itemprop='offers'] ancestor: a "при авторизации"
-    label sitting in a SIBLING offer block (or anywhere else in <body>) does NOT
-    poison this price's classification. PROJECT.md explicitly excludes Gold Card
-    prices from comparison.
+
+def _sibling_text_shallow(sibling: Node) -> str:
+    """Return shallow text of a sibling node, ignoring deep descendants.
+
+    Falls back to recursive text extraction on selectolax versions whose
+    Node.text() does not accept the `deep=` keyword (very old releases).
     """
-    cursor = price_meta.parent
-    depth = 0
-    while cursor is not None and depth < 8:
-        try:
-            txt = cursor.text(strip=False) or ""
-        except Exception:
-            txt = ""
-        if "при авторизации" in txt.lower():
+    try:
+        return sibling.text(deep=False, strip=True) or ""
+    except TypeError:
+        return sibling.text(strip=True) or ""
+
+
+def _is_in_gold_card_section(price_meta: Node) -> bool:
+    """Heuristic: True iff a direct sibling of price_meta is a label element
+    (span/div/p/etc.) whose own shallow text is "при авторизации".
+
+    Why direct-sibling-shallow instead of walk-up-deep:
+    - On test fixtures and well-formed PDPs the Gold Card curtain looks like
+      `<span class="price-row__row">при авторизации</span>` adjacent to a
+      `<meta itemprop="price" content="...">` — both are direct children of
+      the same offer wrapper. Direct-sibling shallow check catches that.
+    - On real PDPs the bonus-badge button can contain "при авторизации" deep
+      in its descendant text (e.g. `<button>...при авторизации увидите...</button>`)
+      but the button is a *bonus promo*, not a price curtain. The previous
+      walk-up + recursive `text()` falsely poisoned every price in the offer.
+      Restricting the search to direct siblings AND excluding non-label tags
+      (button, i, img, svg) prevents that false-positive.
+
+    PROJECT.md still excludes Gold Card prices from comparison; this version
+    is strictly narrower than the previous heuristic and only differs on
+    pages where "при авторизации" appears inside an unrelated subtree.
+    """
+    parent = price_meta.parent
+    if parent is None:
+        return False
+    for sibling in parent.iter():
+        if sibling is price_meta:
+            continue
+        tag = (sibling.tag or "").lower()
+        if tag not in _GOLD_CARD_LABEL_TAGS:
+            continue
+        if "при авторизации" in _sibling_text_shallow(sibling).lower():
             return True
-        # Stop at the offer boundary - do not let neighboring offers' Gold-Card
-        # labels leak across the offer scope.
-        if cursor.attributes.get("itemprop") == "offers":
-            return False
-        cursor = cursor.parent
-        depth += 1
     return False
 
 
 def _extract_top_level_offer(tree: HTMLParser) -> Optional[Node]:
     """Pick the meta[itemprop='price'] whose container is the top-level Offer
-    (has [itemprop='availability'] sibling) AND has no excluded priceType
-    AND is not in a 'при авторизации' (Gold Card) section.
+    (has [itemprop='availability'] descendant) AND passes the priceType/Gold Card
+    filters AND has the lowest sane value among siblings (current/sale price wins).
 
-    Source: 03-RESEARCH.md §Pattern 4 lines 543-578 (verbatim; expanded slightly
-    for Gold Card heuristic per PROJECT.md scope).
+    Selection rule for non-priceType price metas in a single offer:
+    - Filter out priceSpecification descendants, excluded priceType siblings,
+      and Gold Card section members.
+    - Apply PARSE-04 sanity range (100..1_000_000) up-front so price=0 fillers
+      cannot be picked.
+    - Of the remaining candidates within the SAME offer, return the one with
+      the **lowest integer value** — this matches e-commerce convention
+      (sale price < was price when both are emitted as bare `<meta itemprop="price">`).
+
+    Source: 03-RESEARCH.md §Pattern 4 lines 543-578 (verbatim) + 03-07 live-smoke
+    finding that some PDPs emit both current and was price as bare meta tags
+    without StrikethroughPrice markup; min-value selection makes selection
+    deterministic without breaking the canonical priceType-keyed pages.
     """
     offer_nodes = tree.css('[itemprop="offers"][itemtype$="/Offer"]')
     for offer in offer_nodes:
         avail = offer.css_first('link[itemprop="availability"]')
         if avail is None:
             continue
+        candidates: list[tuple[int, Node]] = []
         for price_meta in offer.css('meta[itemprop="price"]'):
             if _walks_into_priceSpecification(price_meta, offer):
                 continue
@@ -205,7 +238,16 @@ def _extract_top_level_offer(tree: HTMLParser) -> Optional[Node]:
                 continue
             if _is_in_gold_card_section(price_meta):
                 continue
-            return price_meta
+            value_str = (price_meta.attributes.get("content") or "").strip()
+            if not value_str.isdigit():
+                continue
+            value = int(value_str)
+            if not (100 <= value <= 1_000_000):  # PARSE-04 applied early
+                continue
+            candidates.append((value, price_meta))
+        if candidates:
+            candidates.sort(key=lambda kv: kv[0])
+            return candidates[0][1]
     return None
 
 
