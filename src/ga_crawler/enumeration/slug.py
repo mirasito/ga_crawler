@@ -78,15 +78,23 @@ def slug_fy_bilingual(alias: str) -> list[str]:
 def intersect_brand_pool(
     viled_brands: list[str],
     aliases: dict[str, list[str]],
-    sitemap_slugs: dict[str, list[str]],
+    brand_bucket: dict[str, list[str]],
 ) -> tuple[list[str], list[str]]:
     """Returns (matched_urls, unmatched_brands).
 
     For each viled brand: get all aliases (fallback to [brand] if absent),
-    slug-fy each, EXACT-MATCH against sitemap_slugs dict via .get() (NOT
+    slug-fy each, EXACT-MATCH against brand_bucket dict via .get() (NOT
     substring iteration — Pitfall 3 / D-305).
 
-    Brand is "matched" iff ANY of its slug-variants hits the sitemap.
+    brand_bucket is the output of
+    ga_crawler.enumeration.goldapple_sitemap.index_by_brand_token(
+        slug_map, known_brand_tokens
+    ) — keys are brand-token prefixes that are members of the
+    known_brand_tokens whitelist (longest-prefix-match against viled's
+    own brand-alias slug-variants). Lookup remains exact-key dict.get();
+    the prefix-bucket structure is precomputed at indexing time.
+
+    Brand is "matched" iff ANY of its slug-variants hits the bucket.
     """
     matched_urls: list[str] = []
     unmatched_brands: list[str] = []
@@ -96,7 +104,7 @@ def intersect_brand_pool(
             brand_slugs.update(slug_fy_bilingual(alias))
         hit_urls: list[str] = []
         for slug in brand_slugs:
-            urls_for_slug = sitemap_slugs.get(slug)  # exact-match via dict.get
+            urls_for_slug = brand_bucket.get(slug)  # exact-match via dict.get
             if urls_for_slug:
                 hit_urls.extend(urls_for_slug)
         if hit_urls:

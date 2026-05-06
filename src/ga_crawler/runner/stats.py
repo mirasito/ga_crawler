@@ -112,9 +112,16 @@ class GoldappleStatsBuilder:
 def compute_norm06_forward(
     viled_brands: list[str],
     aliases: dict[str, list[str]],
-    sitemap_slugs: dict[str, list[str]],
+    brand_bucket: dict[str, list[str]],
 ) -> tuple[list[str], int, list[str]]:
     """Wraps intersect_brand_pool for D-306 NORM-06 forward direction.
+
+    brand_bucket is the precomputed brand-token prefix index from
+    ga_crawler.enumeration.goldapple_sitemap.index_by_brand_token(
+        slug_map, known_brand_tokens
+    ) — NOT the raw sitemap_slugs product-slug dict (resolves
+    03-VERIFICATION Truth 1 BLOCKER; brand-alias slugs cannot exact-match
+    product-slug keys).
 
     Returns:
       (matched_urls, unmatched_count, unmatched_brands_list)
@@ -126,7 +133,7 @@ def compute_norm06_forward(
     # Lazy import to avoid circular deps in module load order
     from ga_crawler.enumeration.slug import intersect_brand_pool
 
-    matched, unmatched = intersect_brand_pool(viled_brands, aliases, sitemap_slugs)
+    matched, unmatched = intersect_brand_pool(viled_brands, aliases, brand_bucket)
     return matched, len(unmatched), unmatched
 
 
