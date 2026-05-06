@@ -38,8 +38,10 @@ from ga_crawler.enumeration.goldapple_sitemap import (
     diff_new_slugs,
     fetch_sitemap_slugs,
     find_previous_slug_file,
+    index_by_brand_token,
     persist_sitemap_slugs,
 )
+from ga_crawler.enumeration.slug import slug_fy_bilingual
 from ga_crawler.fetchers.goldapple import GoldappleFetcher
 from ga_crawler.interfaces import (
     BrandAliasProtocol,
@@ -125,10 +127,32 @@ async def run_goldapple_phase(
     new_slugs = diff_new_slugs(set(slug_map.keys()), prev_slug_file)
     builder.set("unmatched_goldapple_slugs_new", len(new_slugs))
 
-    # Step 4: Resolve aliases for each viled brand + intersect with sitemap
+    # Step 3.5: Build known_brand_tokens whitelist + brand_bucket
+    # (resolves 03-VERIFICATION Truth 1 BLOCKER — sitemap_slugs is keyed by
+    # full product-slug, brand-alias slugs cannot exact-match it. We re-key
+    # URLs by the LONGEST viled-known brand-token prefix using the
+    # known_brand_tokens whitelist. This makes Pitfall 3 / D-305 a
+    # STRUCTURAL invariant: only viled-known tokens can become bucket keys,
+    # and each URL belongs to the single longest-matched bucket — no
+    # cross-contamination between e.g. tom_ford and tom_ford_beauty unless
+    # operator explicitly adds both to viled_brands.)
     aliases: dict[str, list[str]] = {b: brand_alias.lookup(b) for b in viled_brands}
+    known_brand_tokens: set[str] = set()
+    for brand in viled_brands:
+        alias_list = aliases.get(brand) or [brand]
+        for alias in alias_list:
+            known_brand_tokens.update(slug_fy_bilingual(alias))
+    brand_bucket = index_by_brand_token(slug_map, known_brand_tokens)
+    log.info(
+        "phase3_brand_bucket_built",
+        run_id=run_id,
+        whitelist_size=len(known_brand_tokens),
+        bucket_key_count=len(brand_bucket),
+    )
+
+    # Step 4: Intersect viled brands x brand_bucket (D-306 NORM-06 forward)
     matched_urls, unmatched_count, unmatched_brands = compute_norm06_forward(
-        viled_brands, aliases, slug_map
+        viled_brands, aliases, brand_bucket
     )
     builder.set("unmatched_viled_brands", unmatched_count)
     log.info(

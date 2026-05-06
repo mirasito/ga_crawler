@@ -322,6 +322,84 @@ async def test_e2e_atomic_stats_merge_one_call(
 
 
 @pytest.mark.asyncio
+async def test_e2e_brand_intersect_against_realistic_sitemap_shape(
+    tmp_path: Path,
+    goldapple_pdp_html: str,
+    mock_brand_alias,
+    mock_normalizer,
+    mock_snapshot_writer,
+    mock_run_writer,
+) -> None:
+    """Truth 1 closure regression — orchestrator level.
+
+    Injects a 6-entry slug_map keyed by FULL product-slugs (mimics real 45,490-slug
+    sitemap shape from live run-42). Asserts orchestrator's Step 3.5 builds a
+    brand_bucket via index_by_brand_token + known_brand_tokens whitelist so that
+    'givenchy', 'jo_malone_london', and 'tom_ford' all match — none of them
+    appear in unmatched_viled_brands.
+    """
+    realistic_slug_map = {
+        "givenchy-pour-homme-blue-label": ["https://goldapple.kz/100-givenchy-pour-homme-blue-label"],
+        "givenchy-irresistible-eau-de-parfum": ["https://goldapple.kz/200-givenchy-irresistible-eau-de-parfum"],
+        "jo-malone-london-wood-sage-and-sea-salt": ["https://goldapple.kz/300-jo-malone-london-wood-sage-and-sea-salt"],
+        "tom-ford-noir": ["https://goldapple.kz/400-tom-ford-noir"],
+        "category-listing-perfume": ["https://goldapple.kz/910-category-listing-perfume"],
+        "estee-lauder-advanced-night-repair": ["https://goldapple.kz/500-estee-lauder-advanced-night-repair"],
+    }
+    fetcher = FakeFetcher(run_id=1)
+    fetcher.smoke_records = [_real_pdp_smoke_record(goldapple_pdp_html)] * 3
+    # run_loop_records mirror the matched URLs (exact count is unimportant — we just
+    # need at least one record to clear M=1 and reach final-gate success)
+    fetcher.run_loop_records = [
+        _real_pdp_run_record(
+            "https://goldapple.kz/100-givenchy-pour-homme-blue-label", goldapple_pdp_html
+        ),
+        _real_pdp_run_record(
+            "https://goldapple.kz/200-givenchy-irresistible-eau-de-parfum", goldapple_pdp_html
+        ),
+        _real_pdp_run_record(
+            "https://goldapple.kz/300-jo-malone-london-wood-sage-and-sea-salt", goldapple_pdp_html
+        ),
+        _real_pdp_run_record(
+            "https://goldapple.kz/400-tom-ford-noir", goldapple_pdp_html
+        ),
+    ]
+
+    def alias_lookup(b: str) -> list[str]:
+        return {
+            "givenchy": ["Givenchy"],
+            "jo_malone_london": ["Jo Malone London"],
+            "tom_ford": ["Tom Ford"],
+        }.get(b, [b])
+
+    mock_brand_alias.lookup.side_effect = alias_lookup
+
+    result = await run_goldapple_phase(
+        run_id=99,
+        viled_brands=["givenchy", "jo_malone_london", "tom_ford"],
+        repo_root=tmp_path,
+        brand_alias=mock_brand_alias,
+        normalizer=mock_normalizer,
+        snapshot_writer=mock_snapshot_writer,
+        run_writer=mock_run_writer,
+        M=1,
+        fetcher_factory=make_fetcher_factory(fetcher),
+        sitemap_fetcher=lambda: realistic_slug_map,
+    )
+
+    # Truth 1 closure: NONE of the 3 viled brands fell to unmatched
+    assert "givenchy" not in result.unmatched_viled_brands
+    assert "jo_malone_london" not in result.unmatched_viled_brands
+    assert "tom_ford" not in result.unmatched_viled_brands
+    # All 3 brands matched; unmatched count is 0
+    delta = mock_run_writer.patch_stats.call_args.args[1]
+    assert delta["goldapple.unmatched_viled_brands"] == 0
+    # category-listing-perfume slug was orphaned (not viled-known) — proves orchestrator
+    # only crawls operator-known brand prefixes
+    assert result.status == "success"
+
+
+@pytest.mark.asyncio
 async def test_e2e_auto_suggest_when_history_present(
     tmp_path: Path,
     goldapple_pdp_html: str,
