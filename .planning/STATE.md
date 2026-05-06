@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Executing Phase 03
-last_updated: "2026-05-06T05:50:00Z"
+last_updated: "2026-05-06T05:33:00Z"
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 19
-  completed_plans: 15
-  percent: 79
+  completed_plans: 16
+  percent: 84
 ---
 
 # State: GA Crawler
 
 **Last updated:** 2026-05-06
-**Mode:** Phase 1 COMPLETE (signed off 2026-05-06). Phase 3 EXECUTING — Wave 0 (03-01) + Wave 1 (03-02) + Wave 2 (03-03) complete 2026-05-06: deps pinned, interfaces.py contracts frozen, conftest.py + 6 fixtures ready, enumeration primitives ready, **goldapple microdata parser shipped** with priceType-aware extraction (Pitfall 2) and three-axis state classifier (Pitfall 4). 84/84 unit tests green. Phase 2 not yet discussed — independent of Phase 3 per ROADMAP. Next: `/gsd-execute-phase 3 04` (Wave 3 fetcher).
+**Mode:** Phase 1 COMPLETE (signed off 2026-05-06). Phase 3 EXECUTING — Wave 0 (03-01) + Wave 1 (03-02) + Wave 2 (03-03) + Wave 3 (03-04) complete 2026-05-06: deps pinned, interfaces.py contracts frozen, conftest.py + 6 fixtures ready, enumeration primitives ready, microdata parser shipped, **GoldappleFetcher async context manager shipped** with D-311 fresh-profile lifecycle (always-cleanup on success AND exception per Pitfall 7), tenacity retry policy (CRAWL-04 — `stop_after_attempt(3) + wait_exponential_jitter(initial=2, max=30) + retry_if_exception_type((TransientFetchError, PWTimeout))`), per-SKU isolation (CRAWL-03 — `fetch_one_isolated`), spike-style fetch record dict, `run_loop` with `random.uniform(3, 5)` pacing. 105/105 unit + integration tests green. Phase 2 not yet discussed — independent of Phase 3 per ROADMAP. Next: `/gsd-execute-phase 3 05` (Wave 4 gates + stats).
 
 ## Project Reference
 
@@ -26,15 +26,15 @@ progress:
 ## Current Position
 
 Phase: 03 (goldapple-crawl) — EXECUTING
-Plan: 4 of 7 (Waves 0 + 1 + 2 done; Wave 3 next)
+Plan: 5 of 7 (Waves 0 + 1 + 2 + 3 done; Wave 4 next)
 | Field | Value |
 |-------|-------|
-| Phase | 3 — Goldapple Crawl (Wave 2 complete) |
-| Plan | 03-01 ✓ + 03-02 ✓ + 03-03 ✓ (microdata parser shipped) — next: 03-04 (Wave 3 Camoufox fetcher) |
-| Status | Phase 3 plan 03-03 (Wave 2 microdata parser) executed 2026-05-06: GoldappleRawProduct dataclass (9 fields, frozen), detect_state three-axis classifier (gate-shell / stale-sku / real-pdp — Pitfall 4 / D-303), parse_pdp with priceType-aware extraction (Pitfall 2 — picks top-level Offer over StrikethroughPrice / ListPrice / Gold Card "при авторизации"), PARSE-04 sanity 100..1_000_000, PARSE-06 schema.org availability enum + Unknown fallback. Real Givenchy PDP round-trip extracts brand=Givenchy, current_price=46920, was_price=60410, currency=KZT, availability=InStock. 84/84 tests green (Wave 2: 45 new); 2 Rule-1 auto-fixes (priceType-sibling lookup not scope-bounded; Gold-Card walk-up not bounded by [itemprop='offers']). Phase 2 discuss/plan still pending. |
-| Progress | `[███░░░░░░░░░░░░░░░░░] 1/7 phases` (Phase 1 complete: 9/12 plans; Phase 3: 3/7 plans) |
+| Phase | 3 — Goldapple Crawl (Wave 3 complete) |
+| Plan | 03-01 ✓ + 03-02 ✓ + 03-03 ✓ + 03-04 ✓ (GoldappleFetcher shipped) — next: 03-05 (Wave 4 gates + stats) |
+| Status | Phase 3 plan 03-04 (Wave 3 Camoufox fetcher) executed 2026-05-06: `GoldappleFetcher` async context manager (CrawlerProtocol-conforming) with `__aenter__` Camoufox boot using all six locked SKILL kwargs (`geoip=True`, `locale=["ru-RU","kk-KZ","en-US"]`, `humanize=True`, `persistent_context=True`, `user_data_dir=<tmp>` per D-311 fresh-profile-per-run, configurable `headless`); `__aexit__` always-cleanup via `shutil.rmtree(..., ignore_errors=True)` even when caller raises (Pitfall 7); `_goto_with_retry` tenacity decorator (CRAWL-04 — `stop_after_attempt(3) + wait_exponential_jitter(initial=2, max=30) + retry_if_exception_type((TransientFetchError, PWTimeout)) + reraise=True`); `fetch_one_isolated` module-level wrapper (CRAWL-03 — exception-swallow + structlog event + `stats["fetch_failures"]` counter); `fetch_one` returns spike-style dict (status, html_size, title, gate_cleared, gate_cleared_after_ms?, html?, block, block_reason ∈ {gate_shell_not_cleared, http_*, exception}, error?, timing_ms); `run_loop(urls, stats, sleep_fn=None)` sequential drive with `random.uniform(*PAUSE_RANGE)` pacing between URLs (NOT after last), accumulates `fetch_count + gate_shell_count + fetch_failures`. **105/105 tests green** (Wave 0+1+2+3 = 84 prior + 7 retry policy + 4 isolation + 10 mocked-Camoufox integration); 0 deviations (plan executed verbatim). |
+| Progress | `[███░░░░░░░░░░░░░░░░░] 1/7 phases` (Phase 1 complete: 9/12 plans; Phase 3: 4/7 plans) |
 | Branch strategy | none (single-trunk) |
-| Resume file | `.planning/phases/03-goldapple-crawl/03-04-PLAN.md` |
+| Resume file | `.planning/phases/03-goldapple-crawl/03-05-PLAN.md` |
 
 ## Performance Metrics
 
@@ -43,9 +43,9 @@ Plan: 4 of 7 (Waves 0 + 1 + 2 done; Wave 3 next)
 | Phases planned | 7 |
 | Phases completed | 1 |
 | v1 requirements mapped | 48/48 |
-| v1 requirements completed | 4/48 (RECON-01, RECON-02, RECON-03, RECON-04 — all four Phase 1 requirements closed) |
+| v1 requirements completed | 4/48 (RECON-01..04 — all four Phase 1 requirements closed; CRAWL-02 infrastructure ready in Phase 3 Wave 3 but final closure deferred to Wave 5/6 when orchestrator wires Wave 1 brand-pool + Wave 3 fetcher end-to-end) |
 | Plans created | 19 (Phase 1 = 12, Phase 3 = 7) |
-| Plans completed | 12 (Phase 1: `01-01`, `01-02`, `01-04`, `01-05`, `01-06`, `01-07`, `01-08`, `01-11`, `01-12`; Phase 3: `03-01`, `03-02`, `03-03`) |
+| Plans completed | 13 (Phase 1: `01-01`, `01-02`, `01-04`, `01-05`, `01-06`, `01-07`, `01-08`, `01-11`, `01-12`; Phase 3: `03-01`, `03-02`, `03-03`, `03-04`) |
 | Plans skipped | 3 (`01-03` IPRoyal, `01-09` multi-geo proxy, `01-10` Tier 3 escalation — explicit SKIP per Camoufox-fingerprint-solves-gate verdict) |
 | Spawned agents (this session) | roadmapper, gsd-planner, gsd-plan-checker, gsd-executor (inline) |
 | Checkpoints | 1 (Phase 1 sign-off) |
@@ -66,6 +66,7 @@ Plan: 4 of 7 (Waves 0 + 1 + 2 done; Wave 3 next)
 | 03-01 (Wave 0 bootstrap) | ~9 min | 3/3 | 13 created, 2 modified | 2026-05-06 |
 | 03-02 (Wave 1 enumeration) | ~6 min | 2/2 | 8 created, 0 modified | 2026-05-06 |
 | 03-03 (Wave 2 microdata parser) | ~12 min | 2/2 | 5 created, 0 modified | 2026-05-06 |
+| 03-04 (Wave 3 Camoufox fetcher) | ~5 min | 2/2 | 6 created, 0 modified | 2026-05-06 |
 
 ## Accumulated Context
 
@@ -126,6 +127,10 @@ Plan: 4 of 7 (Waves 0 + 1 + 2 done; Wave 3 next)
 
 ### What Was Just Done
 
+- `/gsd-execute-phase 3` plan 03-04 (Wave 3 Camoufox fetcher) 2026-05-06 — 2 tasks executed sequentially, **0 deviations** (plan executed verbatim from copy-paste-ready `<action>` blocks):
+  - **Task 1** (`b178a97`): `src/ga_crawler/fetchers/__init__.py` package marker; `src/ga_crawler/fetchers/goldapple.py` retry + isolation primitives — `TransientFetchError`, `_goto_with_retry` tenacity decorator (`stop_after_attempt(RETRY_MAX_ATTEMPTS=3) + wait_exponential_jitter(initial=2.0, max=30.0) + retry_if_exception_type((TransientFetchError, PWTimeout)) + reraise=True`; lazy `_make_retry_decorator()` factory catches `ImportError` for `playwright.async_api.TimeoutError` and falls back to private `class PWTimeout(Exception)`), `fetch_one_isolated` module-level free function (catch arbitrary `Exception` → `log.error("fetch_failed", url=..., error=str(e), error_type=...)` → `stats["fetch_failures"] += 1` → `return None`), `GoldappleFetcher` class skeleton (Task 2 fills lifecycle + fetch_one + run_loop). Operational constants pinned: `PAUSE_RANGE=(3.0, 5.0)`, `PAGE_TIMEOUT_MS=60_000`, `GATE_POLL_DEADLINE_MS=25_000`, `GATE_POLL_STEP_MS=500`, `RETRY_*` triple, mirrors pyproject.toml [tool.ga_crawler.crawl.goldapple]. 7 retry-policy tests + 4 isolation tests = 11/11 green.
+  - **Task 2** (`e250e27`): `src/ga_crawler/fetchers/goldapple.py` extended with `__aenter__` (lazy `from camoufox.async_api import AsyncCamoufox` + boot with all six SKILL kwargs `geoip=True, locale=["ru-RU","kk-KZ","en-US"], humanize=True, persistent_context=True, user_data_dir=str(self.profile_dir)`; tmp profile cleanup on boot failure), `__aexit__` (try/finally `shutil.rmtree(self.profile_dir, ignore_errors=True)` always — Pitfall 7), `fetch_one(page, url)` (spike-style dict — `_goto_with_retry` for transport, optional `wait_for_load_state("networkidle", 10s)`, gate-poll `while elapsed < GATE_POLL_DEADLINE_MS: page.title()` until `GATE_TITLE_MARKER not in title.lower()`, state classification via `block_reason ∈ {gate_shell_not_cleared, http_*, exception}`; broad outer try/except sets `block=True`+`block_reason="exception"` so isolation is purely counter+log), instance-method `fetch_one_isolated(url, stats)` delegates to module-level free function, `run_loop(urls, stats, sleep_fn=None)` sequential drive with `random.uniform(*PAUSE_RANGE)` between URLs (NOT after last), accumulates `fetch_count` + `gate_shell_count` + `fetch_failures` into stats. `tests/integration/__init__.py` package marker; `tests/integration/test_goldapple_fetch_loop_mocked.py` (10 tests via `FakeCamoufoxCM` context-manager replacement: lifecycle clean on success + on exception, locked Camoufox kwargs assertion, fetch_one happy/gate-shell/404/exception, run_loop pacing-between-not-after-last, run_loop isolation continues, run_loop accumulates `gate_shell_count`). 105/105 tests green (84 prior + 21 new).
+  - SUMMARY → `.planning/phases/03-goldapple-crawl/03-04-SUMMARY.md`. Self-check PASSED. Wave 3 ships infrastructure for CRAWL-02 (per-SKU isolation chain wired end-to-end with retry + counter); CRAWL-02 itself closes when Wave 5 orchestrator wires the brand-pool intersect from Wave 1 into the run_loop.
 - `/gsd-execute-phase 3` plan 03-03 (Wave 2 microdata parser) 2026-05-06 — 2 tasks executed sequentially:
   - **Task 1** (`cb6da19`): `parsers/goldapple_microdata.py` shipped with `GoldappleRawProduct` frozen dataclass (9 fields), `detect_state(html, title)` three-axis classifier (gate-shell / stale-sku / real-pdp — Pitfall 4 / D-303 / RESEARCH §Pattern 4 verbatim), `has_microdata_price(html)` foundation primitive (re-implementation of spike notebook.py L94-110), constants `GATE_SHELL_MAX_BYTES=30_000` and `GATE_TITLE_MARKER="checking"` pinned. 11 gate-detection tests + 4 stale-SKU detection tests anchored to spike `tier2_results_json` row 0 (`7681000002-givenchy-pour-homme-blue-label`: status=200, html_size=18027, title="Loading <url>"). All 15 tests green.
   - **Task 2** (`ed7f959`): `parse_pdp(html, url) -> Optional[GoldappleRawProduct]` with priceType-aware extraction (Pitfall 2). Helpers: `_walks_into_priceSpecification` (skip nested priceSpec descendants), `_has_excluded_priceType_sibling` (scope-bounded — rejects priceType inside nested priceSpecification per ancestor-chain check), `_is_in_gold_card_section` (walk-up bounded by `[itemprop='offers']` ancestor), `_extract_top_level_offer`, `_extract_strikethrough`, `_extract_availability`. PARSE-04 enforces `100 <= price <= 1_000_000` inclusive boundaries. PARSE-06 maps schema.org availability URLs to enum {InStock, OutOfStock, Discontinued, PreOrder, Unknown}. **Real Givenchy PDP round-trip:** brand_raw='Givenchy', sku_id='7681000002', current_price=46920, was_price=60410 (StrikethroughPrice), currency='KZT', availability='InStock'. 30 parser tests (7 round-trip + 2 gate/stale rejection + 3 priceType + 7 sanity-range parametrize + 6 enum parametrize + 1 no-link Unknown + 1 JSON-LD anti-fixture + 3 strikethrough extractor).
@@ -196,7 +201,7 @@ Plan: 4 of 7 (Waves 0 + 1 + 2 done; Wave 3 next)
 
 ### What's Next
 
-1. **`/gsd-execute-phase 3 04`** — Wave 3 Camoufox fetcher: `fetchers/goldapple.py` `GoldappleFetcher` class (refactor of spike notebook.py L207-214 bootstrap + L128-191 fetch_one; D-04 persistent_context + D-311 fresh tmp profile + tenacity retry per RESEARCH §Pattern 5). Wave 2 parser is ready and exposes `parse_pdp` + `detect_state` as the post-fetch handoff contract.
+1. **`/gsd-execute-phase 3 05`** — Wave 4 gates + stats: `runner/gates.py` smoke probe (D-312 — calls `GoldappleFetcher.fetch_one` against 3 hardcoded Givenchy URLs from pyproject.toml `[tool.ga_crawler.crawl.goldapple.smoke_urls]`, asserts microdata-price extracted via `parse_pdp`) + final M-gate (D-308 `M=1000` static + D-309 run-to-completion) + auto-suggest M (D-310 0.7×4-week-median). `runner/stats.py` 13-key namespace (Pitfall 6 atomic JSON-merge to `runs.stats` via `RunWriterProtocol.patch_stats`) + NORM-06 forward direction (D-306 viled-side missing-brand list + D-307 week-over-week NEW goldapple-slug diff sink). Wave 3 fetcher is ready and exposes `GoldappleFetcher.fetch_one(page, url) -> dict` + `run_loop(urls, stats)` as the integration handoff for the orchestrator.
 2. **`/gsd-discuss-phase 2`** — Project Skeleton + viled Crawl + Storage. Phase 2 viled stack is hot-data ready from 01-07 (curl_cffi + selectolax + `__NEXT_DATA__` parser; 8 canonical field paths; sitemap-driven enumeration; was_price via realPrice; currency map "₸"→"KZT"). Phase 2 does NOT depend on Phase 3 and can run in parallel — Phase 3 codes against `interfaces.py` Protocols, Phase 2 implementations swap in at Wave 5.
 3. **Phase 7 hosting decision (pending one smoke fetch):** Hetzner CX22 EU is the working hypothesis. Before locking, one Camoufox+EU smoke fetch against goldapple. If gate passes → no proxy, $0/week. If gate fails → revive D-08 (IPRoyal KZ residential, ~$2/week steady-state). If both fail → managed unblocker (ZenRows / Bright Data Web Unlocker, pay-per-page; reframes economics per D-02).
 4. **Phase 3 ops playbook items (deferred to Phase 7):**
@@ -217,4 +222,4 @@ To continue this project from a fresh session:
 6. Run `/gsd-discuss-phase 2` (viled crawl + storage) OR `/gsd-discuss-phase 3` (goldapple crawl). Phase 2 and Phase 3 are independent — order is operator preference.
 
 ---
-*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05; updated by gsd-executor (plan 01-04) 2026-05-05; updated by gsd-executor (plan 01-05) 2026-05-05; updated by gsd-executor (plan 01-07) 2026-05-05; updated by gsd-executor (plan 01-06) 2026-05-06; updated by gsd-executor (plans 01-08, 01-11, 01-12) 2026-05-06 — Phase 1 CLOSED; updated by gsd-executor (plan 03-01) 2026-05-06 — Phase 3 Wave 0 done; updated by gsd-executor (plan 03-02) 2026-05-06 — Phase 3 Wave 1 done; updated by gsd-executor (plan 03-03) 2026-05-06 — Phase 3 Wave 2 done*
+*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05; updated by gsd-executor (plan 01-04) 2026-05-05; updated by gsd-executor (plan 01-05) 2026-05-05; updated by gsd-executor (plan 01-07) 2026-05-05; updated by gsd-executor (plan 01-06) 2026-05-06; updated by gsd-executor (plans 01-08, 01-11, 01-12) 2026-05-06 — Phase 1 CLOSED; updated by gsd-executor (plan 03-01) 2026-05-06 — Phase 3 Wave 0 done; updated by gsd-executor (plan 03-02) 2026-05-06 — Phase 3 Wave 1 done; updated by gsd-executor (plan 03-03) 2026-05-06 — Phase 3 Wave 2 done; updated by gsd-executor (plan 03-04) 2026-05-06 — Phase 3 Wave 3 done*

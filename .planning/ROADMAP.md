@@ -78,7 +78,7 @@
 - [x] 03-01-PLAN.md - Wave 0: pyproject.toml pins (Camoufox 135.0.1.beta24, tenacity, sqlmodel, pydantic, pytest), interfaces.py Phase 2 Protocols, conftest.py fixtures, spike sample-payloads as test fixtures
 - [x] 03-02-PLAN.md - Wave 1: enumeration/slug.py bilingual slug-fy + intersect_brand_pool (CRAWL-02), enumeration/goldapple_sitemap.py curl_cffi Tier 0 + week-over-week NEW slug diff (D-307)
 - [x] 03-03-PLAN.md - Wave 2: parsers/goldapple_microdata.py priceType-aware extractor (PARSE-01..06) + detect_state three-axis classifier (Pitfall 4 / D-303)
-- [ ] 03-04-PLAN.md - Wave 3: fetchers/goldapple.py Camoufox bootstrap + tenacity retry (CRAWL-04) + per-SKU isolation (CRAWL-03) + run_loop with rate-limit (CRAWL-06)
+- [x] 03-04-PLAN.md - Wave 3: fetchers/goldapple.py Camoufox bootstrap + tenacity retry (CRAWL-04) + per-SKU isolation (CRAWL-03) + run_loop with rate-limit (CRAWL-06)
 - [ ] 03-05-PLAN.md - Wave 4: runner/gates.py smoke probe (D-312) + final M-gate (D-308/D-309) + auto-suggest M (D-310); runner/stats.py 13-key namespace (Pitfall 6) + NORM-06 forward (D-306)
 - [ ] 03-06-PLAN.md - Wave 5: runners/goldapple_run.py orchestrator + cli.py (python -m ga_crawler) + stub Phase 2 protocol implementations + storage integration tests
 - [ ] 03-07-PLAN.md - Wave 6: Manual operator checkpoint - live smoke probe + limited live run on KZ-laptop; Success Criteria 4 and 5 verification
@@ -161,9 +161,9 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Goldapple Reconnaissance Spike | 6/12 | In Progress | - |
+| 1. Goldapple Reconnaissance Spike | 9/12 | Complete (3 plans skipped) | 2026-05-06 |
 | 2. Project Skeleton + viled Crawl + Storage | 0/0 | Not started | - |
-| 3. Goldapple Crawl | 0/0 | Not started | - |
+| 3. Goldapple Crawl | 4/7 | In Progress (Wave 3 complete) | - |
 | 4. Matcher + Match-Rate KPI | 0/0 | Not started | - |
 | 5. Reporter (Excel + summary) | 0/0 | Not started | - |
 | 6. Telegram Delivery + Ops/Business Split | 0/0 | Not started | - |
