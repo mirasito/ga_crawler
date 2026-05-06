@@ -312,3 +312,14 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 > Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
 > This section is managed by `generate-claude-profile` -- do not edit manually.
 <!-- GSD:profile-end -->
+## Obsidian Knowledge Vault
+Хранилище знаний: C:\Users\...\ObsidianMyProject\
+### При старте сессии
+Прочитай 00-home/index.md и текущие приоритеты.md.
+Если задача касается модуля — прочитай заметку из knowledge/.
+### При завершении (пользователь: "сохрани сессию")
+1. Создай заметку в sessions/ с датой
+2. Обнови текущие приоритеты.md
+3. Если решение — создай в knowledge/decisions/
+4. Если баг — создай в knowledge/debugging/
+5. Обнови index.md если новые заметки
