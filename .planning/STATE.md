@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Executing Phase 03
-last_updated: "2026-05-06T05:30:00Z"
+last_updated: "2026-05-06T05:50:00Z"
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 19
-  completed_plans: 14
-  percent: 73
+  completed_plans: 15
+  percent: 79
 ---
 
 # State: GA Crawler
 
 **Last updated:** 2026-05-06
-**Mode:** Phase 1 COMPLETE (signed off 2026-05-06). Phase 3 EXECUTING — Wave 0 (03-01) + Wave 1 (03-02) complete 2026-05-06: deps pinned, interfaces.py contracts frozen, conftest.py + 6 fixtures ready, enumeration primitives (bilingual slug-fy + intersect + curl_cffi sitemap fetch + week-over-week NEW-slug diff) shipping with 39/39 unit tests green. Phase 2 not yet discussed — independent of Phase 3 per ROADMAP. Next: `/gsd-execute-phase 3 03` (Wave 2 parser).
+**Mode:** Phase 1 COMPLETE (signed off 2026-05-06). Phase 3 EXECUTING — Wave 0 (03-01) + Wave 1 (03-02) + Wave 2 (03-03) complete 2026-05-06: deps pinned, interfaces.py contracts frozen, conftest.py + 6 fixtures ready, enumeration primitives ready, **goldapple microdata parser shipped** with priceType-aware extraction (Pitfall 2) and three-axis state classifier (Pitfall 4). 84/84 unit tests green. Phase 2 not yet discussed — independent of Phase 3 per ROADMAP. Next: `/gsd-execute-phase 3 04` (Wave 3 fetcher).
 
 ## Project Reference
 
@@ -26,15 +26,15 @@ progress:
 ## Current Position
 
 Phase: 03 (goldapple-crawl) — EXECUTING
-Plan: 3 of 7 (Waves 0 + 1 done; Wave 2 next)
+Plan: 4 of 7 (Waves 0 + 1 + 2 done; Wave 3 next)
 | Field | Value |
 |-------|-------|
-| Phase | 3 — Goldapple Crawl (Wave 1 complete) |
-| Plan | 03-01 ✓ + 03-02 ✓ (enumeration primitives shipped) — next: 03-03 (Wave 2 microdata parser) |
-| Status | Phase 3 plan 03-02 (Wave 1 enumeration) executed 2026-05-06: bilingual slug-fy + intersect_brand_pool (CRAWL-02), curl_cffi Tier 0 sitemap fetcher with PRODUCT_URL_RE whitelist (Threat T-04), persist + find-previous + diff_new_slugs (D-307 NORM-06 reverse direction). 39/39 tests green; 4 bug auto-fixes (regex range, apostrophe handling, KZ whitelist, namespaced fixture). Phase 2 discuss/plan still pending. |
-| Progress | `[███░░░░░░░░░░░░░░░░░] 1/7 phases` (Phase 1 complete: 9/12 plans; Phase 3: 2/7 plans) |
+| Phase | 3 — Goldapple Crawl (Wave 2 complete) |
+| Plan | 03-01 ✓ + 03-02 ✓ + 03-03 ✓ (microdata parser shipped) — next: 03-04 (Wave 3 Camoufox fetcher) |
+| Status | Phase 3 plan 03-03 (Wave 2 microdata parser) executed 2026-05-06: GoldappleRawProduct dataclass (9 fields, frozen), detect_state three-axis classifier (gate-shell / stale-sku / real-pdp — Pitfall 4 / D-303), parse_pdp with priceType-aware extraction (Pitfall 2 — picks top-level Offer over StrikethroughPrice / ListPrice / Gold Card "при авторизации"), PARSE-04 sanity 100..1_000_000, PARSE-06 schema.org availability enum + Unknown fallback. Real Givenchy PDP round-trip extracts brand=Givenchy, current_price=46920, was_price=60410, currency=KZT, availability=InStock. 84/84 tests green (Wave 2: 45 new); 2 Rule-1 auto-fixes (priceType-sibling lookup not scope-bounded; Gold-Card walk-up not bounded by [itemprop='offers']). Phase 2 discuss/plan still pending. |
+| Progress | `[███░░░░░░░░░░░░░░░░░] 1/7 phases` (Phase 1 complete: 9/12 plans; Phase 3: 3/7 plans) |
 | Branch strategy | none (single-trunk) |
-| Resume file | `.planning/phases/03-goldapple-crawl/03-03-PLAN.md` |
+| Resume file | `.planning/phases/03-goldapple-crawl/03-04-PLAN.md` |
 
 ## Performance Metrics
 
@@ -45,7 +45,7 @@ Plan: 3 of 7 (Waves 0 + 1 done; Wave 2 next)
 | v1 requirements mapped | 48/48 |
 | v1 requirements completed | 4/48 (RECON-01, RECON-02, RECON-03, RECON-04 — all four Phase 1 requirements closed) |
 | Plans created | 19 (Phase 1 = 12, Phase 3 = 7) |
-| Plans completed | 10 (Phase 1: `01-01`, `01-02`, `01-04`, `01-05`, `01-06`, `01-07`, `01-08`, `01-11`, `01-12`; Phase 3: `03-01`) |
+| Plans completed | 12 (Phase 1: `01-01`, `01-02`, `01-04`, `01-05`, `01-06`, `01-07`, `01-08`, `01-11`, `01-12`; Phase 3: `03-01`, `03-02`, `03-03`) |
 | Plans skipped | 3 (`01-03` IPRoyal, `01-09` multi-geo proxy, `01-10` Tier 3 escalation — explicit SKIP per Camoufox-fingerprint-solves-gate verdict) |
 | Spawned agents (this session) | roadmapper, gsd-planner, gsd-plan-checker, gsd-executor (inline) |
 | Checkpoints | 1 (Phase 1 sign-off) |
@@ -65,6 +65,7 @@ Plan: 3 of 7 (Waves 0 + 1 done; Wave 2 next)
 | 01-12 (Obsidian + skill + STATE) | ~5 min | 4/4 | 3 created (Obsidian note, project skill, this STATE update), 1 modified (this STATE.md) | 2026-05-06 |
 | 03-01 (Wave 0 bootstrap) | ~9 min | 3/3 | 13 created, 2 modified | 2026-05-06 |
 | 03-02 (Wave 1 enumeration) | ~6 min | 2/2 | 8 created, 0 modified | 2026-05-06 |
+| 03-03 (Wave 2 microdata parser) | ~12 min | 2/2 | 5 created, 0 modified | 2026-05-06 |
 
 ## Accumulated Context
 
@@ -106,6 +107,8 @@ Plan: 3 of 7 (Waves 0 + 1 done; Wave 2 next)
 | **Cyrillic-presence regex must use explicit KZ-glyph alternation, NOT contiguous range** — `[ә-і]` raises `re.error: bad character range` because KZ glyphs span U+0456 to U+04E9 with non-adjacent codepoints. Use `[а-яёәғқңөұүһі]` (explicit list). Same fix applies to the slug-whitelist regex `_normalize_punct`. RESEARCH §Pattern 2 line 396 contains the source-of-truth bug. | plan 03-02 (Task 1, first pytest run) | All bilingual slug-fy implementations downstream must use the explicit-list form; copy the constant from slug.py rather than re-typing. |
 | **Apostrophes must be stripped (NOT hyphenated) before non-alphanum→hyphen step** — RESEARCH §Pattern 2 line 435 mandates `L'Oréal Paris → loreal-paris`; verbatim algorithm `[^a-z0-9а-я]+ → -` produces `l-oreal-paris`. Strip `' ’ ʼ ʹ` first. | plan 03-02 (Task 1, parametrize case 6) | Phase 2 normalizer (NORM-02) and any future slugifier MUST handle apostrophes before hyphen-replacement; same rule for curly quotes. |
 | **respx is httpx-based, NOT curl_cffi-compatible** — for tests that mock `curl_cffi.requests.get`, monkey-patch the wrapper function directly (e.g. `_fetch_xml`) instead of declaring respx routes. respx routes are silently bypassed by curl_cffi. | plan 03-02 (Task 2 test design) | All Tier 0 fetcher tests follow this pattern; documented in `test_sitemap_parser.py` docstring as canonical reference. |
+| **selectolax `Node.css_first(...)` searches the WHOLE subtree, not direct children** — for sibling-priceType lookups in microdata, naive `parent.css_first('link[itemprop="priceType"]')` falsely matches priceType nested inside `[itemprop="priceSpecification"]` descendants. Iterate `parent.css(...)` and walk each candidate's ancestor chain back up to (but excluding) parent; reject candidates whose chain crosses an `itemprop='priceSpecification'` boundary. RESEARCH §Pattern 4 lines 568-572 contains the source-of-truth bug. | plan 03-03 (Task 2, first pytest run — 5/30 failed including `test_pricetype_filter_picks_top_level_not_strikethrough`) | All future microdata extractors that need scope-bounded selector queries must apply this pattern; Phase 4 matcher follow-on may face similar issue if it walks brand subtrees. |
+| **Gold Card / 'при авторизации' walk-up MUST be bounded by `[itemprop="offers"]` ancestor** — otherwise `parent.text()` reaches `<body>` and includes label text from a SIBLING offer block, falsely poisoning the public-price classification. Encoded as: stop returning False when `cursor.itemprop == 'offers'`. | plan 03-03 (Task 2, after fix #1 — `test_pricetype_gold_card_section_excluded` still failing) | Any future text-context heuristic that walks ancestor chains MUST declare a stop boundary; ad-hoc walks are unreliable on real-world DOMs that nest multiple offers. |
 
 ### Active Todos
 
@@ -123,6 +126,13 @@ Plan: 3 of 7 (Waves 0 + 1 done; Wave 2 next)
 
 ### What Was Just Done
 
+- `/gsd-execute-phase 3` plan 03-03 (Wave 2 microdata parser) 2026-05-06 — 2 tasks executed sequentially:
+  - **Task 1** (`cb6da19`): `parsers/goldapple_microdata.py` shipped with `GoldappleRawProduct` frozen dataclass (9 fields), `detect_state(html, title)` three-axis classifier (gate-shell / stale-sku / real-pdp — Pitfall 4 / D-303 / RESEARCH §Pattern 4 verbatim), `has_microdata_price(html)` foundation primitive (re-implementation of spike notebook.py L94-110), constants `GATE_SHELL_MAX_BYTES=30_000` and `GATE_TITLE_MARKER="checking"` pinned. 11 gate-detection tests + 4 stale-SKU detection tests anchored to spike `tier2_results_json` row 0 (`7681000002-givenchy-pour-homme-blue-label`: status=200, html_size=18027, title="Loading <url>"). All 15 tests green.
+  - **Task 2** (`ed7f959`): `parse_pdp(html, url) -> Optional[GoldappleRawProduct]` with priceType-aware extraction (Pitfall 2). Helpers: `_walks_into_priceSpecification` (skip nested priceSpec descendants), `_has_excluded_priceType_sibling` (scope-bounded — rejects priceType inside nested priceSpecification per ancestor-chain check), `_is_in_gold_card_section` (walk-up bounded by `[itemprop='offers']` ancestor), `_extract_top_level_offer`, `_extract_strikethrough`, `_extract_availability`. PARSE-04 enforces `100 <= price <= 1_000_000` inclusive boundaries. PARSE-06 maps schema.org availability URLs to enum {InStock, OutOfStock, Discontinued, PreOrder, Unknown}. **Real Givenchy PDP round-trip:** brand_raw='Givenchy', sku_id='7681000002', current_price=46920, was_price=60410 (StrikethroughPrice), currency='KZT', availability='InStock'. 30 parser tests (7 round-trip + 2 gate/stale rejection + 3 priceType + 7 sanity-range parametrize + 6 enum parametrize + 1 no-link Unknown + 1 JSON-LD anti-fixture + 3 strikethrough extractor).
+  - 2 deviations both auto-fixed: Rule 1 — naive `parent.css_first('link[itemprop="priceType"]')` reaches into nested priceSpecification descendant and falsely matches StrikethroughPrice as a "sibling" of the public price → fix iterate `parent.css(...)` and walk ancestor chain rejecting nested priceSpec; Rule 1 — `_is_in_gold_card_section` walk-up reads `<body>` text and falsely matches "при авторизации" from a SIBLING offer block → fix bound walk-up at nearest `[itemprop="offers"]` ancestor.
+  - Plan-spec deviation (intentional, not a Rule violation): Task 1 wrote the FULL parser module up-front (including Task-2 helpers) for module-level coherence; Task 1 commit `cb6da19` only ships the dataclass + classifier tests, Task 2 commit `ed7f959` ships parser tests + the bug-fix edits. Both tasks logically separated at test/commit level.
+  - 2 commits, 5 files created, 0 modified; 84/84 unit tests green (Wave 0+1+2). Self-check PASSED.
+  - SUMMARY → `.planning/phases/03-goldapple-crawl/03-03-SUMMARY.md`
 - `/gsd-execute-phase 3` plan 03-02 (Wave 1 enumeration) 2026-05-06 — 2 tasks executed sequentially:
   - **Task 1** (`954d0ea`): `enumeration/slug.py` — `slug_fy_bilingual` (NFKD + accent strip + Cyrillic→Latin transliterate, with explicit KZ-glyph list ә ғ қ ң ө ұ ү һ і) + `intersect_brand_pool` (EXACT-match via `dict.get`, NOT substring iteration — Pitfall 3 / D-305 guard against `tom-ford ⊆ tom-ford-beauty`). 11 RESEARCH-mandated parametrized cases + 4 supplementary (idempotency, KZ glyph round-trip, hyphen-collapse, map keys). Plus 6 intersect cases (exact-match guard, bilingual hit, unmatched surfacing, alias-fallback to brand_norm, empty-alias unmatched, multi-URL slug).
   - **Task 2** (`a7fa06d`): `enumeration/goldapple_sitemap.py` — `fetch_sitemap_slugs` (curl_cffi `impersonate="chrome"`, tenacity `stop_after_attempt(3) + wait_exponential_jitter`, SITEMAP_TIMEOUT_S=30s); `PRODUCT_URL_RE` whitelist (Threat T-04 sitemap-poisoning mitigation: rejects /brands/x facets, wrong domains, non-numeric IDs); `persist_sitemap_slugs / find_previous_slug_file / diff_new_slugs` (D-307 NORM-06 reverse direction, on-disk under `{root}/runs/{run_id}/sitemap-slugs.txt`, sorted). 9 sitemap-parser tests (6 regex whitelist cases + namespaced fixture extraction + mocked end-to-end + 503-retry-then-raise) + 9 norm06-diff tests (persist sorted, predecessor finder with non-numeric/future skip, first-run-empty, additions-sorted, removals-ignored, blank-line-tolerant).
@@ -186,7 +196,7 @@ Plan: 3 of 7 (Waves 0 + 1 done; Wave 2 next)
 
 ### What's Next
 
-1. **`/gsd-execute-phase 3 03`** — Wave 2 microdata parser: `parsers/goldapple_microdata.py` priceType-aware extractor (PARSE-01..06) + `detect_state` three-axis classifier (Pitfall 4 / D-303). Wave 1 enumeration primitives ready (slug-fy + intersect + sitemap fetch + week-diff); Wave 0 fixtures (`_debug-product-page.html`, `gate-shell.html`, `stale-sku-9.5kb.html`) cover all parser test surfaces.
+1. **`/gsd-execute-phase 3 04`** — Wave 3 Camoufox fetcher: `fetchers/goldapple.py` `GoldappleFetcher` class (refactor of spike notebook.py L207-214 bootstrap + L128-191 fetch_one; D-04 persistent_context + D-311 fresh tmp profile + tenacity retry per RESEARCH §Pattern 5). Wave 2 parser is ready and exposes `parse_pdp` + `detect_state` as the post-fetch handoff contract.
 2. **`/gsd-discuss-phase 2`** — Project Skeleton + viled Crawl + Storage. Phase 2 viled stack is hot-data ready from 01-07 (curl_cffi + selectolax + `__NEXT_DATA__` parser; 8 canonical field paths; sitemap-driven enumeration; was_price via realPrice; currency map "₸"→"KZT"). Phase 2 does NOT depend on Phase 3 and can run in parallel — Phase 3 codes against `interfaces.py` Protocols, Phase 2 implementations swap in at Wave 5.
 3. **Phase 7 hosting decision (pending one smoke fetch):** Hetzner CX22 EU is the working hypothesis. Before locking, one Camoufox+EU smoke fetch against goldapple. If gate passes → no proxy, $0/week. If gate fails → revive D-08 (IPRoyal KZ residential, ~$2/week steady-state). If both fail → managed unblocker (ZenRows / Bright Data Web Unlocker, pay-per-page; reframes economics per D-02).
 4. **Phase 3 ops playbook items (deferred to Phase 7):**
@@ -207,4 +217,4 @@ To continue this project from a fresh session:
 6. Run `/gsd-discuss-phase 2` (viled crawl + storage) OR `/gsd-discuss-phase 3` (goldapple crawl). Phase 2 and Phase 3 are independent — order is operator preference.
 
 ---
-*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05; updated by gsd-executor (plan 01-04) 2026-05-05; updated by gsd-executor (plan 01-05) 2026-05-05; updated by gsd-executor (plan 01-07) 2026-05-05; updated by gsd-executor (plan 01-06) 2026-05-06; updated by gsd-executor (plans 01-08, 01-11, 01-12) 2026-05-06 — Phase 1 CLOSED; updated by gsd-executor (plan 03-01) 2026-05-06 — Phase 3 Wave 0 done; updated by gsd-executor (plan 03-02) 2026-05-06 — Phase 3 Wave 1 done*
+*State initialized: 2026-05-05 by gsd-roadmapper; updated by gsd-plan-phase 2026-05-05; updated by gsd-executor (plan 01-01) 2026-05-05; updated by gsd-executor (plan 01-02) 2026-05-05; updated by gsd-executor (plan 01-04) 2026-05-05; updated by gsd-executor (plan 01-05) 2026-05-05; updated by gsd-executor (plan 01-07) 2026-05-05; updated by gsd-executor (plan 01-06) 2026-05-06; updated by gsd-executor (plans 01-08, 01-11, 01-12) 2026-05-06 — Phase 1 CLOSED; updated by gsd-executor (plan 03-01) 2026-05-06 — Phase 3 Wave 0 done; updated by gsd-executor (plan 03-02) 2026-05-06 — Phase 3 Wave 1 done; updated by gsd-executor (plan 03-03) 2026-05-06 — Phase 3 Wave 2 done*
