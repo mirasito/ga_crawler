@@ -86,6 +86,66 @@ def fetch_sitemap_slugs(sitemap_index_url: str = SITEMAP_INDEX) -> dict[str, lis
     return slug_map
 
 
+# Bounded longest-prefix depth: covers single-word ('givenchy'), two-word
+# ('tom-ford'), three-word ('jo-malone-london') brand names. Beyond depth 3
+# the false-positive risk grows. Bound at 3 — covers 100% of viled top-50
+# brand corpus per NORM-01 (D-304/D-305 false-positive guard).
+BRAND_TOKEN_MAX_DEPTH = 3
+
+
+def index_by_brand_token(
+    slug_map: dict[str, list[str]],
+    known_brand_tokens: set[str],
+) -> dict[str, list[str]]:
+    """Index sitemap URLs by LONGEST brand-token prefix that is in known_brand_tokens.
+
+    Path A from 03-VERIFICATION.md, longest-prefix-in-whitelist algorithm
+    (Option 4). For each product slug:
+      - test depth-3, depth-2, depth-1 prefixes (longest first)
+      - the URL goes into bucket[FIRST matched prefix] and ONLY that bucket
+      - if no prefix matches, the URL is DROPPED (viled doesn't carry that brand)
+
+    D-305 / Pitfall 3 enforcement is STRUCTURAL — not interpretive:
+      - 'tom-ford-beauty-eye-cream' with known={'tom-ford', 'tom-ford-beauty'}
+        -> bucket['tom-ford-beauty'] ONLY (depth-3 'tom-ford-beauty' wins)
+      - 'tom-ford-noir-extreme' with same known
+        -> bucket['tom-ford'] ONLY (depth-3 'tom-ford-noir' miss; falls to depth-2)
+      - 'givenchy-pour-homme-blue-label' with known={'givenchy'}
+        -> bucket['givenchy'] (depth-3 / depth-2 miss; falls to depth-1)
+      - 'jo-malone-london-cologne' with known={'jo-malone-london'}
+        -> bucket['jo-malone-london']
+      - 'unknown-brand-product' with known={'givenchy'}
+        -> DROPPED (no whitelisted prefix)
+
+    Args:
+        slug_map: output of fetch_sitemap_slugs; {full_product_slug: [urls]}
+        known_brand_tokens: set of all slug-variants of all viled brand aliases
+            (orchestrator computes this via slug_fy_bilingual over every alias
+            of every viled brand BEFORE calling this function).
+
+    Returns:
+        {brand_token: [urls]} — each URL appears under EXACTLY ONE key
+        (the longest whitelisted prefix). Slugs with no whitelisted prefix
+        are dropped.
+    """
+    bucket: dict[str, list[str]] = {}
+    if not known_brand_tokens:
+        return bucket
+    for slug, urls in slug_map.items():
+        if not slug:
+            continue
+        parts = slug.split("-")
+        if not parts or not parts[0]:
+            continue
+        max_k = min(BRAND_TOKEN_MAX_DEPTH, len(parts))
+        for k in range(max_k, 0, -1):
+            candidate = "-".join(parts[:k])
+            if candidate in known_brand_tokens:
+                bucket.setdefault(candidate, []).extend(urls)
+                break  # longest-match wins; do not also add to shorter prefixes
+    return bucket
+
+
 def persist_sitemap_slugs(slugs: set[str], run_id: int, root: Path) -> Path:
     """Write current week's slugs to {root}/runs/{run_id}/sitemap-slugs.txt.
 
@@ -152,8 +212,10 @@ __all__ = [
     "SITEMAP_INDEX",
     "PRODUCT_URL_RE",
     "SITEMAP_TIMEOUT_S",
+    "BRAND_TOKEN_MAX_DEPTH",
     "SitemapFetchError",
     "fetch_sitemap_slugs",
+    "index_by_brand_token",
     "persist_sitemap_slugs",
     "find_previous_slug_file",
     "diff_new_slugs",
