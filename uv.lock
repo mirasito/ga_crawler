@@ -491,7 +491,7 @@ wheels = [
 [[package]]
 name = "ga-crawler"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "camoufox", extra = ["geoip"] },
     { name = "curl-cffi" },
