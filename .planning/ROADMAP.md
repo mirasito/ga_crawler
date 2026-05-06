@@ -80,7 +80,7 @@
 - [x] 03-03-PLAN.md - Wave 2: parsers/goldapple_microdata.py priceType-aware extractor (PARSE-01..06) + detect_state three-axis classifier (Pitfall 4 / D-303)
 - [x] 03-04-PLAN.md - Wave 3: fetchers/goldapple.py Camoufox bootstrap + tenacity retry (CRAWL-04) + per-SKU isolation (CRAWL-03) + run_loop with rate-limit (CRAWL-06)
 - [x] 03-05-PLAN.md - Wave 4: runner/gates.py smoke probe (D-312) + final M-gate (D-308/D-309) + auto-suggest M (D-310); runner/stats.py 13-key namespace (Pitfall 6) + NORM-06 forward (D-306)
-- [ ] 03-06-PLAN.md - Wave 5: runners/goldapple_run.py orchestrator + cli.py (python -m ga_crawler) + stub Phase 2 protocol implementations + storage integration tests
+- [x] 03-06-PLAN.md - Wave 5: runners/goldapple_run.py orchestrator + cli.py (python -m ga_crawler) + stub Phase 2 protocol implementations + storage integration tests
 - [ ] 03-07-PLAN.md - Wave 6: Manual operator checkpoint - live smoke probe + limited live run on KZ-laptop; Success Criteria 4 and 5 verification
 **UI hint**: no
 
