@@ -4,10 +4,64 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.12"
 dependencies = [
-    "camoufox[geoip]>=0.4.11",
+    # Camoufox Python wrapper 0.4.11 bundles Firefox upstream version 135.0.1-beta.24.
+    # Per Phase 3 D-313 (sign-off MEMO 2026-05-06): exact pin is critical because the
+    # spike's 99/100 success was validated on this exact Firefox fingerprint hash.
+    # Any patch to camoufox bumps the upstream Firefox build and invalidates the spike
+    # validation. Manual upgrade workflow: dev runs goldapple smoke probe on new version,
+    # PR if pass. Smoke probe asserts camoufox_version_expected == "135.0.1.beta24"
+    # (see [tool.ga_crawler.crawl.goldapple] below).
+    # Backup if upstream stalls: switch to coryking/camoufox fork (see SKILL maintenance note).
+    "camoufox[geoip]==0.4.11",
     "curl-cffi>=0.15,<0.16",
     "patchright>=1.55",
+    "pydantic>=2.10,<3.0",
     "python-dotenv>=1.0,<2.0",
     "selectolax>=0.3,<0.4",
+    "sqlmodel>=0.0.24,<0.1",
     "structlog>=25.0,<26.0",
+    "tenacity>=9.0,<10.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<9",
+    "pytest-asyncio>=0.24",
+    "pytest-mock>=3.14",
+    "respx>=0.21",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "live: marks tests requiring live network (deselect with '-m \"not live\"')",
+    "integration: marks integration tests (mocked Camoufox; no live network)",
+]
+
+[tool.ga_crawler.crawl.goldapple]
+# Phase 3 operational constants. Type-locked; operator edits via git PR.
+# Source anchors: 03-CONTEXT.md (D-301..D-313) + spike-skill SKILL.md "Operational constants" + spike notebook.py L41-49.
+sanity_gate_m = 1000                          # D-308 final M-gate threshold
+pause_range_min_seconds = 3.0                 # D-04 + SKILL — random.uniform(3, 5)
+pause_range_max_seconds = 5.0
+concurrency = 1                               # D-04 + SKILL
+page_timeout_ms = 60000                       # spike notebook.py L43
+gate_poll_deadline_ms = 25000                 # spike notebook.py L44 (01-06b proven)
+gate_poll_step_ms = 500                       # spike notebook.py L45
+gate_shell_max_bytes = 30000                  # spike notebook.py L49
+gate_title_marker = "checking"                # spike notebook.py L48 ("Gold Apple — checking device")
+camoufox_locales = ["ru-RU", "kk-KZ", "en-US"] # SKILL operational constant
+camoufox_geoip = true
+camoufox_humanize = true
+camoufox_persistent_context = true
+m_auto_suggest_factor = 0.7                   # D-310: 0.7 × 4-week-median
+m_auto_suggest_after_runs = 4                 # D-310: needs 4+ history rows
+camoufox_version_expected = "135.0.1.beta24"  # D-313; smoke probe asserts; PR-update flow
+
+[tool.ga_crawler.crawl.goldapple.smoke_urls]
+# D-312 hardcoded probe URLs. RESEARCH §"Code Examples" L908-913. Avoid spike row 0 (stale).
+# Operator rotation Phase 7 ops-playbook.
+url_1 = "https://goldapple.kz/7680100018-very-irresistible-givenchy"
+url_2 = "https://goldapple.kz/7681000001-givenchy-pour-homme-blue-label"
+url_3 = "https://goldapple.kz/19000032744-givenchy-gentleman-reserve-privee-eau-de-parfum"
