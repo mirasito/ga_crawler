@@ -45,3 +45,10 @@ logs/
 dist/
 build/
 *.egg-info/
+
+# Phase 3 runtime artifacts (T-03-07-12: never commit live snapshot/sitemap data)
+.planning/runs/
+
+# Editor/agent local state (Obsidian vault config + Claude Code scheduler lock)
+.obsidian/
+.claude/scheduled_tasks.lock
