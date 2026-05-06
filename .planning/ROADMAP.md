@@ -164,7 +164,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 |-------|----------------|--------|-----------|
 | 1. Goldapple Reconnaissance Spike | 9/12 | Complete (3 plans skipped) | 2026-05-06 |
 | 2. Project Skeleton + viled Crawl + Storage | 0/0 | Not started | - |
-| 3. Goldapple Crawl | 5/7 | In Progress (Wave 4 complete) | - |
+| 3. Goldapple Crawl | 8/8 | Complete | 2026-05-06 |
 | 4. Matcher + Match-Rate KPI | 0/0 | Not started | - |
 | 5. Reporter (Excel + summary) | 0/0 | Not started | - |
 | 6. Telegram Delivery + Ops/Business Split | 0/0 | Not started | - |
