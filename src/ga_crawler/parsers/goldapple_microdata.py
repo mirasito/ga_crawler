@@ -126,33 +126,61 @@ def _walks_into_priceSpecification(price_meta: Node, offer_root: Node) -> bool:
 
 
 def _has_excluded_priceType_sibling(price_meta: Node) -> bool:
-    """True if price_meta has a sibling <link itemprop='priceType' href='.../StrikethroughPrice'>
-    or '.../ListPrice'. These are PARSE-03 excluded.
+    """True if price_meta has a SIBLING <link itemprop='priceType' href='.../StrikethroughPrice'>
+    or '.../ListPrice' in the same scope (NOT in a nested priceSpecification descendant).
+
+    selectolax `css_first` searches the whole subtree, so a naive lookup on parent
+    would falsely match a priceType inside a nested <... itemprop='priceSpecification'>
+    block - that block is the OTHER price (was_price) and is NOT a sibling annotation
+    of the current price_meta. We filter it out by checking the chain of itemscopes
+    between the priceType and the parent.
     """
     if price_meta.parent is None:
         return False
-    sibling_pt = price_meta.parent.css_first('link[itemprop="priceType"]')
-    if sibling_pt is None:
-        return False
-    href = sibling_pt.attributes.get("href", "") or ""
-    return ("StrikethroughPrice" in href) or ("ListPrice" in href)
+    parent = price_meta.parent
+    for pt in parent.css('link[itemprop="priceType"]'):
+        # Walk up from pt to parent. If any ancestor on that chain (exclusive of
+        # parent itself) has itemprop='priceSpecification', this priceType belongs
+        # to that nested priceSpecification - NOT a sibling of price_meta.
+        cursor = pt.parent
+        in_nested_spec = False
+        while cursor is not None and cursor != parent:
+            if cursor.attributes.get("itemprop") == "priceSpecification":
+                in_nested_spec = True
+                break
+            cursor = cursor.parent
+        if in_nested_spec:
+            continue
+        href = pt.attributes.get("href", "") or ""
+        if ("StrikethroughPrice" in href) or ("ListPrice" in href):
+            return True
+    return False
 
 
 def _is_in_gold_card_section(price_meta: Node) -> bool:
-    """Heuristic: walks up from price_meta looking for a label "при авторизации"
-    (Gold Card / loyalty pricing). Returns True if found within ancestor text.
-    PROJECT.md explicitly excludes Gold Card prices from comparison.
+    """Heuristic: walks up from price_meta within the SAME [itemprop='offers']
+    subtree, looking for a label "при авторизации" (Gold Card / loyalty pricing).
+    Returns True if the label is co-located with this price block.
+
+    Scope is bounded by the nearest [itemprop='offers'] ancestor: a "при авторизации"
+    label sitting in a SIBLING offer block (or anywhere else in <body>) does NOT
+    poison this price's classification. PROJECT.md explicitly excludes Gold Card
+    prices from comparison.
     """
-    parent = price_meta.parent
+    cursor = price_meta.parent
     depth = 0
-    while parent is not None and depth < 6:
+    while cursor is not None and depth < 8:
         try:
-            txt = parent.text(strip=False) or ""
+            txt = cursor.text(strip=False) or ""
         except Exception:
             txt = ""
         if "при авторизации" in txt.lower():
             return True
-        parent = parent.parent
+        # Stop at the offer boundary - do not let neighboring offers' Gold-Card
+        # labels leak across the offer scope.
+        if cursor.attributes.get("itemprop") == "offers":
+            return False
+        cursor = cursor.parent
         depth += 1
     return False
 
