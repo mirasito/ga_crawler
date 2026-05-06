@@ -9,7 +9,8 @@ date: 2026-05-06
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — Phase 3 план]]** — что делать прямо сейчас (Phase 3 context done, plan next)
+- **[[Текущие приоритеты — Phase 3 execute]]** — что делать прямо сейчас (Phase 3 plan done, execute next)
+- Phase 3 plan trail: ~~[[Текущие приоритеты — Phase 3 план]]~~ — superseded 2026-05-06 (план готов)
 - Phase 1 audit: ~~[[Текущие приоритеты — Phase 1 спайк]]~~ — closed 2026-05-06
 - Ядро решений: [[.planning/PROJECT|PROJECT.md]] · [[.planning/ROADMAP|ROADMAP.md]] · [[.planning/REQUIREMENTS|REQUIREMENTS.md]]
 
@@ -37,6 +38,7 @@ date: 2026-05-06
 - [[2026-05-06 — Camoufox побеждает GroupIB, Phase 1 re-route]]
 - [[2026-05-06 — Phase 1 closure через 01-08 Camoufox + 01-11 MEMO + 01-12 wrap-up]]
 - [[2026-05-06 — Phase 3 контекст зафиксирован]]
+- [[2026-05-06 — Phase 3 план создан, 7 plans across 7 waves]]
 
 ## Inbox
 
