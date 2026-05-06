@@ -82,7 +82,7 @@
 - [x] 03-05-PLAN.md - Wave 4: runner/gates.py smoke probe (D-312) + final M-gate (D-308/D-309) + auto-suggest M (D-310); runner/stats.py 13-key namespace (Pitfall 6) + NORM-06 forward (D-306)
 - [x] 03-06-PLAN.md - Wave 5: runners/goldapple_run.py orchestrator + cli.py (python -m ga_crawler) + stub Phase 2 protocol implementations + storage integration tests
 - [x] 03-07-PLAN.md - Wave 6: Manual operator checkpoint - live smoke probe + limited live run on KZ-laptop; Success Criteria 4 and 5 verification
-- [ ] 03-08-PLAN.md - Wave 7 (gap_closure): brand-token bucket index in goldapple_sitemap.py + intersect_brand_pool refactor to brand_bucket shape; closes CRAWL-02 BLOCKER from 03-VERIFICATION.md (Truth 1: matched_url_count=0 against real 45,490-slug sitemap)
+- [x] 03-08-PLAN.md - Wave 7 (gap_closure): brand-token bucket index in goldapple_sitemap.py + intersect_brand_pool refactor to brand_bucket shape; closes CRAWL-02 BLOCKER from 03-VERIFICATION.md (Truth 1: matched_url_count=0 against real 45,490-slug sitemap)
 **UI hint**: no
 
 ### Phase 4: Matcher + Match-Rate KPI

@@ -15,7 +15,7 @@
 ### Crawl
 
 - [ ] **CRAWL-01**: Краулер обходит весь каталог viled.kz (включая пагинацию) и собирает список URL продуктов
-- [ ] **CRAWL-02**: Краулер goldapple.kz получает список SKU, ограниченный брендами, присутствующими на viled.kz в текущем `run_id`
+- [x] **CRAWL-02**: Краулер goldapple.kz получает список SKU, ограниченный брендами, присутствующими на viled.kz в текущем `run_id`
 - [ ] **CRAWL-03**: Per-SKU isolation — падение одного продукта не валит весь запуск; ошибки логируются и не блокируют остальные SKU
 - [ ] **CRAWL-04**: Retry с экспоненциальной задержкой и jitter для временных сбоев (HTTP 5xx, таймауты)
 - [ ] **CRAWL-05**: Sanity-assertion после краула: `viled_count > N`, `goldapple_count > M` (пороги конфигурируются); меньше — `runs.status = 'failed'`
@@ -138,7 +138,7 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 | RECON-03 | Phase 1 | Done — page-volume in plan 01-05 (2026-05-05); JSON-endpoint hunt in plan 01-06 (2026-05-06, finding: NO Tier-0 endpoint, vendor identified as GroupIB/F.A.C.C.T., D-14 verification deferred to 01-08) |
 | RECON-04 | Phase 1 | Done (plan 01-04, 2026-05-05) |
 | CRAWL-01 | Phase 2 | Pending |
-| CRAWL-02 | Phase 3 | Pending |
+| CRAWL-02 | Phase 3 | Done — Wave 7 gap-closure plan 03-08 (2026-05-06) closed Truth 1 BLOCKER via Path A longest-prefix-in-whitelist brand-token bucket index; matched_url_count > 0 against realistic 45,490-slug sitemap shape proven by full-pipeline regression + E2E test; D-305 / Pitfall 3 enforced structurally (inspect.getsource gates) |
 | CRAWL-03 | Phase 2 | Pending |
 | CRAWL-04 | Phase 2 | Pending |
 | CRAWL-05 | Phase 2 (viled threshold) + Phase 3 (goldapple threshold added to same gate) | Pending |
