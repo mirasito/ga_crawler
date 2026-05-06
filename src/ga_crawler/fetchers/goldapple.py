@@ -179,4 +179,172 @@ class GoldappleFetcher:
         self._browser: Any = None
         self._page: Any = None
 
-    # __aenter__ / __aexit__ / fetch_one / run_loop in Task 2.
+    async def __aenter__(self) -> "GoldappleFetcher":
+        """Boot Camoufox with locked kwargs (D-311 fresh profile + SKILL operational constants)."""
+        from camoufox.async_api import AsyncCamoufox
+
+        self._cm = AsyncCamoufox(
+            headless=self.headless,
+            geoip=True,                              # SKILL operational constant
+            locale=["ru-RU", "kk-KZ", "en-US"],      # SKILL
+            humanize=True,                           # SKILL
+            persistent_context=True,                 # D-04 / SKILL
+            user_data_dir=str(self.profile_dir),     # D-311 fresh tmp profile
+        )
+        try:
+            self._browser = await self._cm.__aenter__()
+            self._page = (
+                self._browser.pages[0]
+                if getattr(self._browser, "pages", None)
+                else await self._browser.new_page()
+            )
+        except Exception:
+            # Camoufox failed to boot — clean up profile dir before re-raising
+            shutil.rmtree(self.profile_dir, ignore_errors=True)
+            raise
+        log.info(
+            "camoufox_booted",
+            run_id=self.run_id,
+            profile_dir=str(self.profile_dir),
+            headless=self.headless,
+        )
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        """Always cleanup profile dir, even on failure (Pitfall 7)."""
+        try:
+            if self._cm is not None:
+                await self._cm.__aexit__(exc_type, exc, tb)
+        finally:
+            shutil.rmtree(self.profile_dir, ignore_errors=True)
+            log.info("camoufox_torn_down", run_id=self.run_id)
+
+    async def fetch_one(self, page: Any, url: str) -> dict:
+        """Returns spike-style dict per RESEARCH §"Code Examples" lines 858-902.
+
+        Calls _goto_with_retry under the hood (CRAWL-04). Exception handling
+        is deliberately broad — any error sets block=True so caller per-SKU
+        isolation logic (fetch_one_isolated) can record without bubbling.
+        """
+        started = time.perf_counter()
+        rec: dict = {
+            "url": url,
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "status": None,
+            "timing_ms": None,
+            "html_size": None,
+            "title": None,
+            "gate_cleared": False,
+            "gate_cleared_after_ms": None,
+            "block": False,
+            "block_reason": None,
+            "error": None,
+        }
+        try:
+            response = await _goto_with_retry(page, url, timeout_ms=PAGE_TIMEOUT_MS)
+            rec["status"] = response.status if response else None
+
+            # Best-effort networkidle (Camoufox / playwright may raise; ignore)
+            try:
+                await page.wait_for_load_state("networkidle", timeout=10_000)
+            except Exception:
+                pass
+
+            # Poll title for gate clearance — spike notebook.py L161-168
+            elapsed = 0
+            last_title = ""
+            while elapsed < GATE_POLL_DEADLINE_MS:
+                last_title = await page.title()
+                if GATE_TITLE_MARKER not in last_title.lower():
+                    rec["gate_cleared"] = True
+                    rec["gate_cleared_after_ms"] = elapsed
+                    break
+                await page.wait_for_timeout(GATE_POLL_STEP_MS)
+                elapsed += GATE_POLL_STEP_MS
+            rec["title"] = last_title
+
+            html = await page.content()
+            rec["html_size"] = len(html)
+
+            # State classification (mirrors detect_state thresholds; record-style fields).
+            # NOTE: keep field-names back-compatible with spike notebook.py for log replay.
+            if not rec["gate_cleared"] and rec["html_size"] < GATE_SHELL_MAX_BYTES:
+                rec["block"] = True
+                rec["block_reason"] = "gate_shell_not_cleared"
+            elif rec["status"] not in (200, 304):
+                rec["block"] = True
+                rec["block_reason"] = f"http_{rec['status']}"
+            else:
+                rec["html"] = html  # caller passes to parse_pdp
+        except Exception as e:
+            rec["error"] = f"{type(e).__name__}: {repr(e)[:200]}"
+            rec["block"] = True
+            rec["block_reason"] = "exception"
+        rec["timing_ms"] = int((time.perf_counter() - started) * 1000)
+        return rec
+
+    async def fetch_one_isolated(self, url: str, stats: dict) -> Optional[dict]:
+        """Per-SKU isolation wrapper (CRAWL-03). Exposed as instance method
+        for orchestrator convenience; delegates to module-level fetch_one_isolated.
+        """
+        return await fetch_one_isolated(self.fetch_one, self._page, url, stats)
+
+    async def run_loop(
+        self,
+        urls: list[str],
+        stats: dict,
+        sleep_fn: Optional[Callable[[float], Awaitable[None]]] = None,
+    ) -> list[dict]:
+        """Sequential fetch loop with random.uniform(3, 5) pacing per CRAWL-06.
+
+        Args:
+          urls: list of product URLs to fetch (matched_urls from intersect_brand_pool)
+          stats: mutable dict accumulating fetch_failures / fetch_count / etc.
+          sleep_fn: optional override for asyncio.sleep (test injection)
+
+        Returns:
+          list of fetch records (one per URL; None entries replaced with the
+          partial record from fetch_one if it has block=True; truly-isolated
+          exceptions are logged + counter-incremented and not appended).
+
+        Source: spike notebook.py L217-257 (refactored for class method + injectable sleep).
+        """
+        if sleep_fn is None:
+            sleep_fn = asyncio.sleep
+
+        records: list[dict] = []
+        for i, url in enumerate(urls, 1):
+            rec = await fetch_one_isolated(self.fetch_one, self._page, url, stats)
+            stats["fetch_count"] = stats.get("fetch_count", 0) + 1
+            if rec is not None:
+                records.append(rec)
+                # Track gate-shell + stale via block_reason for runs.stats audit
+                br = rec.get("block_reason")
+                if br == "gate_shell_not_cleared":
+                    stats["gate_shell_count"] = stats.get("gate_shell_count", 0) + 1
+            log.info(
+                "fetch_progress",
+                run_id=self.run_id,
+                idx=i,
+                total=len(urls),
+                url=url,
+                block=(rec is None) or rec.get("block", False),
+            )
+            if i < len(urls):
+                await sleep_fn(random.uniform(*PAUSE_RANGE))
+        return records
+
+
+__all__ = [
+    "PAUSE_RANGE",
+    "PAGE_TIMEOUT_MS",
+    "GATE_POLL_DEADLINE_MS",
+    "GATE_POLL_STEP_MS",
+    "RETRY_MAX_ATTEMPTS",
+    "RETRY_WAIT_INITIAL",
+    "RETRY_WAIT_MAX",
+    "TransientFetchError",
+    "GoldappleFetcher",
+    "fetch_one_isolated",
+    "_goto_with_retry",
+]
