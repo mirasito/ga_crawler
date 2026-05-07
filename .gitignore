@@ -37,6 +37,16 @@ Thumbs.db
 *.db-wal
 *.db-shm
 
+# Phase 2 — backups directory: dir tracked (.gitkeep), .db files ignored (DATA-06)
+backups/*.db
+backups/*.db-journal
+backups/*.db-wal
+backups/*.db-shm
+prices.db
+prices.db-journal
+prices.db-wal
+prices.db-shm
+
 # Logs
 *.log
 logs/

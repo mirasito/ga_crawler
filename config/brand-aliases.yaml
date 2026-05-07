@@ -1,0 +1,280 @@
+# Brand alias resolution — flat dict {brand_norm: [aliases...]} per CONTEXT D-205.
+# Seeded 2026-05-07 from viled spike payloads (top-50 viled brands).
+#
+# Source priority (D-206):
+#   1. PRIMARY: viled-fetch-results.json (15 product fetches — confirms /item/<id> probe)
+#   2. SECONDARY: viled-home-brands-extract.json (52 homepage product cards across 5 sections)
+#   3. TERTIARY: known luxury fashion + niche perfumery (STATE.md plan 01-05; 5-brand probe)
+#
+# Schema (D-205): canonical key (top-level) maps to a list of aliases.
+#   - Canonical keys: lowercase + ascii (snake_case for aliased brands so test corpus
+#     `estee_lauder`/`givenchy` returns underscore form; pure-Latin slug-only brands
+#     do NOT need entries here — `normalize_brand` falls through to `_normalize_punct(raw)`).
+#   - Aliases: original Latin spelling first, accented Latin second (when differs),
+#     Cyrillic transliteration last (when commonly used in KZ market).
+#
+# Operator workflow: NORM-06 review queue at `.planning/runs/{run_id}/norm06-review.md`
+# surfaces unmatched brands weekly — operator adds aliases via PR to this file.
+# Read-once at run start (D-207); changes require next weekly run to take effect.
+
+# --- Beauty / Niche perfumery (primary v1 commercial relevance vs goldapple.kz) ---
+
+estee_lauder:
+  - "Estée Lauder"
+  - "Estee Lauder"
+  - "Эсте Лаудер"
+
+givenchy:
+  - "Givenchy"
+  - "Живанши"
+
+chanel:
+  - "Chanel"
+  - "Шанель"
+
+dior:
+  - "Dior"
+  - "Christian Dior"
+  - "Диор"
+  - "Кристиан Диор"
+
+tom_ford:
+  - "Tom Ford"
+  - "Tom Ford Beauty"
+  - "Том Форд"
+
+jo_malone_london:
+  - "Jo Malone London"
+  - "Jo Malone"
+  - "Джо Малон Лондон"
+  - "Джо Малон"
+
+creed:
+  - "Creed"
+  - "Крид"
+
+frederic_malle:
+  - "Frédéric Malle"
+  - "Frederic Malle"
+  - "Editions de Parfums Frédéric Malle"
+  - "Фредерик Маль"
+
+amouage:
+  - "Amouage"
+  - "Амуаж"
+
+ex_nihilo:
+  - "Ex Nihilo"
+  - "Экс Нихило"
+
+kilian_paris:
+  - "Kilian Paris"
+  - "By Kilian"
+  - "Килиан"
+
+armani_beauty:
+  - "Armani Beauty"
+  - "Giorgio Armani"
+  - "Armani"
+  - "Армани"
+
+zielinski_rozen:
+  - "Zielinski & Rozen"
+  - "Зелински энд Розен"
+  - "Зелинский и Розен"
+
+lancome:
+  - "Lancôme"
+  - "Lancome"
+  - "Ланком"
+
+ysl_beauty:
+  - "Yves Saint Laurent Beauté"
+  - "YSL Beauty"
+  - "YSL Beauté"
+  - "Ив Сен Лоран Бьюти"
+
+guerlain:
+  - "Guerlain"
+  - "Герлен"
+
+byredo:
+  - "Byredo"
+  - "Бредо"
+  - "Байредо"
+
+maison_francis_kurkdjian:
+  - "Maison Francis Kurkdjian"
+  - "MFK"
+  - "Мезон Франсис Куркджан"
+
+diptyque:
+  - "Diptyque"
+  - "Диптик"
+
+penhaligons:
+  - "Penhaligon's"
+  - "Penhaligons"
+  - "Пенхалигонс"
+
+acqua_di_parma:
+  - "Acqua di Parma"
+  - "Аква ди Парма"
+
+memo_paris:
+  - "Memo Paris"
+  - "Memo"
+  - "Мемо Пари"
+  - "Мемо"
+
+clarins:
+  - "Clarins"
+  - "Кларанс"
+
+la_mer:
+  - "La Mer"
+  - "Crème de la Mer"
+  - "Ла Мер"
+
+la_prairie:
+  - "La Prairie"
+  - "Ла Прери"
+
+shiseido:
+  - "Shiseido"
+  - "Шисейдо"
+
+clinique:
+  - "Clinique"
+  - "Клиник"
+
+# --- Luxury fashion (homepage extract) — kept as one-element lists where pure-Latin ---
+
+yuzefi:
+  - "Yuzefi"
+
+alice_olivia:
+  - "Alice+Olivia"
+  - "Alice + Olivia"
+
+christian_louboutin:
+  - "Christian Louboutin"
+  - "Кристиан Лубутен"
+
+saint_laurent:
+  - "Saint Laurent"
+  - "Yves Saint Laurent"
+  - "YSL"
+  - "Сен Лоран"
+
+gucci:
+  - "Gucci"
+  - "Гуччи"
+
+lorena_antoniazzi:
+  - "Lorena Antoniazzi"
+
+shushu_tong:
+  - "SHUSHU/TONG"
+  - "Shushu/Tong"
+
+yvmin:
+  - "YVMIN"
+
+maison_margiela:
+  - "Maison Margiela"
+  - "MM6 Maison Margiela"
+  - "Мезон Маржела"
+
+aje:
+  - "Aje"
+
+valentino_garavani:
+  - "Valentino Garavani"
+  - "Valentino"
+  - "Валентино"
+
+gia_borghini:
+  - "Gia Borghini"
+
+ami_paris:
+  - "AMI PARIS"
+  - "Ami Paris"
+  - "Ami"
+
+balenciaga:
+  - "Balenciaga"
+  - "Баленсиага"
+
+dolce_gabbana:
+  - "Dolce&Gabbana"
+  - "Dolce & Gabbana"
+  - "D&G"
+  - "Дольче и Габбана"
+
+inuikii:
+  - "Inuikii"
+
+veja:
+  - "Veja"
+
+loewe:
+  - "Loewe"
+  - "Лоэве"
+
+doucals:
+  - "Doucal's"
+  - "Doucals"
+
+jude:
+  - "Jude"
+
+# --- Home / Lifestyle (homepage extract section 14) ---
+
+daum:
+  - "Daum"
+
+villeroy_boch:
+  - "Villeroy & Boch"
+  - "Villeroy and Boch"
+
+baccarat:
+  - "Baccarat"
+  - "Баккара"
+
+ginori:
+  - "Ginori 1735"
+  - "Ginori"
+  - "Richard Ginori"
+
+lladro:
+  - "Lladro"
+  - "Lladró"
+
+italamp:
+  - "ITALAMP"
+  - "Italamp"
+
+christofle:
+  - "Christofle"
+  - "Кристофль"
+
+# --- Additional KZ-market luxury / niche perfumery (commercial relevance vs goldapple) ---
+
+hermes:
+  - "Hermès"
+  - "Hermes"
+  - "Эрмес"
+
+bvlgari:
+  - "Bvlgari"
+  - "Bulgari"
+  - "Булгари"
+
+versace:
+  - "Versace"
+  - "Версаче"
+
+prada:
+  - "Prada"
+  - "Прада"
