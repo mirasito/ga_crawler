@@ -9,10 +9,52 @@ and constraint declarations.
 Source: 02-RESEARCH.md §Validation Architecture row 1; 02-CONTEXT.md D-214.
 """
 import pytest
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session
 
-pytestmark = pytest.mark.skip(reason="Wave 1 not implemented yet — Plan 02-02")
+from ga_crawler.storage.sqlite import Run, Snapshot, init_db, make_engine
 
 
-def test_placeholder():
-    """Placeholder. Plan 02-02 flips this from skip to GREEN."""
-    assert False, "implement in Plan 02-02"
+@pytest.fixture
+def engine(tmp_path):
+    db = tmp_path / "test.db"
+    init_db(db)
+    return make_engine(db)
+
+
+def test_snapshot_columns():
+    cols = set(Snapshot.model_fields.keys())
+    expected = {
+        "id", "run_id", "retailer", "sku_id", "url", "name", "brand",
+        "brand_norm", "name_norm", "volume_raw", "volume_norm",
+        "multipack_flag", "parse_error_flag", "current_price", "was_price",
+        "currency", "stock_state", "scraped_at",
+    }
+    assert expected.issubset(cols), f"missing: {expected - cols}"
+
+
+def test_run_table():
+    cols = set(Run.model_fields.keys())
+    expected = {"run_id", "started_at", "finished_at", "status", "fail_reason", "stats"}
+    assert expected.issubset(cols), f"missing: {expected - cols}"
+
+
+def test_snapshot_unique_constraint(engine):
+    with Session(engine) as s:
+        s.add(Run(run_id=1, status="running"))
+        s.commit()
+        s.add(
+            Snapshot(
+                run_id=1, retailer="viled", sku_id="X1", url="u",
+                name="n", brand="b", brand_norm="b", name_norm="n",
+            )
+        )
+        s.commit()
+        s.add(
+            Snapshot(
+                run_id=1, retailer="viled", sku_id="X1", url="u2",
+                name="n2", brand="b", brand_norm="b", name_norm="n2",
+            )
+        )
+        with pytest.raises(IntegrityError):
+            s.commit()

@@ -1,17 +1,30 @@
-"""DATA-04 — SQLite WAL mode + foreign-keys PRAGMAs applied at engine init.
-
-Wave 1 / Plan 02-02 ships the `create_storage_engine()` factory which sets
-`PRAGMA journal_mode=WAL` + `PRAGMA synchronous=NORMAL` + `PRAGMA foreign_keys=ON`
-via SQLAlchemy `event.listens_for(engine, "connect")`. Asserts pragmas are
-honored on a real on-disk SQLite path (not :memory:).
-
-Source: 02-RESEARCH.md §Validation Architecture row 5; CLAUDE.md §Storage.
-"""
-import pytest
-
-pytestmark = pytest.mark.skip(reason="Wave 1 not implemented yet — Plan 02-02")
+"""DATA-04 verification. Source: 02-RESEARCH.md §Initializing the WAL session."""
+from ga_crawler.storage.sqlite import init_db, make_engine
 
 
-def test_placeholder():
-    """Placeholder. Plan 02-02 flips this from skip to GREEN."""
-    assert False, "implement in Plan 02-02"
+def test_wal_pragma_active(tmp_path):
+    db = tmp_path / "wal.db"
+    init_db(db)
+    engine = make_engine(db)
+    with engine.connect() as conn:
+        result = conn.exec_driver_sql("PRAGMA journal_mode").fetchone()
+        assert result[0].lower() == "wal"
+
+
+def test_synchronous_normal(tmp_path):
+    db = tmp_path / "sync.db"
+    init_db(db)
+    engine = make_engine(db)
+    with engine.connect() as conn:
+        result = conn.exec_driver_sql("PRAGMA synchronous").fetchone()
+        # NORMAL = 1
+        assert result[0] == 1
+
+
+def test_foreign_keys_on(tmp_path):
+    db = tmp_path / "fk.db"
+    init_db(db)
+    engine = make_engine(db)
+    with engine.connect() as conn:
+        result = conn.exec_driver_sql("PRAGMA foreign_keys").fetchone()
+        assert result[0] == 1
