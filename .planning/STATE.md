@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing Phase 02 (Plan 02-02 complete; next: 02-03)
-last_updated: "2026-05-07T13:30:00.000Z"
+status: Executing Phase 02 (Plan 02-03 complete; next: 02-04)
+last_updated: "2026-05-07T14:00:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 26
-  completed_plans: 21
-  percent: 81
+  completed_plans: 22
+  percent: 85
 ---
 
 # State: GA Crawler
 
 **Last updated:** 2026-05-07
-**Mode:** Phase 1 COMPLETE (2026-05-06). Phase 3 COMPLETE (operator-approved 2026-05-06). **Phase 2 EXECUTING** — Plan 02-02 (Wave 1 storage layer) complete 2026-05-07: `src/ga_crawler/storage/{__init__.py,sqlite.py,norm06_writer.py}` ship 362 LOC (8 + 269 + 85) implementing SQLModel `Run` + `Snapshot` tables (DATA-01..02, 18-col Snapshot with UNIQUE (run_id, retailer, sku_id) + 2 supporting indexes), `make_engine` event-listener PRAGMAs (WAL + synchronous=NORMAL + foreign_keys=ON on every connect — DATA-04), `init_db` schema bootstrap + `v_current_snapshots` SQL VIEW (D-221 brand-pool single source of truth), `SqliteSnapshotWriter` append-only with per-batch commit (DATA-03..04, default batch_size=100, filters payload via Snapshot.model_fields.keys() to mitigate Pitfall 7 stub-vs-real schema drift), `SqliteRunWriter` with single-SQL atomic `json_patch(stats, :delta)` merge (Pitfall 6 — viled.* and goldapple.* keys merge cleanly without read-modify-write race) + Pitfall-4 None-rejection at API boundary + idempotent fail/finalize (WHERE status='running' guard prevents un-failing) + concrete-only create()/finalize() NOT added to RunWriterProtocol per Open Q1 (drift avoided), `Norm06Writer.persist()` markdown ledger (NORM-06 + D-208 + D-209: 4-column table at `.planning/runs/{run_id}/norm06-review.md`, source enum viled-unmatched | goldapple-new-slug, status default pending, header documents operator workflow per D-210). 25 GREEN tests across 7 unblocked files (all skip markers removed): test_storage_models (3), test_snapshot_writer (5), test_run_writer (7), test_norm06_writer (4), test_storage_wal (3), test_v_current_snapshots (2), test_run_writer_lifecycle (1). 192 → 217 passing, 24 → 17 skipped, 0 failing. interfaces.py UNCHANGED (0-line diff). 4 commits (e331875 RED + 2c23f8d GREEN-task1 + 3fdadf0 RED + 3ee77c7 GREEN-task2). 0 deviations. Next: `/gsd-execute-phase 02 03` (Wave 2 normalizers).
+**Mode:** Phase 1 COMPLETE (2026-05-06). Phase 3 COMPLETE (operator-approved 2026-05-06). **Phase 2 EXECUTING** — Plan 02-03 (Wave 2 normalizers) complete 2026-05-07: `src/ga_crawler/alias/{__init__.py,yaml_loader.py}` + `src/ga_crawler/normalizers/{__init__.py,brand.py,name.py,volume.py,facade.py}` ship 382 LOC (4+81 + 4+48+30+172+43) implementing NORM-01..05 closure: `YamlBrandAlias` reads YAML once at __init__ (D-207), exposes `lookup(brand_norm)→list[str]` (BrandAliasProtocol) + concrete-only `canonical_for(slug)→str|None` reverse helper (NOT in Protocol per Open Q1); `normalizers/brand.py` IMPORTS `_normalize_punct` from `enumeration/slug.py` (REUSE confirmed by inspection test — no duplication); `normalizers/name.py` NFKD+lowercase+strip-punct+collapse-whitespace; `normalizers/volume.py` 24-entry UNIT_TABLE (мл/ml/милилитр/миллилитр/г/гр/грамм/л/литр/шт/штук/унц/унция/унций/кг + ml/milliliter/g/gram/oz/ounce/fl/kg/l/liter/pcs/pc) + 3-layer grammar (`Set of N × M unit` → `N [optional unit] × M unit` → keyword-only multipack returns None / single-volume) + Volume frozen dataclass (Decimal amount, str unit, int count) + `detect_multipack` INDEPENDENT of `parse_volume` (Open Q4: flag persists when per-unit volume unparseable like `набор пробников` or `10 шт`); `normalizers/facade.py` Normalizer composes brand/name/volume + satisfies NormalizerProtocol via @runtime_checkable (verified inline). 30 GREEN tests across 4 unblocked files (test_yaml_brand_alias 7 + test_brand_normalizer 6 + test_name_normalizer 6 + test_volume_normalizer 11 — all 18 volume-corpus.yaml + all 11 brand-corpus.yaml cases pass). 217 → 247 passing, 13 skipped, 0 failing. enumeration/slug.py + interfaces.py UNCHANGED (0-line diff). 4 commits (b875b0b RED + be94a4d GREEN-task1 + 42d7df6 RED + 7c36316 GREEN-task2). 0 deviations. Next: `/gsd-execute-phase 02 04` (Wave 3 viled parser + fetcher + enumeration).
 
 ## Project Reference
 
@@ -26,11 +26,11 @@ progress:
 ## Current Position
 
 Phase: 02 (project-skeleton-viled-crawl-storage) — EXECUTING
-Plan: 3 of 6 (next up: 02-03 Wave 2 normalizers)
+Plan: 4 of 6 (next up: 02-04 Wave 3 viled parser + fetcher + enumeration)
 | Field | Value |
 |-------|-------|
-| Phase | 02 — project-skeleton-viled-crawl-storage (Wave 0 + Wave 1 complete; next: Wave 2 normalizers Plan 02-03) |
-| Plan | 02-01 ✓ (Wave 0 bootstrap) + 02-02 ✓ (Wave 1 storage layer) — next: `/gsd-execute-phase 02 03` (Wave 2 normalizers NORM-01..05) |
+| Phase | 02 — project-skeleton-viled-crawl-storage (Wave 0 + Wave 1 + Wave 2 complete; next: Wave 3 viled parser/fetcher Plan 02-04) |
+| Plan | 02-01 ✓ (Wave 0 bootstrap) + 02-02 ✓ (Wave 1 storage layer) + 02-03 ✓ (Wave 2 normalizers NORM-01..05) — next: `/gsd-execute-phase 02 04` (Wave 3 viled parser + fetcher + enumeration) |
 | Phase 3 status | Phase 3 — Goldapple Crawl (Waves 0-7 complete; verifier re-run pending for Truth 4 closure). Frozen during Phase 2 work; storage layer in 02-02 leaves Phase 3 modules untouched. |
 | Status | Phase 3 plan 03-08 (Wave 7 gap_closure: NORM-06 brand-intersect bucket fix) executed 2026-05-06: `enumeration/goldapple_sitemap.py` adds `BRAND_TOKEN_MAX_DEPTH=3` + `index_by_brand_token(slug_map, known_brand_tokens) -> dict[brand_token, list[url]]` Path A longest-prefix-in-whitelist algorithm (each URL goes to exactly ONE bucket — the longest whitelisted prefix; orphan slugs dropped); `enumeration/slug.intersect_brand_pool` and `runner/stats.compute_norm06_forward` accept `brand_bucket` (param renamed from `sitemap_slugs`); `runners/goldapple_run.py` Step 3.5 builds `known_brand_tokens` whitelist via `slug_fy_bilingual` over every alias of every viled brand, then `brand_bucket = index_by_brand_token(slug_map, known_brand_tokens)` before passing to `compute_norm06_forward`; structural D-305 / Pitfall 3 invariant (only viled-known tokens become bucket keys, longest-match wins, no cross-contamination between brand-extension families like tom_ford/tom_ford_beauty unless operator-disambiguated). 192/192 non-live tests green (181 baseline + 7 brand_token_index + 3 intersect new + 1 E2E). 4 commits (1 RED + 1 GREEN Task 1 + 1 Task 2 + 1 Task 3). 0 deviations. CRAWL-02 BLOCKER closed.</status_truncated_for_archive>
 | OLD_STATUS_KEPT_BELOW | Phase 3 plan 03-06 (Wave 5 orchestrator + CLI) executed 2026-05-06: `runners/goldapple_run.py` ships `run_goldapple_phase(run_id, viled_brands, repo_root, brand_alias, normalizer, snapshot_writer, run_writer, *, headless=True, M=1000, smoke_urls=None, fetcher_factory=None, sitemap_fetcher=None) -> PhaseResult` async orchestrator implementing all 14 numbered architecture-diagram steps (sitemap fetch → persist → week-over-week diff → brand intersect via compute_norm06_forward → Camoufox boot → smoke_probe → run_loop → parse_pdp + detect_state disambiguation between stale-sku and parse-fail → Phase 2 normalizer protocols → SnapshotWriter.append → Camoufox teardown via async-with __aexit__ Pitfall-7 always-cleanup → final_m_gate → auto_suggest_m via _gather_prior_counts + run_writer.get_stats history scan → atomic patch_stats Pitfall-6 single-call merge), `PhaseResult` dataclass (status/goldapple_count/reason/stats_delta/unmatched_viled_brands/new_goldapple_slugs); `cli.py` ships argparse CLI with `goldapple-smoke --run-id N [--headless false]` (live D-312 smoke probe + diagnostics JSON output) + `goldapple-run --run-id N --viled-brands a,b,c [--repo-root .] [--sanity-gate-m 1000] [--headless false]` (full Phase 3 with stub Phase 2 storage) + 4 stub Phase 2 implementations (StubBrandAlias.lookup → [brand_norm], StubNormalizer.brand/name/volume lowercase+strip / None, StubSnapshotWriter.append → append-only JSONL DATA-03, StubRunWriter.patch_stats/get_stats/fail → JSON dict-merge mirroring SQLite json_patch); `__main__.py` enables `python -m ga_crawler ...`. **16 new integration tests** (test_run_e2e_with_phase2_mocks.py 6 scenarios with FakeFetcher+mocks: happy-path/smoke-fail-aborts/final-gate-fail-run-to-completion/NORM-06-forward-counts/atomic-stats-merge-once/auto-suggest-when-history; test_norm06_diff_integration.py 4 scenarios: first-run-no-diff/second-run-finds-new/third-run-latest-predecessor/removals-ignored; test_storage_integration.py 6 scenarios: jsonl-append/append-only-no-overwrite/patch-merges/fail-records-reason/get-stats-empty/cli-help-emits-subcommands). **179/179 tests green** (Wave 0+1+2+3+4+5 = 163 prior + 16 new). 0 deviations from plan — all `<action>` blocks shipped on first verify pass. |
@@ -53,6 +53,7 @@ Plan: 3 of 6 (next up: 02-03 Wave 2 normalizers)
 | Checkpoints | 1 (Phase 1 sign-off) |
 | Phase 02 P01 | 25 min | 3 tasks | 33 files |
 | Phase 02 P02 | 25 min | 2 tasks | 3 created + 7 modified |
+| Phase 02 P03 | 12 min | 2 tasks | 7 created + 4 modified |
 
 ### Plan Execution Metrics
 
@@ -76,6 +77,7 @@ Plan: 3 of 6 (next up: 02-03 Wave 2 normalizers)
 | 03-08 (Wave 7 gap_closure: brand-token bucket) | ~10 min | 3/3 | 1 created, 6 modified | 2026-05-06 |
 | 02-01 (Wave 0 viled bootstrap) | ~25 min | 3/3 | 33 created, 2 modified | 2026-05-07 |
 | 02-02 (Wave 1 storage layer) | ~25 min | 2/2 | 3 created, 7 modified | 2026-05-07 |
+| 02-03 (Wave 2 normalizers NORM-01..05) | ~12 min | 2/2 | 7 created, 4 modified | 2026-05-07 |
 
 ## Accumulated Context
 

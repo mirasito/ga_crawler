@@ -32,11 +32,11 @@
 
 ### Normalize
 
-- [ ] **NORM-01**: Brand-alias таблица (YAML) сопоставляет Cyrillic ↔ Latin варианты брендов (`Estée Lauder` ↔ `Эсте Лаудер` ↔ `Estee Lauder`); seeded топ-50 брендами viled
-- [ ] **NORM-02**: Нормализация бренда: NFKD + accent strip + lowercase + alias lookup → `brand_norm`
-- [ ] **NORM-03**: Volume value-object `(amount, unit, multipack)`; парсит `30 мл`, `30мл`, `30ml`, `1.0 oz`, `3 шт x 50мл`, `Set of 3 × 50ml`
-- [ ] **NORM-04**: Multipack/kit детектится явно; для v1 такие SKU **исключаются** из price-per-unit-сравнения и помечаются флагом
-- [ ] **NORM-05**: Нормализация имени: lowercase + удаление пунктуации + collapse whitespace → `name_norm`
+- [x] **NORM-01**: Brand-alias таблица (YAML) сопоставляет Cyrillic ↔ Latin варианты брендов (`Estée Lauder` ↔ `Эсте Лаудер` ↔ `Estee Lauder`); seeded топ-50 брендами viled — Plan 02-03 ships `YamlBrandAlias` loader (read-once D-207, lookup + canonical_for reverse helper); production seed config/brand-aliases.yaml lands in Plan 02-06
+- [x] **NORM-02**: Нормализация бренда: NFKD + accent strip + lowercase + alias lookup → `brand_norm` — Plan 02-03 ships `normalizers/brand.py::normalize_brand` (REUSE _normalize_punct from enumeration/slug.py via import — no duplication)
+- [x] **NORM-03**: Volume value-object `(amount, unit, multipack)`; парсит `30 мл`, `30мл`, `30ml`, `1.0 oz`, `3 шт x 50мл`, `Set of 3 × 50ml` — Plan 02-03 ships `Volume` frozen dataclass + `parse_volume` (3-layer grammar) + 24-entry UNIT_TABLE; all 18 volume-corpus.yaml cases pass
+- [x] **NORM-04**: Multipack/kit детектится явно; для v1 такие SKU **исключаются** из price-per-unit-сравнения и помечаются флагом — Plan 02-03 ships `detect_multipack` INDEPENDENT of parse_volume (Open Q4 multipack flag persists when per-unit volume unparseable like `набор пробников`, `10 шт`)
+- [x] **NORM-05**: Нормализация имени: lowercase + удаление пунктуации + collapse whitespace → `name_norm` — Plan 02-03 ships `normalizers/name.py::normalize_name` (NFKD + lowercase + strip-non-word-non-space + collapse-whitespace)
 - [x] **NORM-06**: Лог "бренды на goldapple, не найденные в alias-таблице" — еженедельная очередь ручной проверки (Plan 02-02 ships `Norm06Writer.persist()` markdown ledger at `.planning/runs/{run_id}/norm06-review.md` per D-208/D-211)
 
 ### Match
@@ -149,11 +149,11 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 | PARSE-04 | Phase 2 (modules shared with Phase 3) | Pending |
 | PARSE-05 | Phase 2 (modules shared with Phase 3) | Pending |
 | PARSE-06 | Phase 2 (modules shared with Phase 3) | Pending |
-| NORM-01 | Phase 2 (seeded with viled top-50; goldapple variants added in Phase 3) | Pending |
-| NORM-02 | Phase 2 (modules shared with Phase 3) | Pending |
-| NORM-03 | Phase 2 (modules shared with Phase 3) | Pending |
-| NORM-04 | Phase 2 (modules shared with Phase 3) | Pending |
-| NORM-05 | Phase 2 (modules shared with Phase 3) | Pending |
+| NORM-01 | Phase 2 (seeded with viled top-50; goldapple variants added in Phase 3) | Plan 02-03 (loader + canonical_for); seed in Plan 02-06 |
+| NORM-02 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |
+| NORM-03 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |
+| NORM-04 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |
+| NORM-05 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |
 | NORM-06 | Phase 2 (log defined; populated by real goldapple run in Phase 3) | Done (Plan 02-02 — Norm06Writer ships D-208 markdown ledger) |
 | MATCH-01 | Phase 4 | Pending |
 | MATCH-02 | Phase 4 | Pending |
