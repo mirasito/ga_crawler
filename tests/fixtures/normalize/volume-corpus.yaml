@@ -1,0 +1,75 @@
+# Volume parser corpus. Drives tests/unit/test_volume_normalizer.py via parametrize.
+# Format: list of {input: str, expected_volume: [amount, unit, count] | null, expected_multipack: bool}
+# Source: 02-RESEARCH.md §Pattern 6 Volume Normalizer.
+# Schema:
+#   - input: raw volume_raw string from PDP
+#   - expected_volume: 3-tuple (amount-as-string, unit-enum, multipack-count)
+#                      or null when unparseable
+#   - expected_multipack: True iff input names a kit/набор/multipack
+#                         (decoupled from expected_volume; "набор пробников" is multipack
+#                         but volume_norm is null because per-unit volume is ambiguous)
+
+cases:
+  # ---- canonical singletons (1 unit) ----
+  - input: "30 мл"
+    expected_volume: ["30", "ml", 1]
+    expected_multipack: false
+  - input: "30мл"
+    expected_volume: ["30", "ml", 1]
+    expected_multipack: false
+  - input: "30ml"
+    expected_volume: ["30", "ml", 1]
+    expected_multipack: false
+  - input: "1.0 oz"
+    expected_volume: ["1.0", "oz", 1]
+    expected_multipack: false
+  - input: "1,5 л"
+    expected_volume: ["1.5", "l", 1]
+    expected_multipack: false
+  - input: "100 ml"
+    expected_volume: ["100", "ml", 1]
+    expected_multipack: false
+  - input: "50 g"
+    expected_volume: ["50", "g", 1]
+    expected_multipack: false
+  - input: "75 мл"
+    expected_volume: ["75", "ml", 1]
+    expected_multipack: false
+
+  # ---- multipacks: amount per unit known ----
+  - input: "3 шт x 50мл"
+    expected_volume: ["50", "ml", 3]
+    expected_multipack: true
+  - input: "3 x 50 мл"
+    expected_volume: ["50", "ml", 3]
+    expected_multipack: true
+  - input: "Set of 3 × 50ml"
+    expected_volume: ["50", "ml", 3]
+    expected_multipack: true
+
+  # ---- multipacks: per-unit volume ambiguous → null volume_norm but multipack=true ----
+  - input: "набор пробников"
+    expected_volume: null
+    expected_multipack: true
+  - input: "kit travel size"
+    expected_volume: null
+    expected_multipack: true
+  - input: "комплект для лица"
+    expected_volume: null
+    expected_multipack: true
+  - input: "10 шт"
+    expected_volume: null
+    expected_multipack: true
+
+  # ---- non-volume inputs ----
+  - input: "Кружевное боди"
+    expected_volume: null
+    expected_multipack: false
+  - input: ""
+    expected_volume: null
+    expected_multipack: false
+
+  # ---- mixed-language full-name input (volume embedded in product title) ----
+  - input: "Eau de Parfum 75 ml Givenchy"
+    expected_volume: ["75", "ml", 1]
+    expected_multipack: false

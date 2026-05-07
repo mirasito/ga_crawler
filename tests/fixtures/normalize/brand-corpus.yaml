@@ -1,0 +1,49 @@
+# Brand normalizer corpus. Drives tests/unit/test_brand_normalizer.py via parametrize.
+# Format: list of {raw: str, expected_brand_norm: str, alias_present: bool}
+# Source: 02-RESEARCH.md §Pattern 7 + 02-CONTEXT.md D-205 D-206.
+# Schema:
+#   - raw: original brand string as-emitted-by-retailer (any case, any script)
+#   - expected_brand_norm: canonical lowercase + ascii + underscore/dash key
+#   - alias_present: True iff this raw form appears as an alias in the seed brand-aliases YAML
+#                    (Cyrillic and accented forms must always be aliased; pure-ASCII variants
+#                    canonicalize via slugify rules and don't need an explicit alias entry)
+
+cases:
+  # ---- aliased Cyrillic ↔ Latin pairs ----
+  - raw: "Estée Lauder"
+    expected_brand_norm: "estee_lauder"
+    alias_present: true
+  - raw: "Estee Lauder"
+    expected_brand_norm: "estee_lauder"
+    alias_present: true
+  - raw: "Эсте Лаудер"
+    expected_brand_norm: "estee_lauder"
+    alias_present: true
+  - raw: "Givenchy"
+    expected_brand_norm: "givenchy"
+    alias_present: true
+  - raw: "Живанши"
+    expected_brand_norm: "givenchy"
+    alias_present: true
+
+  # ---- pure-Latin canonicalization (slugify only — no alias entry required) ----
+  - raw: "Tom Ford"
+    expected_brand_norm: "tom-ford"
+    alias_present: false
+  - raw: "L'Oréal Paris"
+    expected_brand_norm: "loreal-paris"
+    alias_present: false
+  - raw: "JO MALONE LONDON"
+    expected_brand_norm: "jo-malone-london"
+    alias_present: false
+  - raw: "Frédéric Malle"
+    expected_brand_norm: "frederic-malle"
+    alias_present: false
+  - raw: "Creed"
+    expected_brand_norm: "creed"
+    alias_present: false
+
+  # ---- edge case: empty input ----
+  - raw: ""
+    expected_brand_norm: ""
+    alias_present: false

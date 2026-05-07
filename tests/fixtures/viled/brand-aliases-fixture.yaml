@@ -1,0 +1,15 @@
+# Test fixture — small flat-dict alias seed for YamlBrandAlias unit tests.
+# Schema per 02-CONTEXT.md D-205: {brand_norm: [aliases...]}.
+# NOT to be confused with the production config/brand-aliases.yaml (which Plan 06 ships).
+# Aliases include Cyrillic + accented Latin forms; canonical key is ASCII underscore-snake.
+
+estee_lauder:
+  - "Estée Lauder"
+  - "Estee Lauder"
+  - "Эсте Лаудер"
+givenchy:
+  - "Givenchy"
+  - "Живанши"
+chanel:
+  - "Chanel"
+  - "Шанель"
