@@ -170,10 +170,100 @@ class SqliteSnapshotWriter:
         return inserted
 
 
+# ---- SqliteRunWriter (DATA-05; atomic json_patch — Pitfall 6) ----
+
+
+class SqliteRunWriter:
+    """RunWriterProtocol implementer + concrete create()/finalize() (NOT in Protocol per Open Q1).
+
+    Atomic stats merge via SQLite json_patch (RFC-7396 MergePatch). Phase 2 writes
+    only viled.* keys; Phase 3 writes only goldapple.* keys; merge cleanly without
+    read-modify-write race (Pitfall 6).
+
+    Pitfall 4: passing None/null in delta DELETES the key (RFC-7396 semantics).
+    Callers MUST NOT pass None values; use sentinels (-1, "", []) instead. Enforced
+    upstream via patch_stats(...) raise ValueError.
+    """
+
+    def __init__(self, engine):
+        self.engine = engine
+
+    def create(self, run_id: Optional[int] = None) -> int:
+        """Concrete-only (NOT in Protocol per Open Q1). Open a new runs row.
+
+        Returns the assigned run_id (auto-increment if not provided).
+        """
+        with Session(self.engine) as s:
+            row = Run(run_id=run_id, status="running")
+            s.add(row)
+            s.commit()
+            s.refresh(row)
+            return row.run_id  # type: ignore[return-value]
+
+    def patch_stats(self, run_id: int, delta: dict) -> None:
+        """Atomic JSON-merge into runs.stats (Pitfall 6 RFC-7396 MergePatch).
+
+        Pitfall 4: delta MUST NOT contain None/null values (would DELETE keys).
+        """
+        if any(v is None for v in delta.values()):
+            raise ValueError(
+                "Pitfall 4: delta contains None — RFC-7396 MergePatch DELETES "
+                "the key. Use sentinels (-1, '', []) or omit the key."
+            )
+        delta_json = json.dumps(delta, ensure_ascii=False, default=str)
+        with Session(self.engine) as s:
+            s.exec(  # type: ignore[call-overload]
+                text(
+                    "UPDATE runs SET stats = json_patch(stats, :delta) "
+                    "WHERE run_id = :rid"
+                ),
+                params={"delta": delta_json, "rid": run_id},
+            )
+            s.commit()
+
+    def get_stats(self, run_id: int) -> dict:
+        with Session(self.engine) as s:
+            row = s.get(Run, run_id)
+            if row is None:
+                return {}
+            return json.loads(row.stats or "{}")
+
+    def fail(self, run_id: int, reason: str) -> None:
+        """Idempotent — safe to call from try/finally even if already failed."""
+        now = datetime.now(timezone.utc)
+        with Session(self.engine) as s:
+            s.exec(  # type: ignore[call-overload]
+                text(
+                    "UPDATE runs SET status='failed', fail_reason=:r, finished_at=:t "
+                    "WHERE run_id=:rid"
+                ),
+                params={"r": reason, "rid": run_id, "t": now},
+            )
+            s.commit()
+
+    def finalize(self, run_id: int, status: str = "success") -> None:
+        """Concrete-only (NOT in Protocol). Close run with explicit status.
+
+        WHERE status='running' guard makes this idempotent — a previously failed run
+        cannot be 'unfailed' by a subsequent finalize call.
+        """
+        now = datetime.now(timezone.utc)
+        with Session(self.engine) as s:
+            s.exec(  # type: ignore[call-overload]
+                text(
+                    "UPDATE runs SET status=:s, finished_at=:t "
+                    "WHERE run_id=:rid AND status='running'"
+                ),
+                params={"s": status, "rid": run_id, "t": now},
+            )
+            s.commit()
+
+
 __all__ = [
     "Run",
     "Snapshot",
     "SqliteSnapshotWriter",
+    "SqliteRunWriter",
     "make_engine",
     "init_db",
 ]
