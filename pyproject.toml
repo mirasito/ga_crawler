@@ -17,6 +17,7 @@ dependencies = [
     "patchright>=1.55",
     "pydantic>=2.10,<3.0",
     "python-dotenv>=1.0,<2.0",
+    "pyyaml>=6.0.3",
     "selectolax>=0.3,<0.4",
     "sqlmodel>=0.0.24,<0.1",
     "structlog>=25.0,<26.0",
@@ -72,3 +73,17 @@ camoufox_version_expected = "135.0.1.beta24"  # D-313; smoke probe asserts; PR-u
 url_1 = "https://goldapple.kz/7680100018-very-irresistible-givenchy"
 url_2 = "https://goldapple.kz/7681000001-givenchy-pour-homme-blue-label"
 url_3 = "https://goldapple.kz/19000032744-givenchy-gentleman-reserve-privee-eau-de-parfum"
+
+[tool.ga_crawler.crawl.viled]
+# Phase 2 operational constants. Type-locked; operator edits via git PR.
+# Source anchors: 02-CONTEXT.md (D-201..D-227) + 02-WAVE0-PROBE.md (probe-verified field paths).
+sanity_gate_n = 100                           # D-201 seed (revised for catalog/1310 scope; auto-suggest from week 5)
+pause_seconds = 2.0                           # D-225 + spike 01-07 (15/15 success at 2s) + WAVE0-PROBE (8/8 success at 2s)
+concurrency = 1                               # D-225 (sync curl_cffi loop, no async)
+retry_attempts = 3                            # D-225 mirror Phase 3 tenacity policy
+n_auto_suggest_factor = 0.7                   # D-203 mirror Phase 3 D-310: 0.7 × 4-week-median
+n_auto_suggest_after_runs = 4                 # D-203 mirror Phase 3 D-310: needs 4+ history rows
+catalog_urls = [                              # D-227 operator-managed list (additive PRs OK)
+    "https://viled.kz/men/catalog/1310",
+    "https://viled.kz/women/catalog/1310",
+]
