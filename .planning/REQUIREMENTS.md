@@ -14,21 +14,21 @@
 
 ### Crawl
 
-- [ ] **CRAWL-01**: Краулер обходит весь каталог viled.kz (включая пагинацию) и собирает список URL продуктов
+- [x] **CRAWL-01**: Краулер обходит весь каталог viled.kz (включая пагинацию) и собирает список URL продуктов — Plan 02-04 ships `enumeration/viled_catalog.py::fetch_catalog_urls` walking `props.pageProps.items.{content, totalPages, pageNumber}` per WAVE0-PROBE A4 REVISED. v1 limitation: SSR ignores `?page=N` and 9 other URL conventions (live probe 2026-05-07); runtime guard breaks early on stuck pageNumber. Effective output: 120 SKUs (60 men + 60 women, page 1 of each catalog) — above D-201 N=100 floor. Full pagination deferred to Phase 3/7 ops.
 - [x] **CRAWL-02**: Краулер goldapple.kz получает список SKU, ограниченный брендами, присутствующими на viled.kz в текущем `run_id`
-- [ ] **CRAWL-03**: Per-SKU isolation — падение одного продукта не валит весь запуск; ошибки логируются и не блокируют остальные SKU
-- [ ] **CRAWL-04**: Retry с экспоненциальной задержкой и jitter для временных сбоев (HTTP 5xx, таймауты)
-- [ ] **CRAWL-05**: Sanity-assertion после краула: `viled_count > N`, `goldapple_count > M` (пороги конфигурируются); меньше — `runs.status = 'failed'`
-- [ ] **CRAWL-06**: Краулер уважает заданный rate-limit (паузы между запросами); параметры конфигурируются
+- [x] **CRAWL-03**: Per-SKU isolation — падение одного продукта не валит весь запуск; ошибки логируются и не блокируют остальные SKU — Plan 02-04 ships `fetchers/viled.py::fetch_one_isolated` (sync wrapper around `ViledFetcher.fetch_one`); exceptions logged via structlog `fetch_failed` event + `stats["fetch_failures"]` counter; run_loop continues to next URL.
+- [x] **CRAWL-04**: Retry с экспоненциальной задержкой и jitter для временных сбоев (HTTP 5xx, таймауты) — Plan 02-04 ships tenacity-decorated `_fetch_html` with `stop_after_attempt(3)` + `wait_exponential_jitter(initial=2, max=30)`; retry-set includes synthetic TransientFetchError + curl_cffi-native Timeout/ReadTimeout/ConnectionError/HTTPError/RequestException (imports from `curl_cffi.requests.exceptions` per WAVE0-PROBE A10 REVISED); 4xx (e.g. 404, 410, 403) NOT retried — surfaces immediately for caller's DELISTED/PITFALL-8 handling.
+- [ ] **CRAWL-05**: Sanity-assertion после краула: `viled_count > N`, `goldapple_count > M` (пороги конфигурируются); меньше — `runs.status = 'failed'` (deferred to Plan 02-05 — runner/gates.py D-203 retailer-agnostic refactor)
+- [x] **CRAWL-06**: Краулер уважает заданный rate-limit (паузы между запросами); параметры конфигурируются — Plan 02-04 ships `ViledFetcher.run_loop` with `sleep_fn(self.pause_seconds)` between fetches (N-1 sleeps for N URLs, no sleep after last); `pause_seconds` configurable via constructor or `ViledConfig.pause_seconds` (default 2.0 per D-225, loaded from `[tool.ga_crawler.crawl.viled]` namespace).
 
 ### Parse
 
-- [ ] **PARSE-01**: Парсер для каждого ритейлера извлекает: название, бренд, объём/вес, текущую цену, цену до скидки (если есть), наличие, URL, валюту
-- [ ] **PARSE-02**: JSON-LD `Product.offers.price` имеет приоритет над CSS-селекторами; CSS — запасной вариант
-- [ ] **PARSE-03**: Парсер отвергает поля вида `*old*`, `*was*`, `*crossed*`, `*club*`, `*gold*`, `*from*` при выборе `current_price`
-- [ ] **PARSE-04**: Sanity-check цены: `100 ≤ price ≤ 1_000_000 ₸`; вне диапазона — поле помечается как ошибка парсинга
-- [ ] **PARSE-05**: Hard-fail invariant — если у >5% продуктов нет обязательного поля (название, цена, URL), запуск помечается `failed`
-- [ ] **PARSE-06**: Стек состояния — enum (`IN_STOCK`, `OUT_OF_STOCK`, `UNAVAILABLE`, `DELISTED`, `URL_CHANGED`, `UNKNOWN`); хранится в схеме как enum, в отчёте v1 сводится к bool
+- [x] **PARSE-01**: Парсер для каждого ритейлера извлекает: название, бренд, объём/вес, текущую цену, цену до скидки (если есть), наличие, URL, валюту — Plan 02-04 ships `parsers/viled_nextdata.py::parse_pdp` returning `ViledRawProduct(sku_id, url, name, brand_raw, current_price, was_price, currency, availability, raw_volume_text)` 9-field shape mirroring Phase 3 `GoldappleRawProduct`; same shape exposed via `ParseDispatcher().dispatch(retailer, html, url)`.
+- [x] **PARSE-02**: JSON-LD `Product.offers.price` имеет приоритет над CSS-селекторами; CSS — запасной вариант — Plan 02-04 ships `parsers/dispatcher.py::ParseDispatcher` per-retailer routing (`viled` → `__NEXT_DATA__`-only parser per spike 01-07's 0/15 JSON-LD finding; `goldapple` → microdata extractor frozen since Phase 3). PARSE-02 inversion: viled parser MUST NOT contain JSON-LD code paths (enforced by `test_no_jsonld_path` source-inspection).
+- [x] **PARSE-03**: Парсер отвергает поля вида `*old*`, `*was*`, `*crossed*`, `*club*`, `*gold*`, `*from*` при выборе `current_price` — Plan 02-04 implements per Reading A (WAVE0-PROBE A2): viled `attributes[0].price` is the current/sale price (customer-facing); `attributes[0].realPrice` is the MSRP/was-price; was_price set only when realPrice > price. Live discounted Frederic Malle fixture (price=356745, realPrice=419700) pinned in `test_discounted_fixture_real_corpus` as a permanent regression-canary.
+- [x] **PARSE-04**: Sanity-check цены: `100 ≤ price ≤ 1_000_000 ₸`; вне диапазона — поле помечается как ошибка парсинга — Plan 02-04 ships inclusive boundary check in `viled_nextdata.parse_pdp`; verified by `test_sanity_range_low`, `test_sanity_range_high`, `test_sanity_range_boundaries_inclusive`.
+- [ ] **PARSE-05**: Hard-fail invariant — если у >5% продуктов нет обязательного поля (название, цена, URL), запуск помечается `failed` (deferred to Plan 02-05 — runner/gates.py parse_quality_gate D-218)
+- [x] **PARSE-06**: Стек состояния — enum (`IN_STOCK`, `OUT_OF_STOCK`, `UNAVAILABLE`, `DELISTED`, `URL_CHANGED`, `UNKNOWN`); хранится в схеме как enum, в отчёте v1 сводится к bool — Plan 02-04 ships `parsers/types.py::StockState` Literal enum + `viled_nextdata._map_stock_state(item)` derives from `item.count` (int) + `item.purchaseType` (str) per WAVE0-PROBE A1 REVISED (no in_stock bool exists in viled __NEXT_DATA__). DELISTED is fetcher-level (404/410); URL_CHANGED is orchestrator-level.
 
 ### Normalize
 
@@ -137,18 +137,18 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 | RECON-02 | Phase 1 | Done (plan 01-07, 2026-05-05) |
 | RECON-03 | Phase 1 | Done — page-volume in plan 01-05 (2026-05-05); JSON-endpoint hunt in plan 01-06 (2026-05-06, finding: NO Tier-0 endpoint, vendor identified as GroupIB/F.A.C.C.T., D-14 verification deferred to 01-08) |
 | RECON-04 | Phase 1 | Done (plan 01-04, 2026-05-05) |
-| CRAWL-01 | Phase 2 | Pending |
+| CRAWL-01 | Phase 2 | Closed (Plan 02-04 — page-1-only v1; full pagination Phase 3/7 ops backlog) |
 | CRAWL-02 | Phase 3 | Done — Wave 7 gap-closure plan 03-08 (2026-05-06) closed Truth 1 BLOCKER via Path A longest-prefix-in-whitelist brand-token bucket index; matched_url_count > 0 against realistic 45,490-slug sitemap shape proven by full-pipeline regression + E2E test; D-305 / Pitfall 3 enforced structurally (inspect.getsource gates) |
-| CRAWL-03 | Phase 2 | Pending |
-| CRAWL-04 | Phase 2 | Pending |
+| CRAWL-03 | Phase 2 | Closed (Plan 02-04) |
+| CRAWL-04 | Phase 2 | Closed (Plan 02-04) |
 | CRAWL-05 | Phase 2 (viled threshold) + Phase 3 (goldapple threshold added to same gate) | Pending |
-| CRAWL-06 | Phase 2 | Pending |
-| PARSE-01 | Phase 2 (modules shared with Phase 3) | Pending |
-| PARSE-02 | Phase 2 (modules shared with Phase 3) | Pending |
-| PARSE-03 | Phase 2 (modules shared with Phase 3) | Pending |
-| PARSE-04 | Phase 2 (modules shared with Phase 3) | Pending |
+| CRAWL-06 | Phase 2 | Closed (Plan 02-04) |
+| PARSE-01 | Phase 2 (modules shared with Phase 3) | Closed (Plan 02-04 viled side; Phase 3 goldapple side already shipped) |
+| PARSE-02 | Phase 2 (modules shared with Phase 3) | Closed (Plan 02-04 — ParseDispatcher routes viled `__NEXT_DATA__` + goldapple microdata) |
+| PARSE-03 | Phase 2 (modules shared with Phase 3) | Closed (Plan 02-04 — Reading A semantics anchored to live fixtures) |
+| PARSE-04 | Phase 2 (modules shared with Phase 3) | Closed (Plan 02-04) |
 | PARSE-05 | Phase 2 (modules shared with Phase 3) | Pending |
-| PARSE-06 | Phase 2 (modules shared with Phase 3) | Pending |
+| PARSE-06 | Phase 2 (modules shared with Phase 3) | Closed (Plan 02-04 — StockState enum + viled `_map_stock_state` per WAVE0-PROBE A1 REVISED) |
 | NORM-01 | Phase 2 (seeded with viled top-50; goldapple variants added in Phase 3) | Plan 02-03 (loader + canonical_for); seed in Plan 02-06 |
 | NORM-02 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |
 | NORM-03 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |

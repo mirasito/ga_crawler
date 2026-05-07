@@ -232,3 +232,49 @@ def fetch(url): ...
 - 2.0 s pause between fetches (D-225). No throttling, no 429, no anti-bot challenge.
 - `impersonate="chrome"` only — no proxy, no Patchright/Camoufox. **viled fully Tier 0 confirmed for catalog endpoints, not just `/item/{id}`** (extends spike-01-07 finding).
 - Probe scripts deleted after capture per spike convention (see commit).
+
+## Addendum 2026-05-07 — A4 follow-up probe (Plan 02-04 implementation)
+
+During Plan 02-04 Task 2 implementation, an additional live probe was run to
+resolve A4's open question: *what URL convention actually paginates the
+catalog?*
+
+**Tested URL conventions** (all against `https://viled.kz/men/catalog/1310`):
+
+| Convention                                                | HTTP | bytes   | `pageProps.items.pageNumber` | content[0].id |
+|-----------------------------------------------------------|------|---------|------------------------------|---------------|
+| `?page=2`                                                 | 200  | 238 212 | **1**                         | 408872        |
+| `?pageNumber=2`                                           | 200  | 238 212 | **1**                         | 408872        |
+| `?p=2`                                                    | 200  | 238 212 | **1**                         | 408872        |
+| `?offset=60`                                              | 200  | 238 212 | **1**                         | 408872        |
+| `?from=60`                                                | 200  | 238 212 | **1**                         | 408872        |
+| `/page/2`                                                 | 404  | —       | —                            | —             |
+| `/2`                                                      | 404  | —       | —                            | —             |
+| `_next/data/{buildId}/men/catalog/1310.json?page=2`       | 200  | 215 357 | **1**                         | 408872        |
+| `_next/data/{buildId}/men/catalog/1310.json?pageNumber=2` | 200  | 215 357 | **1**                         | 408872        |
+| `/api/items?catalogId=1310&page=2` (and 4 variants)       | 404  | 0       | —                            | —             |
+
+**Verdict**: NONE of the public URL conventions paginate the SSR HTML or the
+Next.js `/_next/data` route. The catalog endpoint always returns page 1
+regardless of query params. Inspection of the page-1 HTML found no `/api/`
+references, no `getServerSideProps` hints, and no fetch hooks pointing at a
+specific endpoint. The pagination is presumably driven by client-side JS via
+an XHR endpoint that requires a CSRF token or other request signing not
+exposed through a simple GET.
+
+**Plan 02-04 implementation response** (Rule 3 deviation — auto-fix blocking):
+
+- `enumeration/viled_catalog.py::fetch_catalog_urls` walks page 1, then
+  attempts `?page=2..N` for `totalPages` per A4 metadata.
+- A runtime guard inspects each subsequent response: if `pageNumber` is
+  unchanged or `content[0].id` matches page 1, the loop logs
+  `catalog_pagination_not_supported` and breaks early.
+- v1 effective output: **120 SKUs** (60 men + 60 women) instead of 7,697.
+- Sufficient for D-201 `sanity_gate_n=100` catastrophic-failure detector;
+  the auto-suggest mechanism (D-203) takes over week-5 onward.
+- Resolution path deferred to Phase 3/7 ops follow-up — likely candidates:
+  reverse-engineer the XHR pagination call by capturing a real browser
+  session, or escalate to a categorised crawl per `groupId` filter on
+  `pageProps.filters`.
+
+This finding closes A4 as **REVISED + LIMITATION-DOCUMENTED**.
