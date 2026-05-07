@@ -60,7 +60,13 @@
   3. The viled snapshot for a run contains all required fields (name, brand, volume_raw, current_price, was_price, currency, stock_state enum, url, brand_norm, name_norm, volume_norm, multipack_flag, scraped_at) with <5% null rate on required fields, otherwise the run is marked `failed`.
   4. The brand-alias YAML (seeded with viled's top-50 brands and Cyrillic↔Latin variants) and Volume value object correctly normalize a documented test suite of real strings (including `30 мл`, `30мл`, `30ml`, `1.0 oz`, `3 шт x 50мл`, kits/sets); kits are flagged and excluded from price-per-unit comparison.
   5. A sanity-assertion gate after the crawl marks the run `failed` when `viled_count < N` (configurable threshold), preventing downstream phases from running on bad data.
-**Plans**: TBD
+**Plans**: 6 plans across 6 waves (Wave 0 bootstrap -> Wave 1 storage -> Wave 2 normalizers -> Wave 3 viled parser/fetcher/enumeration -> Wave 4 gates+orchestrator+CLI cutover -> Wave 5 alias seed+backup+doc cascades)
+- [ ] 02-01-PLAN.md - Wave 0: pyproject [tool.ga_crawler.crawl.viled] namespace + PyYAML dep + Wave 0 live probe (A1/A2/A3/A4/A10) + 5 viled fixtures + volume/brand corpus YAMLs + 24 skip-marked test stubs + 02-WAVE0-PROBE.md memo
+- [ ] 02-02-PLAN.md - Wave 1: storage/sqlite.py SQLModel Run+Snapshot tables + WAL engine + atomic json_patch RunWriter (Pitfall 6) + per-batch SnapshotWriter (DATA-04) + v_current_snapshots VIEW (D-221); storage/norm06_writer.py markdown ledger (D-208/D-211); 7 test files GREEN
+- [ ] 02-03-PLAN.md - Wave 2: alias/yaml_loader.py YamlBrandAlias (read-once D-207) + normalizers/{brand,name,volume}.py (NORM-02/05/03/04 — REUSE _normalize_punct from slug.py) + facade.py Normalizer satisfying NormalizerProtocol; 4 test files GREEN
+- [ ] 02-04-PLAN.md - Wave 3: parsers/viled_nextdata.py (PARSE-01..04, PARSE-06 — __NEXT_DATA__ first, NO json-ld) + parsers/dispatcher.py (PARSE-02 routing) + enumeration/viled_catalog.py (__NEXT_DATA__ pagination D-224) + fetchers/viled.py (curl_cffi sync + tenacity 3-retry + per-SKU isolation + 2s rate-limit per D-225) + config.py ViledConfig loader; 7 test files GREEN
+- [ ] 02-05-PLAN.md - Wave 4: runner/gates.py D-203 retailer-agnostic refactor + parse_quality_gate (D-218) + Phase 3 backward-compat shims; runner/stats.py ViledStatsBuilder mirror; runners/viled_run.py 8-step orchestrator with sequential parse-quality + sanity-N gates + atomic patch_stats; runners/main_run.py composition with try/except DATA-05 lifecycle; cli.py D-212 cutover (DELETE 4 stubs + goldapple-run; ADD weekly-run); 6 test files GREEN
+- [ ] 02-06-PLAN.md - Wave 5: config/brand-aliases.yaml seeded with ≥50 viled brands (D-206); bin/backup.sh (online sqlite3 .backup + 4-rotate D-219); backups/ dir + .gitignore; tests/integration/test_backup_script.py (DATA-06); CONTEXT Action Items cascade to REQUIREMENTS.md/PROJECT.md/STATE.md (scope-narrowing to /men/catalog/1310 + /women/catalog/1310)
 **UI hint**: no
 
 ### Phase 3: Goldapple Crawl
@@ -163,7 +169,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Goldapple Reconnaissance Spike | 9/12 | Complete (3 plans skipped) | 2026-05-06 |
-| 2. Project Skeleton + viled Crawl + Storage | 0/0 | Not started | - |
+| 2. Project Skeleton + viled Crawl + Storage | 0/6 | Planned | - |
 | 3. Goldapple Crawl | 8/8 | Complete | 2026-05-06 |
 | 4. Matcher + Match-Rate KPI | 0/0 | Not started | - |
 | 5. Reporter (Excel + summary) | 0/0 | Not started | - |
