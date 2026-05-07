@@ -14,7 +14,7 @@
 
 ### Crawl
 
-- [x] **CRAWL-01**: Краулер обходит весь каталог viled.kz (включая пагинацию) и собирает список URL продуктов — Plan 02-04 ships `enumeration/viled_catalog.py::fetch_catalog_urls` walking `props.pageProps.items.{content, totalPages, pageNumber}` per WAVE0-PROBE A4 REVISED. v1 limitation: SSR ignores `?page=N` and 9 other URL conventions (live probe 2026-05-07); runtime guard breaks early on stuck pageNumber. Effective output: 120 SKUs (60 men + 60 women, page 1 of each catalog) — above D-201 N=100 floor. Full pagination deferred to Phase 3/7 ops.
+- [x] **CRAWL-01**: Краулер обходит beauty+парфюмерия каталог viled.kz (`/men/catalog/1310` + `/women/catalog/1310`, через пагинацию) и собирает список URL продуктов — Plan 02-04 ships `enumeration/viled_catalog.py::fetch_catalog_urls` walking `props.pageProps.items.{content, totalPages, pageNumber}` per WAVE0-PROBE A4 REVISED. Scope clarification (CONTEXT D-223, 2026-05-07): viled = beauty+parfumery only (NOT full luxury catalog) — commercial relevance vs goldapple beauty retailer. v1 limitation: SSR ignores `?page=N` and 9 other URL conventions (live probe 2026-05-07); runtime guard breaks early on stuck pageNumber. Effective output: 120 SKUs (60 men + 60 women, page 1 of each catalog) — above D-201 N=100 floor. Full pagination deferred to Phase 3/7 ops.
 - [x] **CRAWL-02**: Краулер goldapple.kz получает список SKU, ограниченный брендами, присутствующими на viled.kz в текущем `run_id`
 - [x] **CRAWL-03**: Per-SKU isolation — падение одного продукта не валит весь запуск; ошибки логируются и не блокируют остальные SKU — Plan 02-04 ships `fetchers/viled.py::fetch_one_isolated` (sync wrapper around `ViledFetcher.fetch_one`); exceptions logged via structlog `fetch_failed` event + `stats["fetch_failures"]` counter; run_loop continues to next URL.
 - [x] **CRAWL-04**: Retry с экспоненциальной задержкой и jitter для временных сбоев (HTTP 5xx, таймауты) — Plan 02-04 ships tenacity-decorated `_fetch_html` with `stop_after_attempt(3)` + `wait_exponential_jitter(initial=2, max=30)`; retry-set includes synthetic TransientFetchError + curl_cffi-native Timeout/ReadTimeout/ConnectionError/HTTPError/RequestException (imports from `curl_cffi.requests.exceptions` per WAVE0-PROBE A10 REVISED); 4xx (e.g. 404, 410, 403) NOT retried — surfaces immediately for caller's DELISTED/PITFALL-8 handling.
@@ -32,7 +32,7 @@
 
 ### Normalize
 
-- [x] **NORM-01**: Brand-alias таблица (YAML) сопоставляет Cyrillic ↔ Latin варианты брендов (`Estée Lauder` ↔ `Эсте Лаудер` ↔ `Estee Lauder`); seeded топ-50 брендами viled — Plan 02-03 ships `YamlBrandAlias` loader (read-once D-207, lookup + canonical_for reverse helper); production seed config/brand-aliases.yaml lands in Plan 02-06
+- [x] **NORM-01**: Brand-alias таблица (YAML) сопоставляет Cyrillic ↔ Latin варианты брендов (`Estée Lauder` ↔ `Эсте Лаудер` ↔ `Estee Lauder`); seeded топ-50 брендами viled — Plan 02-03 ships `YamlBrandAlias` loader (read-once D-207, lookup + canonical_for reverse helper); Plan 02-06 ships production seed `config/brand-aliases.yaml` with **58 canonical brands** (≥50 floor) including 46 Cyrillic alias entries (Эсте Лаудер, Живанши, Шанель, Диор, Том Форд, Джо Малон Лондон, Крид, Фредерик Маль, Амуаж, Килиан, Армани, etc.) per D-204..D-207 priority order (viled-home-brands-extract + STATE.md plan 01-05 luxury/perfumery brands)
 - [x] **NORM-02**: Нормализация бренда: NFKD + accent strip + lowercase + alias lookup → `brand_norm` — Plan 02-03 ships `normalizers/brand.py::normalize_brand` (REUSE _normalize_punct from enumeration/slug.py via import — no duplication)
 - [x] **NORM-03**: Volume value-object `(amount, unit, multipack)`; парсит `30 мл`, `30мл`, `30ml`, `1.0 oz`, `3 шт x 50мл`, `Set of 3 × 50ml` — Plan 02-03 ships `Volume` frozen dataclass + `parse_volume` (3-layer grammar) + 24-entry UNIT_TABLE; all 18 volume-corpus.yaml cases pass
 - [x] **NORM-04**: Multipack/kit детектится явно; для v1 такие SKU **исключаются** из price-per-unit-сравнения и помечаются флагом — Plan 02-03 ships `detect_multipack` INDEPENDENT of parse_volume (Open Q4 multipack flag persists when per-unit volume unparseable like `набор пробников`, `10 шт`)
@@ -53,7 +53,7 @@
 - [x] **DATA-03**: Все записи immutable — апдейты только через новый `run_id`; "current view" реализуется через SQL `v_current_snapshots` — Plan 02-02 ships UNIQUE (run_id, retailer, sku_id) + INSERT-only `SqliteSnapshotWriter` + `v_current_snapshots` VIEW (D-221)
 - [x] **DATA-04**: WAL mode включён; per-run транзакции; on-failure rollback не теряет уже сохранённые SKU — Plan 02-02 ships `make_engine` PRAGMA event listener (WAL + synchronous=NORMAL + foreign_keys=ON) + per-batch commit (DATA-04 mid-run-failure resilience, default batch_size=100)
 - [x] **DATA-05**: `runs` row создаётся в начале запуска и **обязательно** обновляется в конце (success/partial/failed) во всех ветках кода — Plan 02-02 ships `SqliteRunWriter.create/patch_stats(json_patch)/get_stats/fail/finalize` lifecycle (atomic Pitfall-6 merge + idempotent fail/finalize). Try/finally orchestration wired in Plan 05.
-- [ ] **DATA-06**: Nightly backup БД в отдельную директорию (минимум 4 последних бэкапа)
+- [x] **DATA-06**: Nightly backup БД в отдельную директорию (минимум 4 последних бэкапа) — Plan 02-06 ships `bin/backup.sh` (online sqlite3 .backup + 4-rotate retention per D-219 + RESEARCH §Pitfall 3 atomic+WAL-safe) + `backups/` directory tracked via .gitkeep with `.gitignore` excluding *.db files. 4 integration tests in `tests/integration/test_backup_script.py` verify atomic backup + 4-file retention + missing-source error + auto-mkdir.
 
 ### Report
 
@@ -149,7 +149,7 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 | PARSE-04 | Phase 2 (modules shared with Phase 3) | Closed (Plan 02-04) |
 | PARSE-05 | Phase 2 (modules shared with Phase 3) | Closed (Plan 02-05 — D-218 `parse_quality_gate(null_rate, threshold=0.05)` runs FIRST in viled_run.py before sanity-N; ≤5% null-required-field rate passes; >5% sets run.status='failed' with reason 'parse_quality_below_threshold') |
 | PARSE-06 | Phase 2 (modules shared with Phase 3) | Closed (Plan 02-04 — StockState enum + viled `_map_stock_state` per WAVE0-PROBE A1 REVISED) |
-| NORM-01 | Phase 2 (seeded with viled top-50; goldapple variants added in Phase 3) | Plan 02-03 (loader + canonical_for); seed in Plan 02-06 |
+| NORM-01 | Phase 2 (seeded with viled top-50; goldapple variants added in Phase 3) | Closed (Plan 02-03 loader + canonical_for; Plan 02-06 production seed `config/brand-aliases.yaml` with 58 canonical brands + 46 Cyrillic aliases) |
 | NORM-02 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |
 | NORM-03 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |
 | NORM-04 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |
@@ -164,7 +164,7 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 | DATA-03 | Phase 2 | Done (Plan 02-02 — UNIQUE constraint + append-only writer + v_current_snapshots VIEW) |
 | DATA-04 | Phase 2 | Done (Plan 02-02 — WAL PRAGMA event listener + per-batch commit) |
 | DATA-05 | Phase 2 | Done (Plan 02-02 — SqliteRunWriter atomic json_patch lifecycle; try/finally orchestration in Plan 05) |
-| DATA-06 | Phase 2 | Pending |
+| DATA-06 | Phase 2 | Closed (Plan 02-06 — bin/backup.sh online sqlite3 .backup + 4-rotate retention per D-219; 4 integration tests verify atomic backup + retention + error path + auto-mkdir) |
 | REPORT-01 | Phase 5 | Pending |
 | REPORT-02 | Phase 5 | Pending |
 | REPORT-03 | Phase 5 | Pending |

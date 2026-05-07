@@ -43,9 +43,13 @@ if [ ! -s "$TARGET" ]; then
 fi
 
 # Retention rotation: keep 4 most recent (DATA-06 minimum).
-# `ls -t` sorts newest-first; `tail -n +5` skips the first 4; `xargs -r rm -f`
-# deletes the rest. `-r` (no-run-if-empty) suppresses the rm call when there
-# are <4 files, keeping the script idempotent on first runs.
-ls -t "$BACKUP_DIR"/*.db 2>/dev/null | tail -n +5 | xargs -r rm -f
+# `ls -t` sorts newest-first; `tail -n +5` skips the first 4; `xargs -r -d '\n'
+# rm -f` deletes the rest. `-r` (no-run-if-empty) suppresses the rm call when
+# there are <4 files, keeping the script idempotent on first runs. `-d '\n'`
+# tells xargs to use newline as the ONLY delimiter — without it, xargs treats
+# backslashes as escape characters, which breaks Windows paths
+# (`C:\Users\…\backups/2025-01-15.db` -> `C:UsersgstorepcAppDataLocal…`)
+# when the script runs under Git Bash on Windows. GNU xargs supports `-d`.
+ls -t "$BACKUP_DIR"/*.db 2>/dev/null | tail -n +5 | xargs -r -d '\n' rm -f
 
 echo "OK: backup written to $TARGET"

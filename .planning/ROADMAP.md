@@ -14,7 +14,7 @@
 ## Phases
 
 - [ ] **Phase 1: Goldapple Reconnaissance Spike** — Anti-bot tier and proxy provider for goldapple.kz are decided and validated against 100 sequential live product fetches; throwaway code, decision memo committed.
-- [ ] **Phase 2: Project Skeleton + viled Crawl + Storage** — `python -m ga_crawler` executes end-to-end against viled.kz and persists a complete, idempotent weekly snapshot with shared parser + normalizer modules.
+- [ ] **Phase 2: Project Skeleton + viled Crawl + Storage** — `python -m ga_crawler` executes end-to-end against viled.kz (beauty+parfumery scope: /men/catalog/1310 + /women/catalog/1310) and persists a complete, idempotent weekly snapshot with shared parser + normalizer modules.
 - [ ] **Phase 3: Goldapple Crawl** — Goldapple snapshots, scoped to viled brands, are written to the same `snapshots` table at the same quality bar as viled, using the anti-bot tier from the spike.
 - [ ] **Phase 4: Matcher + Match-Rate KPI** — Strict-key matches between viled and goldapple are persisted per `run_id`, match-rate is logged as a tracked KPI, and a sanity-gate blocks delivery on low match counts.
 - [ ] **Phase 5: Reporter (Excel + summary)** — A multi-sheet Russian-headed Excel file and text summary are produced from the database alone, archived to disk, independent of any delivery channel.
@@ -55,7 +55,7 @@
 **Depends on**: Phase 1
 **Requirements**: DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, CRAWL-01, CRAWL-03, CRAWL-04, CRAWL-05, CRAWL-06, PARSE-01, PARSE-02, PARSE-03, PARSE-04, PARSE-05, PARSE-06, NORM-01, NORM-02, NORM-03, NORM-04, NORM-05, NORM-06
 **Success Criteria** (what must be TRUE):
-  1. Running `python -m ga_crawler` opens a `runs` row, crawls the full viled.kz catalog with retry/backoff and per-SKU isolation, and writes immutable snapshots in a single per-run transaction (with WAL enabled).
+  1. Running `python -m ga_crawler` opens a `runs` row, crawls the viled.kz beauty+parfumery catalog (`/men/catalog/1310` + `/women/catalog/1310`) with retry/backoff and per-SKU isolation, and writes immutable snapshots in a single per-run transaction (with WAL enabled).
   2. The `runs` row is closed (success/partial/failed) on every code path, including crashes and sanity-gate failures; nightly DB backup directory contains at least the last 4 backups.
   3. The viled snapshot for a run contains all required fields (name, brand, volume_raw, current_price, was_price, currency, stock_state enum, url, brand_norm, name_norm, volume_norm, multipack_flag, scraped_at) with <5% null rate on required fields, otherwise the run is marked `failed`.
   4. The brand-alias YAML (seeded with viled's top-50 brands and Cyrillic↔Latin variants) and Volume value object correctly normalize a documented test suite of real strings (including `30 мл`, `30мл`, `30ml`, `1.0 oz`, `3 шт x 50мл`, kits/sets); kits are flagged and excluded from price-per-unit comparison.
@@ -66,7 +66,7 @@
 - [x] 02-03-PLAN.md - Wave 2: alias/yaml_loader.py YamlBrandAlias (read-once D-207) + normalizers/{brand,name,volume}.py (NORM-02/05/03/04 — REUSE _normalize_punct from slug.py) + facade.py Normalizer satisfying NormalizerProtocol; 4 test files GREEN
 - [x] 02-04-PLAN.md - Wave 3: parsers/viled_nextdata.py (PARSE-01..04, PARSE-06 — __NEXT_DATA__ first, NO json-ld) + parsers/dispatcher.py (PARSE-02 routing) + enumeration/viled_catalog.py (__NEXT_DATA__ pagination D-224 — runtime SSR-pagination guard, v1 page-1-only fallback documented) + fetchers/viled.py (curl_cffi sync + tenacity 3-retry + per-SKU isolation + 2s rate-limit per D-225, exception types from .exceptions per A10) + config.py ViledConfig loader; 8 test files GREEN, +74 tests, 321 passed
 - [x] 02-05-PLAN.md - Wave 4: runner/gates.py D-203 retailer-agnostic refactor + parse_quality_gate (D-218) + Phase 3 backward-compat shims; runner/stats.py ViledStatsBuilder mirror; runners/viled_run.py 8-step orchestrator with sequential parse-quality + sanity-N gates + atomic patch_stats; runners/main_run.py composition with try/except DATA-05 lifecycle; cli.py D-212 cutover (DELETED 4 stubs + goldapple-run; ADDED weekly-run); 9 test files GREEN, +60 tests, 381 passed
-- [ ] 02-06-PLAN.md - Wave 5: config/brand-aliases.yaml seeded with ≥50 viled brands (D-206); bin/backup.sh (online sqlite3 .backup + 4-rotate D-219); backups/ dir + .gitignore; tests/integration/test_backup_script.py (DATA-06); CONTEXT Action Items cascade to REQUIREMENTS.md/PROJECT.md/STATE.md (scope-narrowing to /men/catalog/1310 + /women/catalog/1310)
+- [x] 02-06-PLAN.md - Wave 5: config/brand-aliases.yaml seeded with 58 viled brands (D-206 — 46 Cyrillic aliases); bin/backup.sh (online sqlite3 .backup + 4-rotate D-219); backups/ dir + .gitignore; tests/integration/test_backup_script.py (DATA-06 — 4 integration tests); CONTEXT Action Items cascade to REQUIREMENTS.md/PROJECT.md/STATE.md/ROADMAP.md (scope-narrowing to /men/catalog/1310 + /women/catalog/1310)
 **UI hint**: no
 
 ### Phase 3: Goldapple Crawl
@@ -169,7 +169,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Goldapple Reconnaissance Spike | 9/12 | Complete (3 plans skipped) | 2026-05-06 |
-| 2. Project Skeleton + viled Crawl + Storage | 0/6 | Planned | - |
+| 2. Project Skeleton + viled Crawl + Storage | 6/6 | Complete | 2026-05-07 |
 | 3. Goldapple Crawl | 8/8 | Complete | 2026-05-06 |
 | 4. Matcher + Match-Rate KPI | 0/0 | Not started | - |
 | 5. Reporter (Excel + summary) | 0/0 | Not started | - |
