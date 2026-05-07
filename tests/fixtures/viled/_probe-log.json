@@ -1,0 +1,20 @@
+[
+  {
+    "url": "https://viled.kz/item/407682",
+    "file": "viled-pdp-407682.html",
+    "status": 200,
+    "size": 145011
+  },
+  {
+    "url": "https://viled.kz/men/catalog/1310",
+    "file": "viled-catalog-men-1310-page1.html",
+    "status": 200,
+    "size": 238212
+  },
+  {
+    "url": "https://viled.kz/women/catalog/1310",
+    "file": "viled-catalog-women-1310-page1.html",
+    "status": 200,
+    "size": 255108
+  }
+]
