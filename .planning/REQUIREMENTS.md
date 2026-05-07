@@ -37,7 +37,7 @@
 - [ ] **NORM-03**: Volume value-object `(amount, unit, multipack)`; парсит `30 мл`, `30мл`, `30ml`, `1.0 oz`, `3 шт x 50мл`, `Set of 3 × 50ml`
 - [ ] **NORM-04**: Multipack/kit детектится явно; для v1 такие SKU **исключаются** из price-per-unit-сравнения и помечаются флагом
 - [ ] **NORM-05**: Нормализация имени: lowercase + удаление пунктуации + collapse whitespace → `name_norm`
-- [ ] **NORM-06**: Лог "бренды на goldapple, не найденные в alias-таблице" — еженедельная очередь ручной проверки
+- [x] **NORM-06**: Лог "бренды на goldapple, не найденные в alias-таблице" — еженедельная очередь ручной проверки (Plan 02-02 ships `Norm06Writer.persist()` markdown ledger at `.planning/runs/{run_id}/norm06-review.md` per D-208/D-211)
 
 ### Match
 
@@ -48,11 +48,11 @@
 
 ### Data
 
-- [ ] **DATA-01**: SQLite-схема: `runs` (метаданные запуска), `snapshots` (immutable history, уникальный ключ `(run_id, retailer, sku_id)`), `matches` (производная)
-- [ ] **DATA-02**: Snapshots хранят `current_price`, `was_price`, `currency`, `stock_state` (enum), `url`, `name`, `brand`, `volume_raw`, `brand_norm`, `name_norm`, `volume_norm`, `multipack_flag`, `scraped_at`
-- [ ] **DATA-03**: Все записи immutable — апдейты только через новый `run_id`; "current view" реализуется через SQL `v_current_snapshots`
-- [ ] **DATA-04**: WAL mode включён; per-run транзакции; on-failure rollback не теряет уже сохранённые SKU
-- [ ] **DATA-05**: `runs` row создаётся в начале запуска и **обязательно** обновляется в конце (success/partial/failed) во всех ветках кода
+- [x] **DATA-01**: SQLite-схема: `runs` (метаданные запуска), `snapshots` (immutable history, уникальный ключ `(run_id, retailer, sku_id)`), `matches` (производная) — Plan 02-02 ships `runs` + `snapshots` SQLModel tables (matches table deferred to Phase 4 per scope)
+- [x] **DATA-02**: Snapshots хранят `current_price`, `was_price`, `currency`, `stock_state` (enum), `url`, `name`, `brand`, `volume_raw`, `brand_norm`, `name_norm`, `volume_norm`, `multipack_flag`, `scraped_at` — Plan 02-02 ships 18-col Snapshot SQLModel with all 13 required fields
+- [x] **DATA-03**: Все записи immutable — апдейты только через новый `run_id`; "current view" реализуется через SQL `v_current_snapshots` — Plan 02-02 ships UNIQUE (run_id, retailer, sku_id) + INSERT-only `SqliteSnapshotWriter` + `v_current_snapshots` VIEW (D-221)
+- [x] **DATA-04**: WAL mode включён; per-run транзакции; on-failure rollback не теряет уже сохранённые SKU — Plan 02-02 ships `make_engine` PRAGMA event listener (WAL + synchronous=NORMAL + foreign_keys=ON) + per-batch commit (DATA-04 mid-run-failure resilience, default batch_size=100)
+- [x] **DATA-05**: `runs` row создаётся в начале запуска и **обязательно** обновляется в конце (success/partial/failed) во всех ветках кода — Plan 02-02 ships `SqliteRunWriter.create/patch_stats(json_patch)/get_stats/fail/finalize` lifecycle (atomic Pitfall-6 merge + idempotent fail/finalize). Try/finally orchestration wired in Plan 05.
 - [ ] **DATA-06**: Nightly backup БД в отдельную директорию (минимум 4 последних бэкапа)
 
 ### Report
@@ -154,16 +154,16 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 | NORM-03 | Phase 2 (modules shared with Phase 3) | Pending |
 | NORM-04 | Phase 2 (modules shared with Phase 3) | Pending |
 | NORM-05 | Phase 2 (modules shared with Phase 3) | Pending |
-| NORM-06 | Phase 2 (log defined; populated by real goldapple run in Phase 3) | Pending |
+| NORM-06 | Phase 2 (log defined; populated by real goldapple run in Phase 3) | Done (Plan 02-02 — Norm06Writer ships D-208 markdown ledger) |
 | MATCH-01 | Phase 4 | Pending |
 | MATCH-02 | Phase 4 | Pending |
 | MATCH-03 | Phase 4 | Pending |
 | MATCH-04 | Phase 4 | Pending |
-| DATA-01 | Phase 2 | Pending |
-| DATA-02 | Phase 2 | Pending |
-| DATA-03 | Phase 2 | Pending |
-| DATA-04 | Phase 2 | Pending |
-| DATA-05 | Phase 2 | Pending |
+| DATA-01 | Phase 2 | Done (Plan 02-02 — Run + Snapshot SQLModel tables) |
+| DATA-02 | Phase 2 | Done (Plan 02-02 — 18-col Snapshot table with all 13 required fields) |
+| DATA-03 | Phase 2 | Done (Plan 02-02 — UNIQUE constraint + append-only writer + v_current_snapshots VIEW) |
+| DATA-04 | Phase 2 | Done (Plan 02-02 — WAL PRAGMA event listener + per-batch commit) |
+| DATA-05 | Phase 2 | Done (Plan 02-02 — SqliteRunWriter atomic json_patch lifecycle; try/finally orchestration in Plan 05) |
 | DATA-06 | Phase 2 | Pending |
 | REPORT-01 | Phase 5 | Pending |
 | REPORT-02 | Phase 5 | Pending |
