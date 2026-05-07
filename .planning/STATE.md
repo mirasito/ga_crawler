@@ -2,31 +2,31 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-last_updated: "2026-05-07T10:31:08.269Z"
+status: Executing Phase 02 (Plan 02-01 complete; next: 02-02)
+last_updated: "2026-05-07T11:02:01.176Z"
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 26
-  completed_plans: 20
-  percent: 77
+  completed_plans: 21
+  percent: 81
 ---
 
 # State: GA Crawler
 
-**Last updated:** 2026-05-06
-**Mode:** Phase 1 COMPLETE (signed off 2026-05-06). Phase 3 EXECUTING — Waves 0..5 complete 2026-05-06: deps pinned, interfaces.py contracts frozen, conftest.py + 6 fixtures ready, enumeration primitives ready, microdata parser shipped, GoldappleFetcher with D-311 fresh-profile + tenacity retry + per-SKU isolation, runner gates + stats namespace shipped, **Wave 5 orchestrator + CLI shipped** — `runners/goldapple_run.py` ships `run_goldapple_phase()` async orchestrator (12-step composition: sitemap fetch → persist → diff → brand intersect → Camoufox boot → smoke probe → run_loop → parse_pdp → normalize → SnapshotWriter.append → teardown → final M-gate → auto_suggest_m → atomic patch_stats merge), `PhaseResult` dataclass (status/count/reason/stats_delta/unmatched/new_slugs); `cli.py` ships argparse CLI with `goldapple-smoke` (D-312 live probe) + `goldapple-run` (full pipeline with stub Phase 2 storage) subcommands + 4 stub Phase 2 implementations (StubBrandAlias / StubNormalizer / StubSnapshotWriter / StubRunWriter); `__main__.py` enables `python -m ga_crawler ...`. **179/179 tests green** (163 prior + 6 e2e + 4 norm06 + 6 storage). Phase 2 not yet discussed — independent of Phase 3 per ROADMAP. Next: `/gsd-execute-phase 3 07` (Wave 6 manual live smoke checkpoint) OR `/gsd-discuss-phase 2`.
+**Last updated:** 2026-05-07
+**Mode:** Phase 1 COMPLETE (2026-05-06). Phase 3 COMPLETE (operator-approved 2026-05-06). **Phase 2 EXECUTING** — Plan 02-01 (Wave 0 bootstrap) complete 2026-05-07: pyproject `[tool.ga_crawler.crawl.viled]` namespace + pyyaml dep, 5 viled HTML fixtures captured via curl_cffi probe (HTTP 200 across all 8 fetches, no anti-bot), 2 normalize corpus YAMLs (volume=18 cases, brand=11 cases), 8 conftest fixtures (existing 11 preserved), 24 RED skip-marked test stubs covering DATA-01..06 / CRAWL-01,03,04,05,06 / PARSE-01..06 / NORM-01..06. Live probe revealed REVISED field paths cascading to Plan 04: A1 (no `in_stock` boolean — use `item.count > 0` + `item.purchaseType`), A4 (pagination keys live under `pageProps.items.{content,total,totalPages,pageSize,pageNumber}`), A10 (curl_cffi exception classes import from `.exceptions` not `.errors`). 192 prior tests still green + 24 new skipped (216 collected). 3 commits (d6f1420 + 34e2be0 + 00e9887). Next: `/gsd-execute-phase 02 02` (Wave 1 storage models).
 
 ## Project Reference
 
 **Core value:** Команда viled.kz один раз в неделю получает детализированный, сопоставленный по позициям отчёт о ценах конкурента (goldapple.kz) и может корректировать собственное ценообразование, видеть ассортиментные разрывы и отслеживать чужие промо-акции.
 
-**Current focus:** Phase 03 — goldapple-crawl
+**Current focus:** Phase 02 — project-skeleton-viled-crawl-storage
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
+Phase: 02 (project-skeleton-viled-crawl-storage) — EXECUTING
+Plan: 2 of 6
 | Field | Value |
 |-------|-------|
 | Phase | 3 — Goldapple Crawl (Waves 0-7 complete; verifier re-run pending for Truth 4 closure) |
@@ -50,6 +50,7 @@ Plan: Not started
 | Plans skipped | 3 (`01-03` IPRoyal, `01-09` multi-geo proxy, `01-10` Tier 3 escalation — explicit SKIP per Camoufox-fingerprint-solves-gate verdict) |
 | Spawned agents (this session) | roadmapper, gsd-planner, gsd-plan-checker, gsd-executor (inline) |
 | Checkpoints | 1 (Phase 1 sign-off) |
+| Phase 02 P01 | 25 min | 3 tasks | 33 files |
 
 ### Plan Execution Metrics
 
