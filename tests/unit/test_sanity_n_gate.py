@@ -1,21 +1,57 @@
-"""CRAWL-05 — final N-gate sanity check for viled run.
+"""CRAWL-05 + D-201 verification — `final_threshold_gate` boundary tests.
 
-Wave 4 / Plan 02-05 implements `final_n_gate(viled_count, N)` (mirror Phase 3's
-final_m_gate). Asserts:
-  - viled_count >= N → run status='success'
-  - viled_count < N → run status='failed', reason='sanity_gate_n_failed'
-  - rows still persist (audit trail invariant per D-218)
+Wave 4 / Plan 02-05 introduces the retailer-agnostic
+`final_threshold_gate(count, threshold)` helper. Asserts the >= semantics
+that the orchestrator depends on for both the viled-side N-gate (D-201)
+and (via shim) the goldapple-side M-gate.
 
-Plus auto_suggest_threshold(history, factor=0.7, min_runs=4) shared helper —
-either refactored from Phase 3's auto_suggest_m or parametrized per D-203.
+Audit-trail invariant (gate fails → snapshot rows still persist) is verified
+in tests/integration/test_viled_run_e2e_with_real_storage.py.
 
 Source: 02-RESEARCH.md §Validation Architecture row 20; 02-CONTEXT.md D-201..D-203.
 """
+
 import pytest
 
-pytestmark = pytest.mark.skip(reason="Wave 4 not implemented yet — Plan 02-05")
+from ga_crawler.runner.gates import final_threshold_gate
 
 
-def test_placeholder():
-    """Placeholder. Plan 02-05 flips this from skip to GREEN."""
-    assert False, "implement in Plan 02-05"
+def test_above_threshold_passes():
+    assert final_threshold_gate(150, 100) is True
+
+
+def test_below_threshold_fails():
+    assert final_threshold_gate(50, 100) is False
+
+
+def test_equal_threshold_passes():
+    """>= semantics — exactly threshold passes."""
+    assert final_threshold_gate(100, 100) is True
+
+
+def test_zero_count_below_any_positive_threshold():
+    assert final_threshold_gate(0, 100) is False
+    assert final_threshold_gate(0, 1) is False
+
+
+def test_zero_threshold_always_passes():
+    """Edge case: threshold=0 means any non-negative count passes."""
+    assert final_threshold_gate(0, 0) is True
+    assert final_threshold_gate(1, 0) is True
+
+
+@pytest.mark.parametrize(
+    "count, threshold, expected",
+    [
+        (0, 100, False),
+        (99, 100, False),
+        (100, 100, True),
+        (101, 100, True),
+        (5000, 100, True),
+        # D-201 viled seed
+        (120, 100, True),
+        (150, 100, True),
+    ],
+)
+def test_boundaries(count, threshold, expected):
+    assert final_threshold_gate(count, threshold) is expected

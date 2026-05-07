@@ -136,40 +136,104 @@ async def smoke_probe(fetcher: Any, smoke_urls: tuple[str, ...] = SMOKE_URLS) ->
     return {"pass": passed, "diagnostics": diagnostics}
 
 
-def final_m_gate(goldapple_count: int, M: int = 1000) -> bool:
-    """D-308/D-309 final sanity gate. Returns True iff goldapple_count >= M.
+# ---- D-203 retailer-agnostic refactor (Phase 2 Plan 02-05) ----
 
-    Caller (Wave 5 orchestrator):
-      if not final_m_gate(stats["goldapple.fetch_count"], M=config["sanity_gate_m"]):
-          run_writer.fail(run_id, reason=f"goldapple_count {n} < M={M}")
+
+def auto_suggest_threshold(
+    history_counts: list[int],
+    factor: float = 0.7,
+    min_runs: int = 4,
+) -> Optional[int]:
+    """Retailer-agnostic auto-suggest. Returns int(factor × median(last min_runs counts)).
+
+    Returns None if history < min_runs.
+
+    NOTE on float arithmetic (STATE.md plan 03-05 lesson): `int(0.7 * value)` truncates
+    toward 0 due to IEEE 754; documented behavior. Don't pre-compute test expectations.
+
+    Source: 02-RESEARCH.md §"auto_suggest_threshold refactor" lines 980-998.
+    Decision: D-203.
+    """
+    if len(history_counts) < min_runs:
+        return None
+    last = history_counts[-min_runs:]
+    return int(factor * statistics.median(last))
+
+
+def final_threshold_gate(count: int, threshold: int) -> bool:
+    """Retailer-agnostic. count >= threshold → True (gate PASSES).
+
+    Source: 02-RESEARCH.md §"final_threshold_gate refactor" lines 1004-1014.
+    """
+    return count >= threshold
+
+
+# ---- D-218 parse-quality gate (Phase 2 Plan 02-05) ----
+
+
+def parse_quality_gate(
+    null_rate_required_fields: float,
+    *,
+    threshold: float = 0.05,
+) -> bool:
+    """D-218: returns True iff null_rate <= threshold (gate PASSES).
+
+    null_rate_required_fields = (rows where name OR current_price OR url is NULL)
+                              / total_count
+
+    >5% null rate → run marked failed with reason='parse_quality_below_threshold'.
+    Threshold inclusive (≤): exactly 5% passes; 5.01% fails.
+
+    Source: 02-CONTEXT.md D-218; 02-RESEARCH.md §Pattern 1 PARSE-05.
+    """
+    return null_rate_required_fields <= threshold
+
+
+# ---- Backward-compat shims (Phase 3 callers + Phase 2 viled-side seeds) ----
+
+
+def final_m_gate(goldapple_count: int, M: int = 1000) -> bool:
+    """D-308/D-309 final sanity gate (Phase 3 shim).
+
+    Forwards to retailer-agnostic `final_threshold_gate(count, M)`.
+    Kept so Phase 3 callers (orchestrator + tests) stay green after the
+    D-203 refactor.
 
     Source: 03-RESEARCH.md §"Code Examples" lines 944-946.
     """
-    return goldapple_count >= M
+    return final_threshold_gate(goldapple_count, M)
+
+
+def final_n_gate(viled_count: int, N: int = 100) -> bool:
+    """Phase 2 viled-side sanity gate. Forwards to final_threshold_gate(count, N).
+
+    Decision: D-201 seed N=100 — sized for the catalog/1310 scope after the
+    week-1 enumerator returns ~120 page-1 SKUs from both catalogs combined.
+    Operator updates via auto_suggest_threshold (D-203) from week 5.
+    """
+    return final_threshold_gate(viled_count, N)
 
 
 def auto_suggest_m(history_counts: list[int]) -> Optional[int]:
-    """D-310: returns suggested M after 4+ runs of history.
+    """D-310: returns suggested M after 4+ runs of history (Phase 3 shim).
 
-    Formula: int(0.7 × median(last_4_run_counts))
-    Less than 4 runs → returns None (operator gets no suggestion yet).
-
+    Forwards to `auto_suggest_threshold(history, factor=0.7, min_runs=4)`.
     Operator decides whether to update sanity_gate_m in pyproject.toml.
     NEVER auto-tunes (Pitfall: silent drift downward at gradual anti-bot regression).
 
     Source: 03-RESEARCH.md §"Code Examples" lines 948-954.
     """
-    if len(history_counts) < 4:
-        return None
-    last_4 = history_counts[-4:]
-    median = statistics.median(last_4)
-    return int(0.7 * median)
+    return auto_suggest_threshold(history_counts, factor=0.7, min_runs=4)
 
 
 __all__ = [
     "SMOKE_URLS",
     "load_smoke_urls_from_config",
     "smoke_probe",
+    "auto_suggest_threshold",
+    "final_threshold_gate",
+    "parse_quality_gate",
     "final_m_gate",
+    "final_n_gate",
     "auto_suggest_m",
 ]
