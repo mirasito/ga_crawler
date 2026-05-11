@@ -1,6 +1,6 @@
 ---
 tags: [home, index]
-date: 2026-05-11
+date: 2026-05-12
 ---
 
 # GA Crawler — Vault Index
@@ -9,7 +9,8 @@ date: 2026-05-11
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — Phase 5 plan ready, execute next]]** — что делать прямо сейчас (Phase 5 discuss + plan завершены 2026-05-11; 16 решений D-501..D-516, 6 plans across 6 waves, plan-checker ✅ PLANS PASS; готов к `/gsd-execute-phase 5`)
+- **[[Текущие приоритеты — Phase 5 done, Phase 6 next]]** — что делать прямо сейчас (Phase 5 executed 2026-05-12; 6 plans across 6 waves, 472→610 tests, 0 regressions, 2 Warning advisory findings; готов к `/gsd-discuss-phase 6` Telegram Delivery)
+- Phase 5 execute trail: ~~[[Текущие приоритеты — Phase 5 plan ready, execute next]]~~ — superseded 2026-05-12 (Phase 5 executed end-to-end; verifier 6/6 must-haves; 3 visual items в HUMAN-UAT)
 - Phase 5 discuss trail: ~~[[Текущие приоритеты — Phase 5 reporter ready для discuss]]~~ — superseded 2026-05-11 (Phase 5 contexted + planned в одном сеансе)
 - Phase 4 execute trail: ~~[[Текущие приоритеты — Phase 4 plan ready, execute next]]~~ — superseded 2026-05-11 evening (Phase 4 executed end-to-end, verifier PASS 11/11)
 - Phase 3 transition: ~~[[Текущие приоритеты — Phase 3 closed окончательно, дальше Phase 4]]~~ — superseded 2026-05-11 PM (Phase 3 security re-audited, Phase 4 contexted + planned)
@@ -36,12 +37,12 @@ date: 2026-05-11
 - **Решения Phase 3 (живые):** [[Sitemap-only URL pool для goldapple, без brand-facet rendering]] · [[Slug-эвристика для viled→goldapple, не explicit YAML]] · [[Sanity-gate M=1000 static с auto-suggest, не auto-tune]] · [[Fresh Camoufox profile per run + integrated smoke probe]] · **[[Brand-intersect через longest-prefix-in-whitelist, не exact-match]]** (D-305 refined Wave 7)
 - **Решения Phase 2 (живые):** **[[viled scope сужен до beauty+парфюм каталога catalog 1310]]** (D-223 mid-flight 2026-05-07; cascading на enumeration + N-gate)
 - **Решения Phase 4 (живые, 2026-05-11):** **[[Matches table — денормализованная, N→1 keep-all]]** (D-401/-403) · **[[Sanity-gate P — третий экземпляр паттерна auto-suggest 0.7×median]]** (D-406/-407 — третий retailer-domain экземпляр D-201/D-308 паттерна) · [[Match-rate — KPI с первой недели]] обновлено: формула frozen via D-405 source-locked canary
-- **Решения Phase 5 (живые, 2026-05-11):** **[[Reporter — source-of-truth для Telegram caption через runs.stats.report.summary_text]]** (D-514 — 7-key namespace + caption-without-regen invariant; cascades в Phase 6) · **[[REPORT-06 size guard — delivery-time concern, не reporter-time]]** (D-515 — xlsx ВСЕГДА пишется + `size_guard_passed=false` flag для Phase 6 DELIVER-03 gate)
+- **Решения Phase 5 (живые, 2026-05-11):** **[[Reporter — source-of-truth для Telegram caption через runs.stats.report.summary_text]]** (D-514 — 7-key namespace + caption-without-regen invariant; cascades в Phase 6 — verified runtime 2026-05-12) · **[[REPORT-06 size guard — delivery-time concern, не reporter-time]]** (D-515 — xlsx ВСЕГДА пишется + `size_guard_passed=false` flag для Phase 6 DELIVER-03 gate — verified runtime 2026-05-12)
 - **Решения Phase 3 (живые, 2026-05-11):** **[[SMOKE_URLS rotation — операторская routine, не Phase 3 code defect]]** (первая ротация 2026-05-11; ops-procedure, не fix-plan материал)
 - **Решения (superseded):** ~~[[Tier 2 Patchright — стартовый tier для goldapple]]~~ → заменено Camoufox-экспериментом 2026-05-06 → финал [[Goldapple — Tier 2 Camoufox без proxy, 99 из 100]]
 - **Решения (superseded):** ~~[[Спайковый fetch-OK = HTML 200 плюс product JSON-LD]]~~ → D-14 revised 2026-05-06: goldapple uses inline microdata (`itemprop="price"`), not JSON-LD Product schema
-- **Паттерны:** [[JSON-LD первый, CSS резервный в парсерах]] · [[Per-SKU isolation вместо fail-on-first]] · [[Run-level sanity-gate перед доставкой]] · [[Volume как value-object с multipack-флагом]] · [[Тиры anti-bot эскалации]]
-- **Debugging:** [[Goldapple показывает Cloudflare-челлендж — эскалация tier]] · [[Match-rate резко упал — проверь brand-alias таблицу]] · [[Парсер тихо вернул 0 продуктов — sanity-gate должен был сработать]] · [[Anti-bot transient gate-shell на быстрых Camoufox cold-spawns]] · **[[Cold-start `Loading` race на первой навигации после Camoufox boot]]** (resolved-empirically 2026-05-11T11:18Z — 4/4 cold-spawn runs reached run_loop) · **[[Pre-finalize-before-matcher в run_weekly — D-411 skip-on-running ловушка]]** (resolved 2026-05-11 Plan 04-05 — composition требует state-handshake перед matcher)
+- **Паттерны:** [[JSON-LD первый, CSS резервный в парсерах]] · [[Per-SKU isolation вместо fail-on-first]] · [[Run-level sanity-gate перед доставкой]] · [[Volume как value-object с multipack-флагом]] · [[Тиры anti-bot эскалации]] · **[[CLI stdout UTF-8 на Windows — sys.stdout.buffer.write вместо print]]** (new 2026-05-12 — Plan 05-05 Rule 1 fix для Cyrillic+emoji caption в CLI)
+- **Debugging:** [[Goldapple показывает Cloudflare-челлендж — эскалация tier]] · [[Match-rate резко упал — проверь brand-alias таблицу]] · [[Парсер тихо вернул 0 продуктов — sanity-gate должен был сработать]] · [[Anti-bot transient gate-shell на быстрых Camoufox cold-spawns]] · **[[Cold-start `Loading` race на первой навигации после Camoufox boot]]** (resolved-empirically 2026-05-11T11:18Z — 4/4 cold-spawn runs reached run_loop) · **[[Pre-finalize-before-matcher в run_weekly — D-411 skip-on-running ловушка]]** (resolved 2026-05-11 Plan 04-05 — composition требует state-handshake перед matcher) · **[[Skip-path ReporterPhaseResult — size_guard_passed расходится между DB и memory]]** (open-for-Phase-6-consumer 2026-05-12 — WR-01; Phase 6 delivery-gate ОБЯЗАН читать БД через `get_stats`, не in-memory `MainRunResult`)
 
 ## Сессии
 
@@ -59,6 +60,7 @@ date: 2026-05-11
 - [[2026-05-11 — Phase 3 security re-audit + Phase 4 discuss и plan готовы]]
 - [[2026-05-11 — Phase 4 executed — matcher + KPI shipped через 5 waves]]
 - [[2026-05-11 — Phase 5 discuss + plan ready, 6 plans across 6 waves для execute]]
+- [[2026-05-12 — Phase 5 executed — reporter shipped через 6 waves]]
 
 ## Inbox
 
