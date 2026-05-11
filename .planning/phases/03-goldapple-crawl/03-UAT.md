@@ -1,5 +1,5 @@
 ---
-status: complete
+status: partial
 phase: 03-goldapple-crawl
 source:
   - 03-01-SUMMARY.md
@@ -10,8 +10,9 @@ source:
   - 03-06-SUMMARY.md
   - 03-07-SUMMARY.md
   - 03-08-SUMMARY.md
+  - 03-09-SUMMARY.md
 started: 2026-05-06T12:22:30Z
-updated: 2026-05-11T08:55:00Z
+updated: 2026-05-11T15:30:00Z
 ---
 
 ## Current Test
@@ -200,18 +201,40 @@ blocked: 0
 ## Gaps
 
 - truth: "Live goldapple run on KZ-laptop completes a clean 1-hour crawl with sanity gate passing, real snapshots written to DB."
-  status: failed
-  reason: "Smoke probe gate fails consistently in dev-session re-runs due to (a) cold-start `Loading` race on URL[0], (b) back-to-back Cloudflare device-check after short cooldown. SMOKE_URLS[0] was also stale (FIXED inline 2026-05-11). Run_loop never reached."
+  status: partial
+  reason: "Operational Finding #1 (cold-start `Loading` race on URL[0]) closed structurally by plan 03-09: WARMUP_URL navigation in GoldappleFetcher.__aenter__ absorbs the bootstrap race onto goldapple.kz homepage; retry-once safety net in smoke_probe catches the rare residual case. CR-01 follow-up tightens the gate-shell guard to use canonical GATE_TITLE_MARKER. SMOKE_URLS[0] stale-SKU also fixed (fefed43). 392 non-live tests pass. Awaiting operator re-run of scripts/uat3_live_run.py on KZ-laptop with cold Camoufox spawn to flip from partial → pass."
   severity: major
   test: 6
+  resolution_plans:
+    - "03-09 — cold-start Loading race gap-closure (2026-05-11, plan-and-execute)"
+  resolution_commits:
+    - "9e4f3b4 test(03-09): add 3 failing fetcher tests for warm-up navigation (RED)"
+    - "e7801ae feat(03-09): warm-up navigation in GoldappleFetcher.__aenter__ (GREEN)"
+    - "b15f48d test(03-09): add 4 smoke_probe retry-once tests (RED)"
+    - "0bdd12a feat(03-09): retry-once in smoke_probe on Loading-race shape (GREEN)"
+    - "bc76fed docs(03-09): complete cold-start Loading race gap-closure plan"
+    - "05b29a8 fix(03-09): use GATE_TITLE_MARKER + block_reason guard in _is_loading_race (CR-01)"
   artifacts:
-    - "src/ga_crawler/runner/gates.py:32 (SMOKE_URLS — rotated index 0)"
-    - "src/ga_crawler/fetchers/goldapple.py:182 (GoldappleFetcher.__aenter__ — no warm-up navigation)"
-    - "src/ga_crawler/runner/gates.py:80 (smoke_probe — strict all-3 pass criteria)"
-    - ".planning/runs/{1..5}/runs.json (empirical evidence)"
-  missing:
-    - "Warm-up navigation step in GoldappleFetcher before smoke probe — Operational Finding #1 (existing Phase 7 ops-playbook backlog item)"
-    - "Cooldown / fingerprint-rotation policy for back-to-back runs — Operational Finding #2 (existing Phase 7 ops-playbook backlog item)"
-    - "Headless-mode framebuffer workaround for Windows local QA (production Linux VPS unaffected)"
-  applied_fix: "SMOKE_URLS[0] rotation — `7680100018-very-irresistible-givenchy` → `19000488678-givenchy-irresistible` (live in current sitemap)."
-  recommended_next: "Accept partial — Test 6 represents anti-bot conditions that are intrinsically NOT reproducible in same-session dev debugging, as documented in 2026-05-06 VERIFICATION.md deferral. SC#4 (1-hour live run) will be canonically verified by the first production weekly cron in Phase 7. Phase 7 ops-playbook already owns Operational Findings #1 and #2 as backlog. Alternative: spawn full Phase 3 diagnose+fix-plan pipeline to implement warm-up + smoke-probe rework — heavier and arguably wrong scope (these are Phase 7 ops concerns, not Phase 3 code defects)."
+    - "src/ga_crawler/fetchers/goldapple.py:54-56 (WARMUP_URL/WARMUP_SETTLE_SECONDS/WARMUP_NETWORKIDLE_TIMEOUT_MS constants)"
+    - "src/ga_crawler/fetchers/goldapple.py:222-235 (warm-up navigation in __aenter__ — best-effort, networkidle + 2s settle)"
+    - "src/ga_crawler/runner/gates.py:84-139 (_compute_price_extracted + _is_loading_race helpers, post-CR-01)"
+    - "src/ga_crawler/runner/gates.py:178-188 (smoke_probe retry-once branch + phase3_smoke_probe_retry event)"
+    - "tests/integration/test_goldapple_fetch_loop_mocked.py:255,270,315 (3 fetcher lifecycle tests)"
+    - "tests/unit/test_smoke_probe.py:141,208,236,283 (4 retry-once tests)"
+  remaining:
+    - "Operational Finding #2 (back-to-back gate-shell after short cooldown) — out of scope per plan 03-09; production weekly cadence won't see this; Phase 7 ops-playbook backlog item"
+    - "Headless-mode framebuffer workaround for Windows local QA — production Linux VPS unaffected"
+    - "Operator live re-run of scripts/uat3_live_run.py on KZ-laptop with cold Camoufox spawn to confirm reach of run_loop"
+  awaiting:
+    role: operator
+    action: |
+      Run `uv run python scripts/uat3_live_run.py` from KZ-laptop with cold Camoufox spawn.
+      Pass criterion: 4 cold-spawn runs all reach run_loop; camoufox_booted event contains
+      warmup_url + warmup_elapsed_ms fields; smoke_probe does not trip on URL[0] Loading state.
+    next: |
+      On pass: operator flips Test 6 `result: pass`, removes Gaps entry, and bumps frontmatter
+      `status: complete`. Phase 3 then closes for the second (final) time.
+    on_failure: |
+      Capture new run logs, file fresh `/gsd-verify-work 3` against this 03-UAT.md, and let
+      the verifier route to either a follow-up gap-closure plan or accept Phase 7 ops-playbook
+      escalation depending on the failure shape.

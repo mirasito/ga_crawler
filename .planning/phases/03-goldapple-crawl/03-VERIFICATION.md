@@ -1,56 +1,63 @@
 ---
 phase: 03-goldapple-crawl
-verified: 2026-05-06T11:30:00Z
-operator_approved: 2026-05-06T12:30:00Z
-status: passed
-score: 5/5 must-haves verified (Truth 4 partial-empirical + structural-by-design)
+verified: 2026-05-11T09:00:00Z
+status: human_needed
+score: 5/5 must-haves verified (Truth 4 awaits operator live re-run of scripts/uat3_live_run.py)
 overrides_applied: 0
 re_verification:
-  previous_status: gaps_found
-  previous_score: 4/5
+  previous_status: passed_with_human_needed
+  previous_score: 5/5
+  reopened: 2026-05-11
+  reopen_reason: "UAT Test 6 (Operational Finding #1 — cold-start Loading race) reproduced 4-of-4 cold runs by scripts/uat3_live_run.py; smoke_probe never reaches run_loop"
   gaps_closed:
-    - "Truth 1: intersect_brand_pool exact-matches brand-alias slugs against product-slug-keyed sitemap dict — matched_url_count=0 in production"
-  gaps_remaining: []
+    - "Operational Finding #1 (cold-start Loading race on URL[0] first nav after fresh Camoufox boot) — fixed at TWO layers: primary (warm-up nav in __aenter__) + safety net (retry-once in smoke_probe on exact Loading-race shape)"
+    - "CR-01 from 03-REVIEW.md (`_is_loading_race` used literal 'checking device' instead of canonical GATE_TITLE_MARKER) — closed by commit 05b29a8: now reuses GATE_TITLE_MARKER from parsers.goldapple_microdata + adds block_reason='gate_shell_not_cleared' defence-in-depth check"
+  gaps_remaining:
+    - "Truth 4 (1-hour live run / SC#4) — operator-driven, deferred per 2026-05-06 deferral; first production weekly cron in Phase 7 is canonical test bed"
   regressions: []
-operator_validation:
-  run_id: 43
-  date: 2026-05-06
-  hard_data:
-    - "unmatched_viled_brands dropped 2 → 1 (givenchy matched, jo_malone_london unmatched — likely brand absent from current sitemap or token shape mismatch — separate operational investigation)"
-    - "Wave 7 brand-bucket fix verified live: structural fix produces matched URLs > 0 against real 45,490-slug sitemap"
-    - "smoke probe inside orchestrator hit transient race condition (URL[0] in 'Loading' state at boot) → fail-fast worked correctly per D-312"
-    - "Phase 1 spike (99/100 success at same Camoufox baseline) inherited as 1-hour Truth 4 evidence — no sustained 429/503 expected at chosen tier"
-  ops_findings_added_to_phase_7_backlog:
-    - "Orchestrator smoke probe needs warm-up wait between Camoufox boot and first probe URL (URL[0] caught mid-load)"
-    - "Anti-bot transient gate-shell triggered by ≥3 Camoufox cold-spawns within 5-min window — production weekly cron unaffected, but manual re-runs need 5+ min cooldown"
-    - "jo_malone_london unmatched in run-43 — investigate whether brand absent from KZ goldapple sitemap or alias-table token mismatch"
+  open_findings_not_in_scope:
+    - "REVIEW WR-01 (asyncio.sleep not injectable in smoke_probe) — INFO/style; slows retry tests by 1s; defer"
+    - "REVIEW WR-02 (_compute_price_extracted re-invokes parse_pdp on already-blocked records) — INFO/performance; not a correctness bug; defer"
+    - "REVIEW WR-03 (phase3_smoke_probe_retry has no retry-outcome event) — observability gap; defer"
+    - "REVIEW WR-04 (WARMUP_SETTLE_SECONDS always runs even on fast warm-up — +2s overhead per cron) — INFO/perf; accept as budget on weekly cadence"
+    - "REVIEW WR-05 (PWTimeout fallback in _make_retry_decorator masks misconfigured dev env) — out of plan-03-09 scope; tagged for plan 03-10 hardening"
+    - "REVIEW IN-01..IN-04 — cosmetic / docstring sweep; defer"
 gaps: []
 deferred:
   - item: "1-hour clean live run (ROADMAP SC#4 empirical)"
-    why: "Anti-bot transient timing makes a 60-min uninterrupted run hard to schedule in a debugging session; Phase 1 spike already validated 99/100 success at same Camoufox baseline; production weekly cadence (1 run/week, 3-5s rate-limit) is the real test bed"
+    why: "Anti-bot transient timing makes a 60-min uninterrupted run hard to schedule in a debugging session; Phase 1 spike already validated 99/100 success at same Camoufox baseline; production weekly cadence (1 run/week, 3-5s rate-limit) is the real test bed. Original 2026-05-06 deferral re-confirmed by 2026-05-11 UAT attempt."
     when: "First production weekly run (Phase 7 ops-playbook initial deploy)"
+human_verification:
+  - test: "Operator re-runs scripts/uat3_live_run.py on KZ-laptop with cold Camoufox spawn"
+    expected: "4 cold-spawn runs reach run_loop (smoke probe no longer trips on URL[0] Loading state). Pass criterion per gap_closure_brief acceptance signal. If pass — operator flips Phase 3 row from `9/9 | Complete (re-opened ...; awaiting operator re-verification)` to plain `9/9 | Complete` in ROADMAP.md and checks `[x] 03-09-PLAN.md` in plan-list."
+    why_human: "Cannot run live Camoufox + KZ-laptop + real goldapple traffic from automation. The structural code-level fix (Layer 1 warm-up nav + Layer 2 retry-once safety net) is verified by 24-test combined fetcher+smoke suite; the live measurement is operator-owned per 2026-05-06 deferral."
 ---
 
-# Phase 3: Goldapple Crawl Verification Report (Re-verification)
+# Phase 3: Goldapple Crawl Verification Report (Re-verification, plan 03-09 gap-closure)
 
 **Phase Goal:** Goldapple snapshots, restricted to brands present in the current run's viled snapshot, are written to the same `snapshots` table at the same quality bar as viled, using the anti-bot tier decided in Phase 1.
-**Verified:** 2026-05-06T11:30:00Z
-**Status:** human_needed
-**Re-verification:** Yes — after Wave 7 gap-closure plan 03-08 landed (commits 88176bc, 68e32c0, ca719c7, 68213b4)
+**Verified:** 2026-05-11T09:00:00Z
+**Status:** human_needed (single human-verification item: operator live re-run on KZ-laptop)
+**Re-verification:** Yes — after Wave 8 gap-closure plan 03-09 (commits 9e4f3b4, e7801ae, b15f48d, 0bdd12a, bc76fed) + CR-01 follow-up fix (commit 05b29a8)
 
 ## Re-verification Summary
 
-Previous verdict (2026-05-06T10:00:00Z): `gaps_found` (4/5). One BLOCKER: Truth 1 (CRAWL-02 NORM-06 forward direction produced 0 matches against real 45,490-slug sitemap). After Wave 7 closure (Path A: longest-prefix-in-whitelist via `index_by_brand_token`), Truth 1 is structurally closed and 192/192 non-live tests pass (was 181). D-305 in CONTEXT.md was canonicalized in commit `c662d72` to describe the new mechanism.
+Phase 3 was closed `passed` 2026-05-06 (5/5 truths verified) and re-opened 2026-05-11 by `/gsd-verify-work 3` after `scripts/uat3_live_run.py` reproduced UAT Test 6 (Operational Finding #1) in 4 of 4 cold runs — smoke_probe failed-fast on URL[0] in `Loading` state, never reaching `run_loop`. Plan 03-09 (Wave 8 gap-closure) ships a two-layer fix:
 
-| Truth | Previous | Current | Change |
-|-------|----------|---------|--------|
-| 1 — viled-derived URL pool + alias respect | FAILED (BLOCKER) | VERIFIED | Closed via Path A |
-| 2 — quality-bar reuse from Phase 2 modules | VERIFIED (by-protocol) | VERIFIED | No regression |
-| 3 — final M-gate guards both retailers | VERIFIED | VERIFIED | No regression |
-| 4 — 1-hour live run | UNCERTAIN | UNCERTAIN (operator-driven) | Same; structural blocker now removed, but re-run still requires operator |
-| 5 — NORM-06 review queue populated | VERIFIED (mechanism); FAILED (data) | VERIFIED (both) | Data trustworthiness restored — depends on Truth 1 |
+- **Layer 1 (primary):** WARMUP_URL navigation in `GoldappleFetcher.__aenter__` (best-effort, networkidle + 2 s settle). Absorbs Camoufox bootstrap race onto bare homepage.
+- **Layer 2 (safety net):** Retry-once in `smoke_probe` on exact Loading-race shape (status==200 + `loading ` in title + no microdata + not gate-shell + not pre-blocked).
 
-Score: 5/5 verified by automated/code-level criteria. Truth 4 demoted from a BLOCKER-by-association into a `human_needed` item: the structural fix removes the upstream cause of the previously-unviable live run, but the live measurement itself remains the operator's call.
+Plan also includes CR-01 follow-up (commit 05b29a8): `_is_loading_race` now reuses canonical `GATE_TITLE_MARKER` from `parsers.goldapple_microdata` + adds `block_reason="gate_shell_not_cleared"` defence-in-depth check.
+
+| Truth | Previous (2026-05-06) | Current (2026-05-11) | Change |
+|-------|------------------------|------------------------|--------|
+| 1 — viled-derived URL pool + alias respect | VERIFIED (Wave 7 closure) | VERIFIED | Unchanged — Wave 7 brand-bucket fix preserved |
+| 2 — quality-bar reuse from Phase 2 modules | VERIFIED | VERIFIED | Unchanged — fetcher/parser bytecode-identical except for warm-up in `__aenter__` |
+| 3 — final M-gate guards both retailers | VERIFIED | VERIFIED | Unchanged |
+| 4 — 1-hour live run | UNCERTAIN (operator-driven) | UNCERTAIN (operator-driven) | Same; structural BLOCKER from UAT Test 6 now removed via warm-up + retry-once; live re-run still operator-owned |
+| 5 — NORM-06 review queue populated | VERIFIED | VERIFIED | Unchanged |
+
+Score: **5/5 verified at code level**. Truth 4 carries `human_needed` badge for the operator live re-run.
 
 ## Goal Achievement
 
@@ -58,141 +65,159 @@ Score: 5/5 verified by automated/code-level criteria. Truth 4 demoted from a BLO
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Goldapple crawler derives URL pool from current run's viled snapshot AND respects alias table; Cyrillic-only goldapple brand pages reached | VERIFIED | New helper `index_by_brand_token(slug_map, known_brand_tokens)` in `enumeration/goldapple_sitemap.py` re-keys product-slug map by LONGEST viled-known brand-token prefix (depth 1..3). Orchestrator Step 3.5 (lines 130-156 of `goldapple_run.py`) builds `known_brand_tokens` via `slug_fy_bilingual` over every alias of every viled brand and feeds the bucket into `compute_norm06_forward`. Full-pipeline regression `test_intersect_against_real_sitemap_shape` (sub-tests 7a-7f) proves matched_url_count > 0 for `givenchy` (3/3), `jo_malone_london` (2/2), `tom_ford` w/o disambiguation (2/2 incl. beauty-line fallthrough), `tom_ford` + `tom_ford_beauty` disambiguated (1/1 each, ZERO cross-contamination), `estee_lauder` bilingual (2/2 — both ASCII and Cyrillic variants). Smoke command from gap-closure plan executes end-to-end: `Truth 1 closure + D-305 structural disambiguation proven` (verified inline above). |
-| 2 | Goldapple snapshots written to `snapshots` at same quality bar (per-SKU isolation, retry/backoff, rate-limit, parse-quality) reusing Phase 2 modules | VERIFIED | No code changes in Wave 7 to fetcher/parser/protocols. Same evidence as previous verification: `fetcher.run_loop` rate-limit `random.uniform(3.0, 5.0)` (CRAWL-06); `_goto_with_retry` `@retry(stop_after_attempt(3), wait_exponential_jitter(initial=2, max=30))` (CRAWL-04); `fetch_one_isolated` swallows every exception (CRAWL-03); `parse_pdp` enforces PARSE-01/03/04/06; orchestrator calls `snapshot_writer.append(run_id, "goldapple", products)` via the `SnapshotWriterProtocol` contract. 11 tests across `test_retry_policy` + `test_fetcher_isolation` + `test_goldapple_fetch_loop_mocked` continue to pass. |
-| 3 | Post-crawl sanity gate marks run failed when `goldapple_count < M` (single gate now protects both retailers) | VERIFIED | No code changes in Wave 7 to `runner/gates.py`. `final_m_gate(count, M=1000)` boundary tests still pass; orchestrator wires `run_writer.fail` on gate failure with run-to-completion behavior (D-309). `test_e2e_final_gate_fail_run_to_completion` continues green. |
-| 4 | 1-hour live run completes without sustained 429/503 spikes or Cloudflare interstitial; per-page cookie reuse verified | UNCERTAIN (operator-driven) | Wave 6 live-smoke (run-42) verified Camoufox boot + smoke pass after 60s cooldown; Wave 7 (this gap-closure) is pure-Python refactor with no fetcher changes — Camoufox kwargs/profile-lifecycle/retry-policy bytecode-identical to run-42 baseline. Phase 1 spike already established 99/100 success at this tier (sample-payloads/tier2-camoufox-kz-results.json). The previous run-42 abort root-caused to Truth 1 (no URLs to crawl) is now unblocked. Live re-run remains operator-driven — see `human_verification` section. |
-| 5 | NORM-06 review queue (defined in Phase 2) populated by a real goldapple run | VERIFIED | Reverse direction (week-over-week NEW slug diff) unchanged: `persist_sitemap_slugs` + `find_previous_slug_file` + `diff_new_slugs` proven by run-42 sitemap-slugs.txt. Forward direction (`compute_norm06_forward`) now produces TRUSTWORTHY data: with the bucket fix, brands genuinely absent surface as `unmatched`; brands that do exist on goldapple correctly resolve. Sub-tests 7a/7b/7c/7d/7e of `test_intersect_against_real_sitemap_shape` verify the unmatched-list contract is honoured across single-brand, multi-brand, and bilingual scenarios. Stats key `goldapple.unmatched_viled_brands` continues to be set by orchestrator at line 157 of `goldapple_run.py`. |
+| 1 | Goldapple crawler derives URL pool from current run's viled snapshot AND respects alias table; Cyrillic-only goldapple brand pages reached | VERIFIED | Unchanged from 2026-05-06 (Wave 7 closure). `index_by_brand_token` + `intersect_brand_pool` + `compute_norm06_forward` with longest-prefix-in-whitelist mechanism. 7 unit tests in `test_brand_token_index.py` + 9 in `test_intersect_brand_pool.py` + 1 E2E in `test_run_e2e_with_phase2_mocks.py`. |
+| 2 | Goldapple snapshots written to `snapshots` at same quality bar (per-SKU isolation, retry/backoff, rate-limit, parse-quality) reusing Phase 2 modules | VERIFIED | Unchanged except for warm-up step prepended to `__aenter__`. Rate-limit `random.uniform(3.0, 5.0)` (CRAWL-06), tenacity retry `stop_after_attempt(3), wait_exponential_jitter(2, 30)` (CRAWL-04), `fetch_one_isolated` (CRAWL-03), `parse_pdp` PARSE-01/03/04/06 — all bytecode-identical. |
+| 3 | Post-crawl sanity gate marks run failed when `goldapple_count < M` (single gate now protects both retailers) | VERIFIED | Unchanged. `final_m_gate(count, M=1000)` forwards to `final_threshold_gate`. `test_e2e_final_gate_fail_run_to_completion` continues green. |
+| 4 | 1-hour live run completes without sustained 429/503 spikes or Cloudflare interstitial; per-page cookie reuse verified | UNCERTAIN (operator-driven) | Wave 6 live-smoke (run-42) verified Camoufox boot + smoke pass after 60 s cooldown. Phase 1 spike established 99/100 success at this tier. The 2026-05-11 UAT BLOCKER (cold-start race) is now structurally fixed at TWO layers (warm-up nav + retry-once). Live re-run remains operator-driven per 2026-05-06 deferral — see `human_verification`. |
+| 5 | NORM-06 review queue (defined in Phase 2) populated by a real goldapple run | VERIFIED | Unchanged. Reverse direction (`persist_sitemap_slugs` + `find_previous_slug_file` + `diff_new_slugs`) and forward direction (`compute_norm06_forward`) both intact. Run-43 evidence: 52,010-slug sitemap, `unmatched_goldapple_slugs_new=6606`, `unmatched_viled_brands=1`. |
 
-**Score:** 5/5 truths VERIFIED. Truth 4 carries a `human_needed` badge for the live re-run (structural blocker now removed; measurement remains operator-owned).
+**Score:** 5/5 truths VERIFIED at code level. Truth 4 carries `human_needed` badge.
 
-### Gap Closure Audit (Truth 1)
+### Gap Closure Audit (plan 03-09 — Operational Finding #1)
 
-The Wave 7 plan called for one of two paths:
-- Path A: brand-token bucket index emitting `dict[brand_token, list[url]]`
-- Path B: bounded prefix-match with explicit whitelist enforcement
-
-Path A was executed (per `03-08-SUMMARY.md` decision). Verification of plan deliverables:
+Plan deliverable inventory:
 
 | Plan deliverable | Found | Evidence |
 |---|---|---|
-| New helper `index_by_brand_token(slug_map, known_brand_tokens)` | YES | `src/ga_crawler/enumeration/goldapple_sitemap.py` lines 96-146 |
-| `BRAND_TOKEN_MAX_DEPTH = 3` exported | YES | Line 93 + `__all__` line 215 |
-| `intersect_brand_pool` param renamed `sitemap_slugs` → `brand_bucket` | YES | `src/ga_crawler/enumeration/slug.py` line 81; AST check confirms `sitemap_slugs` no longer a parameter in slug.py or stats.py |
-| `compute_norm06_forward` accepts brand_bucket | YES | `src/ga_crawler/runner/stats.py` line 115 |
-| Orchestrator Step 3.5 builds known_brand_tokens whitelist | YES | `src/ga_crawler/runners/goldapple_run.py` lines 130-156; structlog event `phase3_brand_bucket_built` emits whitelist_size + bucket_key_count |
-| Orchestrator passes brand_bucket (NOT slug_map) to compute_norm06_forward | YES | AST check on line 154-156: third positional arg is Name `brand_bucket` |
-| 7 unit tests for `index_by_brand_token` (incl. tom-ford / tom-ford-beauty contamination guard) | YES | `tests/unit/test_brand_token_index.py` — 7 test functions, all pass |
-| 3 new tests in `test_intersect_brand_pool.py` (full-pipeline regression + inspect.getsource gate + brand_bucket shape) | YES | Tests 7, 8, 9 added; existing 6 tests refactored to brand_bucket; all 9 pass |
-| 1 new E2E test `test_e2e_brand_intersect_against_realistic_sitemap_shape` | YES | `tests/integration/test_run_e2e_with_phase2_mocks.py` lines 325-399; passes |
-| All 192 non-live tests pass (181 baseline + 11 new) | YES | `uv run pytest tests/ -q -m "not live"` → `192 passed in 44.90s` |
-| D-305 source-level guard (no `.startswith` / `.find` / `.endswith` / `.contains` in production functions) | YES | Verified via `inspect.getsource` over `intersect_brand_pool`, `index_by_brand_token`, `compute_norm06_forward` — all three clean |
-| Pitfall 3 / D-305 structurally enforced (tom-ford / tom-ford-beauty disambiguation guard test) | YES | `test_brand_token_index_tom_ford_does_not_contaminate_tom_ford_beauty` passes; `bucket['tom-ford-beauty']==[u2]` and `bucket['tom-ford']==[u1, u3]` with NO cross-contamination |
-| D-305 in CONTEXT.md refined to canonicalize new mechanism | YES | Commit `c662d72` ("docs(03): refine D-305 — longest-prefix-in-whitelist (gap-closure 03-08 prep)"). CONTEXT.md line 25 contains the revised D-305 text describing `index_by_brand_token`, the longest-prefix-in-whitelist algorithm, and the operator opt-in disambiguation semantic. |
+| `WARMUP_URL: str = "https://goldapple.kz/"` module constant | YES | `src/ga_crawler/fetchers/goldapple.py:54` + `__all__:385` |
+| `WARMUP_SETTLE_SECONDS: float = 2.0` module constant | YES | `goldapple.py:55` + `__all__:386` |
+| `WARMUP_NETWORKIDLE_TIMEOUT_MS: int = 15_000` module constant | YES | `goldapple.py:56` + `__all__:387` |
+| Warm-up nav in `__aenter__` BEFORE `camoufox_booted` log event | YES | `goldapple.py:222-227` — `self._page.goto(WARMUP_URL, wait_until="networkidle", timeout=WARMUP_NETWORKIDLE_TIMEOUT_MS)` |
+| Inner try/except → `camoufox_warmup_networkidle_timeout` warning | YES | `goldapple.py:228-233` |
+| Unconditional `asyncio.sleep(WARMUP_SETTLE_SECONDS)` after goto | YES | `goldapple.py:235` (OUTSIDE inner try, settle ALWAYS runs) |
+| Outer try/except → Pitfall 7 cleanup on Camoufox-boot failure | YES | `goldapple.py:237-240` — `shutil.rmtree(self.profile_dir, ignore_errors=True)` |
+| `camoufox_booted` event extended with `warmup_url` + `warmup_elapsed_ms` | YES | `goldapple.py:247-248` |
+| `import asyncio` in `gates.py` | YES | `gates.py:18` |
+| `_compute_price_extracted` private helper | YES | `gates.py:84-97` |
+| `_is_loading_race` private helper | YES | `gates.py:100-139` |
+| Retry-once branch in `smoke_probe` (sleep 1s + re-fetch) | YES | `gates.py:178-188` |
+| `phase3_smoke_probe_retry` structlog event with first-attempt diagnostics | YES | `gates.py:179-185` |
+| smoke_probe has exactly ONE for-loop (D-312 invariant) | YES | AST-verified — exactly 1 `ast.For` node in `inspect.getsource(smoke_probe)` |
+| 3 new fetcher tests | YES | `test_goldapple_fetch_loop_mocked.py:255` (warmup_called_once), `:270` (camoufox_boot_failure_cleans_profile_dir), `:315` (warmup_goto_failure_does_not_abort_boot) |
+| 4 new smoke_probe tests | YES | `test_smoke_probe.py:141` (retries_once), `:208` (no_retry_on_happy_path), `:236` (no_retry_on_gate_shell), `:283` (no_retry_on_non_200) |
+| Net +7 tests; suite 385 → 392 passed | YES | `uv run pytest tests/ -q -m "not live"` → `392 passed, 1 skipped, 0 failed in 101.11s` |
+| STATE.md D-314 row appended | YES | `STATE.md:149` |
+| ROADMAP.md Phase 3 row updated to `9/9 \| Complete (re-opened ...)` | YES | `ROADMAP.md:174` |
+| ROADMAP.md plan-list grows by 03-09 entry (unchecked) | YES | `ROADMAP.md:92` |
+| Wave summary expanded to "9 plans across 9 waves" with Wave 8 description | YES | `ROADMAP.md:83` |
+| CR-01 follow-up: `GATE_TITLE_MARKER` reuse in `_is_loading_race` | YES | `gates.py:25` import + `:137` `if GATE_TITLE_MARKER in title_l: return False` |
+| CR-01 follow-up: `block_reason="gate_shell_not_cleared"` defence-in-depth | YES | `gates.py:131-132` |
+| Out-of-scope: SMOKE_URLS[0] unchanged from post-fefed43 (`19000488678-givenchy-irresistible`) | YES | `gates.py:37` |
+| Out-of-scope: `fetch_one` body has NO `wait_for_selector` (approach #2 rejected) | YES | AST-verified — 0 `wait_for_selector` calls in `fetch_one` |
 
-### Required Artifacts (delta-only — full inventory in previous verification)
+### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `src/ga_crawler/enumeration/goldapple_sitemap.py` | `+ index_by_brand_token` + `+ BRAND_TOKEN_MAX_DEPTH` + `__all__` extended | VERIFIED | Lines 89-146; `__all__` (line 211) lists `BRAND_TOKEN_MAX_DEPTH` and `index_by_brand_token`. Helper algorithm exact-matches plan: bounded depth-3 longest-prefix-match against whitelist; orphan slugs dropped silently; empty whitelist short-circuits to empty bucket. |
-| `src/ga_crawler/enumeration/slug.py` | param rename + docstring updated | VERIFIED | Line 81 param is `brand_bucket`; docstring (lines 83-97) describes the bucket as the output of `index_by_brand_token`. Lookup remains `brand_bucket.get(slug)` (line 107) — exact-key dict.get. |
-| `src/ga_crawler/runner/stats.py` | param rename | VERIFIED | Line 115 param is `brand_bucket`; docstring (lines 117-131) describes the bucket as the precomputed brand-token prefix index. |
-| `src/ga_crawler/runners/goldapple_run.py` | Step 3.5 wiring + new structlog event | VERIFIED | Lines 130-156: builds aliases (line 139), known_brand_tokens whitelist (lines 140-144), brand_bucket via `index_by_brand_token(slug_map, known_brand_tokens)` (line 145), emits `phase3_brand_bucket_built` event (lines 146-151), then `compute_norm06_forward(viled_brands, aliases, brand_bucket)` (line 154-156). |
-| `tests/unit/test_brand_token_index.py` | NEW file with 7 tests | VERIFIED | 7 test functions, plain `def test_*` matching `test_sitemap_parser.py` style. Test 3 (`test_brand_token_index_tom_ford_does_not_contaminate_tom_ford_beauty`) is the structural D-305 invariant. |
-| `tests/unit/test_intersect_brand_pool.py` | mechanical rename + 3 new tests | VERIFIED | 9 tests total: 6 original (renamed `sitemap` → `brand_bucket`), + Test 7 `test_intersect_against_real_sitemap_shape` (full pipeline 7a-7f), + Test 8 `test_intersect_no_substring_lookup_in_function_body` (inspect.getsource gate), + Test 9 `test_compute_norm06_forward_with_brand_bucket_shape` (signature shape). All pass. |
-| `tests/integration/test_run_e2e_with_phase2_mocks.py` | + 1 E2E test | VERIFIED | New `test_e2e_brand_intersect_against_realistic_sitemap_shape` at lines 325-399; injects 6-entry slug_map keyed by full product-slugs, asserts `givenchy`, `jo_malone_london`, `tom_ford` all match (`unmatched_viled_brands == 0`), and `result.status == "success"`. |
-| `.planning/phases/03-goldapple-crawl/03-CONTEXT.md` D-305 refinement | YES | Commit `c662d72`; CONTEXT.md line 25 describes longest-prefix-in-whitelist mechanism + operator opt-in disambiguation. |
+| `src/ga_crawler/fetchers/goldapple.py` | WARMUP_URL/SETTLE_SECONDS/NETWORKIDLE_TIMEOUT_MS constants + warm-up nav in __aenter__ + __all__ extended | VERIFIED | Lines 48-56 (constants block), 192-250 (__aenter__ revised), 385-387 (__all__). Inner try/except logs `camoufox_warmup_networkidle_timeout`. Unconditional settle sleep runs even on failure. Pitfall 7 cleanup preserved on Camoufox-boot failure only. |
+| `src/ga_crawler/runner/gates.py` | import asyncio + _compute_price_extracted + _is_loading_race + retry-once in smoke_probe | VERIFIED | Line 18 (`import asyncio`), 84-97 (`_compute_price_extracted`), 100-139 (`_is_loading_race` with GATE_TITLE_MARKER reuse + block_reason guard per CR-01), 178-188 (retry branch with `await asyncio.sleep(1.0)` + `phase3_smoke_probe_retry` event). |
+| `tests/integration/test_goldapple_fetch_loop_mocked.py` | +3 fetcher lifecycle tests | VERIFIED | 13 total (10 baseline + 3 new). Lines 255 (warmup_called_once), 270 (boot_failure_cleans_profile_dir), 315 (warmup_goto_failure_does_not_abort_boot). |
+| `tests/unit/test_smoke_probe.py` | +4 smoke_probe retry-once tests | VERIFIED | 11 total (7 baseline + 4 new). Lines 141 (retries_once_on_loading_race), 208 (no_retry_on_happy_path), 236 (no_retry_on_gate_shell), 283 (no_retry_on_non_200). |
+| `.planning/STATE.md` | D-314 row added | VERIFIED | Line 149 — captures cold-start race fix decision, approach #2 rejection rationale, retry-once guard requirements. |
+| `.planning/ROADMAP.md` | Phase 3 row re-opened narrative + 03-09 plan entry + wave summary update | VERIFIED | Line 83 (wave summary), 92 (plan-list 03-09 entry), 174 (Progress table row `9/9 \| Complete (re-opened ...)`). |
 
-### Key Link Verification (delta from previous)
+### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|----|--------|---------|
-| `runners/goldapple_run.py` | `enumeration/goldapple_sitemap.index_by_brand_token` | `from ga_crawler.enumeration.goldapple_sitemap import index_by_brand_token` (line 41) + invocation at line 145 | WIRED | AST-verified via `ast.walk` — call count ≥ 1 |
-| `runners/goldapple_run.py` | `enumeration/slug.slug_fy_bilingual` | `from ga_crawler.enumeration.slug import slug_fy_bilingual` (line 44) + invocation at line 144 | WIRED | AST-verified |
-| `runners/goldapple_run.py` step 4 | `runner/stats.compute_norm06_forward` (third arg = brand_bucket Name) | line 154-156 | WIRED | AST-verified — third positional arg of the call is `ast.Name(id='brand_bucket')` |
-| `enumeration/slug.intersect_brand_pool` | brand_bucket dict shape | `brand_bucket.get(slug)` at line 107 | WIRED (semantic) | The previously-FAILED semantic link is now WIRED — bucket keys are produced by `index_by_brand_token` against a precomputed whitelist that contains the slug-variants `intersect_brand_pool` will look up. |
+| `GoldappleFetcher.__aenter__` | `WARMUP_URL` | `self._page.goto(WARMUP_URL, wait_until='networkidle', timeout=WARMUP_NETWORKIDLE_TIMEOUT_MS)` | WIRED | AST-verified — first positional arg of single `self._page.goto(...)` call inside `__aenter__` is `ast.Name(id='WARMUP_URL')` |
+| `GoldappleFetcher.__aenter__` | `asyncio.sleep(WARMUP_SETTLE_SECONDS)` | line 235 OUTSIDE inner try/except (always runs) | WIRED | `test_warmup_goto_failure_does_not_abort_boot` asserts sleep was called with `WARMUP_SETTLE_SECONDS` even when goto raised |
+| `_is_loading_race` | `GATE_TITLE_MARKER` | imported from `ga_crawler.parsers.goldapple_microdata` at gates.py:25; used at line 137 | WIRED | CR-01 closed: `assert 'GATE_TITLE_MARKER' in inspect.getsource(_is_loading_race)` |
+| `_is_loading_race` | `block_reason="gate_shell_not_cleared"` defence-in-depth | line 131-132 | WIRED | CR-01 follow-up: pre-emptive rejection even if fetcher's block flag is somehow False |
+| `smoke_probe` retry branch | `fetcher.fetch_one` (second attempt) | line 187 (`rec = await fetcher.fetch_one(fetcher._page, url)`) | WIRED | `test_smoke_probe_retries_once_on_loading_race` asserts call_log length == 4 for the URL[0]-retries scenario |
+| `smoke_probe` retry branch | `phase3_smoke_probe_retry` structlog event | line 179-185 | WIRED | Event emits before sleep with first-attempt title/size/status diagnostics |
 
-### Data-Flow Trace (Level 4) — delta
+### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|--------------------|--------|
-| Orchestrator `final_records` (step 9 → snapshot_writer.append) | `final_records` list of normalized dicts | `parse_pdp(rec.html, rec.url)` for each rec from `fetcher.run_loop(matched_urls, stats)` | YES (in production, given Wave 7 fix) | Previously HOLLOW (matched_urls always empty); Wave 7 makes the data flow whole. The new E2E test asserts non-empty `final_records` end-to-end. |
-| Orchestrator `goldapple_count` → `final_m_gate` | `int = len(final_records)` | Step 9 final_records | YES | Now non-zero against realistic sitemap shape; `test_e2e_brand_intersect_against_realistic_sitemap_shape` passes M=1 gate. |
+| `smoke_probe` `results[i]` | `price_extracted: bool` after retry | `_compute_price_extracted(rec, url)` → `parse_pdp(html, url)` from second attempt | YES (in production, given warm-up nav absorbs race) | When Loading race triggers, second attempt's record replaces the failing one; if real PDP returned, `price_extracted=True` and gate passes |
+| `__aenter__` `camoufox_booted` event | `warmup_url`, `warmup_elapsed_ms` | computed inside `__aenter__` via `time.perf_counter()` delta | YES | Empirically verifiable in structlog output during operator re-run |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Full pytest suite (excluding live) | `uv run pytest tests/ -q -m "not live"` | `192 passed in 44.90s` | PASS (was 181 → now 192, +11 net new tests) |
-| CLI module entry registers both subcommands | `uv run python -m ga_crawler --help` | Output contains `goldapple-smoke` and `goldapple-run` | PASS |
-| D-305 source-level guard (3 production functions) | `inspect.getsource` over `intersect_brand_pool`, `index_by_brand_token`, `compute_norm06_forward` checking for `.startswith(`, `.find(`, `.endswith(`, `.contains` | `D-305 source-level guards passed for all 3 production functions` | PASS |
-| Truth 1 closure smoke (full pipeline) | `slug_fy_bilingual` → `index_by_brand_token` → `intersect_brand_pool` for givenchy, jo_malone_london, tom_ford, tom_ford_beauty against realistic 5-entry slug_map | `PASS - Truth 1 closure + D-305 structural disambiguation proven` | PASS |
-| AST orchestrator wiring (index_by_brand_token + slug_fy_bilingual called; brand_bucket third arg of compute_norm06_forward) | `ast.walk` over goldapple_run.py | `orchestrator wiring AST verified` + `compute_norm06_forward receives brand_bucket` | PASS |
-| AST param-rename (sitemap_slugs no longer a parameter in slug.py or stats.py) | `ast.walk` over both files | `slug.py param-rename verified` + `stats.py param-rename verified` | PASS |
-| 7 E2E orchestrator integration tests | `uv run pytest tests/integration/test_run_e2e_with_phase2_mocks.py -v` | `7 passed` | PASS (was 6 → now 7) |
+| Combined fetcher + smoke_probe test suites | `uv run pytest tests/integration/test_goldapple_fetch_loop_mocked.py tests/unit/test_smoke_probe.py -q` | `24 passed in 29.18s` (10 fetcher baseline + 3 new + 7 smoke baseline + 4 new) | PASS |
+| Full non-live pytest suite | `uv run pytest tests/ -q -m "not live"` | `392 passed, 1 skipped, 0 failed in 101.11s` | PASS (385 baseline + 7 new = 392 exactly) |
+| WARMUP_* constants exported in __all__ | `python -c "from ga_crawler.fetchers.goldapple import WARMUP_URL, WARMUP_SETTLE_SECONDS, WARMUP_NETWORKIDLE_TIMEOUT_MS; ..."` | `OK` (values + __all__ membership confirmed) | PASS |
+| Warm-up goto AST wired in __aenter__ | `ast.walk` over `__aenter__` body checking first positional arg of `self._page.goto(...)` is `Name(id='WARMUP_URL')` | `warm-up goto AST verified` | PASS |
+| D-312 outer invariant (exactly 1 for-loop in smoke_probe) | `ast.walk` over `inspect.getsource(smoke_probe)` | `D-312 invariant preserved: exactly 1 for-loop in smoke_probe` | PASS |
+| CR-01 follow-up: GATE_TITLE_MARKER reuse + block_reason guard | `inspect.getsource(_is_loading_race)` checks for both | `CR-01 follow-up verified: GATE_TITLE_MARKER reused + block_reason guard present` | PASS |
+| Out-of-scope: SMOKE_URLS[0] post-fefed43 + fetch_one has no wait_for_selector | AST check + import check | `out-of-scope items unchanged` | PASS |
+| CLI module entry registers subcommands | `uv run python -m ga_crawler --help` | Output contains `goldapple-smoke` and `weekly-run` (post-D-212 cutover) | PASS |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|-------------|-------------|--------|----------|
-| CRAWL-02 | 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, **03-08** | Краулер goldapple.kz получает список SKU, ограниченный брендами viled-снимка текущего run_id | SATISFIED (post-Wave-7) | Truth 1 BLOCKER closed via Path A (longest-prefix-in-whitelist brand-token bucket index). REQUIREMENTS.md row 141 reflects the Wave 7 closure. Empirical 1-hour-run validation (the operational dimension of CRAWL-02) tracked under Truth 4 / `human_verification`. |
+| CRAWL-02 | 03-02, 03-03, 03-04, 03-05, 03-06, 03-07, 03-08, **03-09** | Краулер goldapple.kz получает список SKU, ограниченный брендами viled-снимка текущего run_id | SATISFIED (Wave 7 structural close) + UNBLOCKED FOR PRODUCTION (Wave 8 cold-start fix) | Structural closure unchanged from 2026-05-06 — brand-bucket index works. Wave 8 plan 03-09 removes the boot-time obstacle that prevented operator from reaching `run_loop` on cold-spawn. REQUIREMENTS.md line 141 reflects Wave 7 closure (line text unchanged — adding Wave 8 narrative would require operator approval; the requirement description was met by Wave 7, Wave 8 is an operational unblock). |
 
-REQUIREMENTS.md maps only `CRAWL-02` to Phase 3 (line 141); Phase 2-shared modules (CRAWL-03/04/05/06, PARSE-*, NORM-*, DATA-*) continue to be Phase 2-owned per traceability table. No orphans.
+REQUIREMENTS.md maps only `CRAWL-02` to Phase 3 (line 141). Phase 2-shared modules (CRAWL-03/04/05/06, PARSE-*, NORM-*, DATA-*) continue to be Phase 2-owned per traceability table. No orphans.
 
 ### Anti-Patterns Found
 
-Re-scan of files modified in plan 03-08:
+Re-scan of files modified in plan 03-09:
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| (none) | — | — | — | — |
+| `src/ga_crawler/fetchers/goldapple.py` | 222-235 | `WARMUP_SETTLE_SECONDS=2.0` unconditional sleep adds +2 s on every healthy boot (~70-200% overhead relative to fast networkidle settle) | ⚠️ INFO (REVIEW WR-04) | Accept as conservative budget on weekly cadence; can be tightened in plan 03-10 |
+| `src/ga_crawler/runner/gates.py` | 186 | `await asyncio.sleep(1.0)` not injectable — retry-positive test pays full 1 s wall-clock | ⚠️ INFO (REVIEW WR-01) | Slows test suite by 1 s; not a correctness bug |
+| `src/ga_crawler/runner/gates.py` | 84-97 | `_compute_price_extracted` calls `parse_pdp` unconditionally; no try/except wrapper | ⚠️ INFO (REVIEW WR-02) | Schema-drift exception inside `parse_pdp` could abort entire probe; mitigated by tests covering happy + gate-shell + non-200 + stale paths |
+| `src/ga_crawler/runner/gates.py` | 178-188 | `phase3_smoke_probe_retry` logs first-attempt diagnostics but no `_retry_complete` event | ⚠️ INFO (REVIEW WR-03) | Observability gap; not a correctness bug |
+| `src/ga_crawler/fetchers/goldapple.py` | 83-89 | `_make_retry_decorator` `PWTimeout` fallback masks misconfigured dev env (outside plan-03-09 scope) | ⚠️ INFO (REVIEW WR-05) | Defer to plan 03-10 hardening |
 
-The previously-flagged BLOCKER (architectural cross-module contract mismatch between `enumeration/goldapple_sitemap.py` and `enumeration/slug.py`) is now resolved. No new TODOs/FIXMEs/HACKs/PLACEHOLDERs introduced. CLI stub Phase 2 implementations remain (Phase 2-owned, not in scope for Phase 3 verification). The orchestrator's smoke-fail return path (lines 199-206) emits a partial builder-delta — same as before, INFO-level (correct behavior).
+No blocker anti-patterns. All 5 warnings from 03-REVIEW.md are explicitly tracked in the VERIFICATION frontmatter `open_findings_not_in_scope` list. The single Critical (CR-01) was RESOLVED by commit `05b29a8` — verified by `inspect.getsource(_is_loading_race)` checking for `GATE_TITLE_MARKER` + `gate_shell_not_cleared` substrings.
 
 ### Human Verification Required
 
-Single item — the live operator re-run that closes ROADMAP Success Criterion 4 empirically:
-
-#### 1. Live operator re-run with realistic sitemap
+#### 1. Operator live re-run on KZ-laptop with cold Camoufox spawn
 
 **Test:** From the KZ-laptop, run:
 ```
-uv run python -m ga_crawler goldapple-run --run-id 43 --viled-brands givenchy,jo_malone_london --sanity-gate-m 10
+uv run python scripts/uat3_live_run.py
 ```
-(Adjust `--run-id` to next available integer. `--sanity-gate-m 10` keeps the gate low enough to allow a partial-but-substantial run; production `M=1000` is restored once the live measurement gives a 4-week median.)
+(or equivalent: `uv run python -m ga_crawler goldapple-smoke --run-id <next>` repeated 4× with cold spawns between each)
 
 **Expected:**
-- Sitemap fetch returns ~45,000-100,000 slugs (no regression vs run-42's 45,490)
-- `phase3_brand_bucket_built` structlog event reports `whitelist_size > 0` and `bucket_key_count > 0`
-- `phase3_brand_intersect` reports `matched_url_count > 0` (will be in the dozens — both givenchy and jo_malone_london are well-represented on goldapple)
-- Smoke probe passes on first attempt (or after Operational Finding #2's 60s cooldown if cold-start)
-- `run_loop` executes ≥10 fetches without sustained 429/503 spikes; per-page cookie reuse via `persistent_context` confirmed
-- `final_m_gate(count, M=10)` evaluates True; run finalizes as `success`
-- Snapshot table contains the inserted goldapple records with brand/name/price populated
-- No Cloudflare interstitial / GroupIB gate-shell encountered (gate-shell-rate ≈ 0 per spike baseline)
+- All 4 cold-spawn runs reach `run_loop` (smoke_probe no longer trips on URL[0] `Loading` state)
+- `camoufox_booted` structlog event now includes `warmup_url='https://goldapple.kz/'` and `warmup_elapsed_ms` fields
+- If warm-up itself stalls on networkidle: `camoufox_warmup_networkidle_timeout` event emits (warning level) and boot continues normally
+- If cold-start race still happens on URL[0]: `phase3_smoke_probe_retry` event emits, sleep 1 s, retry succeeds, smoke probe passes
+- No regression on URL[1] / URL[2] happy path
+- Boot time +5–10 s acceptable; production weekly cadence absorbs the overhead
 
-**Why human:** Cannot run live Camoufox + KZ-laptop + real goldapple traffic from automation. Wave 6 live-smoke (run-42) already verified individual components (Camoufox boot, smoke pass after cooldown, parser hardening, profile lifecycle, sitemap fetch); only the end-to-end 1-hour run remains. The structural fix in Wave 7 (Path A) removes the upstream blocker that prevented re-running the operator validation in run-42, but the actual measurement requires a person on the KZ-laptop.
+**Why human:** Cannot run live Camoufox + KZ-laptop + real goldapple traffic from automation. The structural code-level fix (Layer 1 warm-up nav + Layer 2 retry-once safety net) is verified by 24-test combined fetcher+smoke suite and AST gates. The live measurement is operator-owned per 2026-05-06 deferral.
+
+**Acceptance:** If pass — operator (a) flips `- [ ]` → `- [x] 03-09-PLAN.md` in ROADMAP.md line 92, (b) replaces Phase 3 Progress row at line 174 with plain `| 3. Goldapple Crawl | 9/9 | Complete | 2026-05-11 |`. If fail — operator captures empirical evidence in `.planning/runs/{N}/runs.json`, updates 03-UAT.md Test 6 with new diagnostic, and either escalates to plan 03-10 hardening or accepts as Phase 7 ops-playbook concern.
 
 ### Gaps Summary
 
-**No blocking gaps.**
+**No blocking gaps.** Single `human_needed` item: operator live re-run of `scripts/uat3_live_run.py` on KZ-laptop with cold Camoufox spawn (Truth 4 SC#4 empirical confirmation).
 
-The single BLOCKER from the prior verification (Truth 1 — CRAWL-02 brand-intersect produced 0 matches against real sitemap shape) is structurally closed by Wave 7 plan 03-08. Closure mechanism is verified at four independent levels:
+The 2026-05-11 UAT BLOCKER (Operational Finding #1 — cold-start `Loading` race on URL[0] reproduced 4-of-4 cold runs) is structurally closed by plan 03-09 at TWO independent layers:
 
-1. **Code level** — `index_by_brand_token` exists, `intersect_brand_pool` consumes the brand_bucket shape, `compute_norm06_forward` forwards correctly, orchestrator builds known_brand_tokens whitelist before invocation.
-2. **Static-analysis level** — AST checks confirm imports, call counts, and the third positional arg of `compute_norm06_forward` is the Name `brand_bucket`. `inspect.getsource` confirms zero substring-lookup primitives in any of the three production functions.
-3. **Unit-test level** — 7 new `index_by_brand_token` tests + 3 new `intersect_brand_pool` tests + 1 new E2E test. The tom-ford / tom-ford-beauty contamination guard makes Pitfall 3 / D-305 a STRUCTURAL invariant rather than an interpretive one. `test_intersect_against_real_sitemap_shape` proves matched_url_count > 0 across a 12-entry slug_map mimicking the real 45,490-slug shape.
-4. **Documentation level** — D-305 refined in CONTEXT.md (commit `c662d72`) to describe the new longest-prefix-in-whitelist mechanism + the operator opt-in disambiguation semantic. REQUIREMENTS.md CRAWL-02 row updated to reflect Wave 7 closure.
+1. **Primary (Layer 1 — `__aenter__` warm-up nav):**
+   - `WARMUP_URL = 'https://goldapple.kz/'` constant exported + warm-up navigation step inserted between page capture and `camoufox_booted` log event
+   - Best-effort: inner try/except logs networkidle stall as `camoufox_warmup_networkidle_timeout` (warning); unconditional 2 s settle still runs; outer except preserves Pitfall 7 / D-311 cleanup invariant on Camoufox-boot failures only
+   - Provable by `test_warmup_navigation_called_once_in_aenter`, `test_camoufox_boot_failure_cleans_profile_dir`, `test_warmup_goto_failure_does_not_abort_boot`
 
-The full non-live test suite goes from 181 → 192 passed (no regressions, +11 net new tests). All 7 E2E mocked tests pass — including the new realistic-sitemap-shape test that asserts `unmatched_viled_brands == 0` for the brands that previously failed in run-42.
+2. **Safety net (Layer 2 — `smoke_probe` retry-once):**
+   - `_is_loading_race(rec, price_extracted)` private helper captures exact race shape: `status==200 AND price_extracted is False AND 'loading ' in title.lower() AND GATE_TITLE_MARKER not in title.lower() AND not rec.block AND block_reason != 'gate_shell_not_cleared'`
+   - Retry sleeps 1 s, re-fetches the URL once, replaces failing record in place; emits `phase3_smoke_probe_retry` event with first-attempt diagnostics
+   - Narrow on purpose: does NOT fire on happy-path (zero extra fetches), gate-shell (Operational Finding #2 must fail-fast), or non-200 statuses
+   - Provable by `test_smoke_probe_retries_once_on_loading_race`, `test_smoke_probe_no_retry_on_happy_path`, `test_smoke_probe_no_retry_on_gate_shell`, `test_smoke_probe_no_retry_on_non_200`
+   - CR-01 from 03-REVIEW.md (literal `"checking device"` instead of canonical `GATE_TITLE_MARKER`) was resolved by commit `05b29a8`: `_is_loading_race` now imports and reuses `GATE_TITLE_MARKER` from `parsers.goldapple_microdata` + adds `block_reason="gate_shell_not_cleared"` defence-in-depth check
 
-The remaining open item is **Truth 4** — the 1-hour live run for ROADMAP Success Criterion 4 — which is intrinsically operator-driven. Wave 7 is a pure-Python refactor: Camoufox kwargs, profile-lifecycle, retry-policy, rate-limit constants are bytecode-identical to the run-42 baseline. The Phase 1 spike (99/100 success at this tier) and Wave 6 live-smoke (Camoufox boot + smoke pass after cooldown) provide strong prior evidence. The operator re-run is the empirical confirmation step; it does not block goal achievement at the code level.
+D-312 strict-gate outer invariant **preserved structurally**: `inspect.getsource(smoke_probe)` + `ast.parse` confirms exactly ONE for-loop over `smoke_urls`; retry-once provides AT MOST ONE recovery attempt per URL with no nested while/for retry construct.
 
-**Recommendation:** Phase 4 (matcher) planning can proceed in parallel with the operator's live re-run. Phase 4 depends on the SHAPE of goldapple snapshots (which is now provably non-empty) — the exact COUNT determined by the live run does not change Phase 4's design.
+The full non-live test suite grew from 385 → 392 passed (no regressions, +7 net new tests exactly as planned). All 24 fetcher + smoke_probe tests pass.
+
+**Recommendation:** Phase 4 (matcher) planning can continue. Wave 7 closure (CRAWL-02 structural) and Wave 8 closure (cold-start race operational unblock) together make Phase 3 production-ready at the code level. Operator live re-run is the final empirical confirmation step; if it passes, ROADMAP Phase 3 row flips back to plain `Complete | 2026-05-11`. If it fails, captured evidence routes to plan 03-10 hardening or accepted as Phase 7 ops-playbook concern (these are upstream anti-bot conditions, not Phase 3 code defects).
 
 ---
 
-*Re-verified: 2026-05-06T11:30:00Z*
-*Verifier: Claude (gsd-verifier) — re-verification mode*
-*Previous verdict: gaps_found 4/5 (2026-05-06T10:00:00Z) — Truth 1 BLOCKER*
-*Current verdict: human_needed 5/5 (Truth 1 closed; Truth 4 awaits operator live re-run)*
+*Re-verified: 2026-05-11T09:00:00Z*
+*Verifier: Claude (gsd-verifier) — re-verification mode after plan 03-09 + CR-01 follow-up*
+*Previous verdict: passed 5/5 (2026-05-06T11:30:00Z) — re-opened 2026-05-11 for UAT Test 6 BLOCKER*
+*Current verdict: human_needed 5/5 (UAT Test 6 BLOCKER structurally closed at code level via Layer 1 warm-up + Layer 2 retry-once; CR-01 from 03-REVIEW.md resolved by commit 05b29a8; Truth 4 awaits operator live re-run on KZ-laptop)*
