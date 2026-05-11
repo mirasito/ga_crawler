@@ -9,7 +9,8 @@ date: 2026-05-11
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — Phase 5 reporter ready для discuss]]** — что делать прямо сейчас (Phase 4 executed 2026-05-11 evening; 6 plans across 5 waves, MATCH-01..04 done, 465/465 tests; Phase 5 reporter готов к `/gsd-discuss-phase 5`)
+- **[[Текущие приоритеты — Phase 5 plan ready, execute next]]** — что делать прямо сейчас (Phase 5 discuss + plan завершены 2026-05-11; 16 решений D-501..D-516, 6 plans across 6 waves, plan-checker ✅ PLANS PASS; готов к `/gsd-execute-phase 5`)
+- Phase 5 discuss trail: ~~[[Текущие приоритеты — Phase 5 reporter ready для discuss]]~~ — superseded 2026-05-11 (Phase 5 contexted + planned в одном сеансе)
 - Phase 4 execute trail: ~~[[Текущие приоритеты — Phase 4 plan ready, execute next]]~~ — superseded 2026-05-11 evening (Phase 4 executed end-to-end, verifier PASS 11/11)
 - Phase 3 transition: ~~[[Текущие приоритеты — Phase 3 closed окончательно, дальше Phase 4]]~~ — superseded 2026-05-11 PM (Phase 3 security re-audited, Phase 4 contexted + planned)
 - Phase 3 plan-09 UAT trail: ~~[[Текущие приоритеты — Phase 3 plan 09 shipped, ждём operator UAT]]~~ — superseded 2026-05-11T11:18Z (operator UAT прошёл: 4/4 cold-spawn runs reached run_loop)
@@ -35,6 +36,7 @@ date: 2026-05-11
 - **Решения Phase 3 (живые):** [[Sitemap-only URL pool для goldapple, без brand-facet rendering]] · [[Slug-эвристика для viled→goldapple, не explicit YAML]] · [[Sanity-gate M=1000 static с auto-suggest, не auto-tune]] · [[Fresh Camoufox profile per run + integrated smoke probe]] · **[[Brand-intersect через longest-prefix-in-whitelist, не exact-match]]** (D-305 refined Wave 7)
 - **Решения Phase 2 (живые):** **[[viled scope сужен до beauty+парфюм каталога catalog 1310]]** (D-223 mid-flight 2026-05-07; cascading на enumeration + N-gate)
 - **Решения Phase 4 (живые, 2026-05-11):** **[[Matches table — денормализованная, N→1 keep-all]]** (D-401/-403) · **[[Sanity-gate P — третий экземпляр паттерна auto-suggest 0.7×median]]** (D-406/-407 — третий retailer-domain экземпляр D-201/D-308 паттерна) · [[Match-rate — KPI с первой недели]] обновлено: формула frozen via D-405 source-locked canary
+- **Решения Phase 5 (живые, 2026-05-11):** **[[Reporter — source-of-truth для Telegram caption через runs.stats.report.summary_text]]** (D-514 — 7-key namespace + caption-without-regen invariant; cascades в Phase 6) · **[[REPORT-06 size guard — delivery-time concern, не reporter-time]]** (D-515 — xlsx ВСЕГДА пишется + `size_guard_passed=false` flag для Phase 6 DELIVER-03 gate)
 - **Решения Phase 3 (живые, 2026-05-11):** **[[SMOKE_URLS rotation — операторская routine, не Phase 3 code defect]]** (первая ротация 2026-05-11; ops-procedure, не fix-plan материал)
 - **Решения (superseded):** ~~[[Tier 2 Patchright — стартовый tier для goldapple]]~~ → заменено Camoufox-экспериментом 2026-05-06 → финал [[Goldapple — Tier 2 Camoufox без proxy, 99 из 100]]
 - **Решения (superseded):** ~~[[Спайковый fetch-OK = HTML 200 плюс product JSON-LD]]~~ → D-14 revised 2026-05-06: goldapple uses inline microdata (`itemprop="price"`), not JSON-LD Product schema
@@ -56,6 +58,7 @@ date: 2026-05-11
 - [[2026-05-11 — Phase 3 UAT Test 6 closed empirically, cold-start race fix validated на live KZ-laptop]]
 - [[2026-05-11 — Phase 3 security re-audit + Phase 4 discuss и plan готовы]]
 - [[2026-05-11 — Phase 4 executed — matcher + KPI shipped через 5 waves]]
+- [[2026-05-11 — Phase 5 discuss + plan ready, 6 plans across 6 waves для execute]]
 
 ## Inbox
 
