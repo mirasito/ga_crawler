@@ -45,6 +45,16 @@ RETRY_MAX_ATTEMPTS: int = 3                              # tenacity stop_after_a
 RETRY_WAIT_INITIAL: float = 2.0
 RETRY_WAIT_MAX: float = 30.0
 
+# ---- Warm-up navigation (Operational Finding #1 fix, 2026-05-11) ----
+# Cold-start `Loading` race: the first navigation after a fresh Camoufox
+# boot captures HTML before the page reaches a usable state (4-of-4
+# reproduction by scripts/uat3_live_run.py on 2026-05-11 — see
+# 03-UAT.md Test 6). Warming up __aenter__ with one navigation to the
+# bare homepage absorbs the race onto a non-probe URL.
+WARMUP_URL: str = "https://goldapple.kz/"
+WARMUP_SETTLE_SECONDS: float = 2.0
+WARMUP_NETWORKIDLE_TIMEOUT_MS: int = 15_000
+
 
 log = structlog.get_logger(__name__)
 
@@ -180,7 +190,15 @@ class GoldappleFetcher:
         self._page: Any = None
 
     async def __aenter__(self) -> "GoldappleFetcher":
-        """Boot Camoufox with locked kwargs (D-311 fresh profile + SKILL operational constants)."""
+        """Boot Camoufox + warm-up navigation (D-314 cold-start race fix).
+
+        Sequence:
+          1. Boot AsyncCamoufox with locked kwargs (D-311 fresh profile).
+          2. Capture first page.
+          3. Warm-up nav to WARMUP_URL (best-effort — networkidle stall does NOT abort the boot).
+          4. Unconditional WARMUP_SETTLE_SECONDS sleep — race is bounded to first nav.
+          5. Log camoufox_booted (now includes warmup_url + warmup_elapsed_ms).
+        """
         from camoufox.async_api import AsyncCamoufox
 
         self._cm = AsyncCamoufox(
@@ -198,15 +216,36 @@ class GoldappleFetcher:
                 if getattr(self._browser, "pages", None)
                 else await self._browser.new_page()
             )
+            # Warm-up navigation — BEST-EFFORT. networkidle stall must not abort the boot
+            # (transient networkidle non-emission on healthy Camoufox is documented).
+            warmup_started = time.perf_counter()
+            try:
+                await self._page.goto(
+                    WARMUP_URL,
+                    wait_until="networkidle",
+                    timeout=WARMUP_NETWORKIDLE_TIMEOUT_MS,
+                )
+            except Exception as warmup_exc:
+                log.warning(
+                    "camoufox_warmup_networkidle_timeout",
+                    run_id=self.run_id,
+                    error=f"{type(warmup_exc).__name__}: {repr(warmup_exc)[:200]}",
+                )
+            # Settle ALWAYS runs — race is bounded to first nav, even if networkidle stalled.
+            await asyncio.sleep(WARMUP_SETTLE_SECONDS)
+            warmup_elapsed_ms = int((time.perf_counter() - warmup_started) * 1000)
         except Exception:
-            # Camoufox failed to boot — clean up profile dir before re-raising
+            # Camoufox-BOOT failure (not warm-up) — Pitfall 7 cleanup + re-raise.
             shutil.rmtree(self.profile_dir, ignore_errors=True)
             raise
+
         log.info(
             "camoufox_booted",
             run_id=self.run_id,
             profile_dir=str(self.profile_dir),
             headless=self.headless,
+            warmup_url=WARMUP_URL,
+            warmup_elapsed_ms=warmup_elapsed_ms,
         )
         return self
 
@@ -343,6 +382,9 @@ __all__ = [
     "RETRY_MAX_ATTEMPTS",
     "RETRY_WAIT_INITIAL",
     "RETRY_WAIT_MAX",
+    "WARMUP_URL",
+    "WARMUP_SETTLE_SECONDS",
+    "WARMUP_NETWORKIDLE_TIMEOUT_MS",
     "TransientFetchError",
     "GoldappleFetcher",
     "fetch_one_isolated",
