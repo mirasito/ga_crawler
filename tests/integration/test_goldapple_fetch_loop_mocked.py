@@ -16,6 +16,8 @@ import pytest
 from ga_crawler.fetchers.goldapple import (
     GoldappleFetcher,
     PAUSE_RANGE,
+    WARMUP_NETWORKIDLE_TIMEOUT_MS,
+    WARMUP_URL,
 )
 
 
@@ -247,6 +249,153 @@ async def test_run_loop_isolation_keeps_running(fake_camoufox, goldapple_pdp_htm
     assert stats["fetch_count"] == 5
     # tenacity reraised after 3 attempts → fetch_one wraps in block=True; not in fetch_failures.
     assert len(records) == 5
+
+
+@pytest.mark.asyncio
+async def test_warmup_navigation_called_once_in_aenter(fake_camoufox) -> None:
+    """Operational Finding #1 fix: __aenter__ navigates to WARMUP_URL exactly
+    once with networkidle + WARMUP_NETWORKIDLE_TIMEOUT_MS before returning."""
+    async with GoldappleFetcher(run_id=1) as fetcher:
+        # Inspect goto call history during __aenter__ (no fetch_one yet)
+        calls = fetcher._page.goto.call_args_list
+        assert len(calls) == 1, f"expected exactly 1 goto in __aenter__, got {len(calls)}"
+        # First positional arg is WARMUP_URL
+        assert calls[0].args[0] == WARMUP_URL
+        # Verify kwargs
+        assert calls[0].kwargs.get("wait_until") == "networkidle"
+        assert calls[0].kwargs.get("timeout") == WARMUP_NETWORKIDLE_TIMEOUT_MS
+
+
+@pytest.mark.asyncio
+async def test_camoufox_boot_failure_cleans_profile_dir() -> None:
+    """Pitfall 7 + D-311: Camoufox-BOOT failure (before page capture) must
+    still clean up tmp profile dir before re-raising.
+
+    Warm-up goto failure is handled separately in
+    test_warmup_goto_failure_does_not_abort_boot (warm-up is best-effort
+    by design — D-314).
+    """
+    fetcher = GoldappleFetcher(run_id=77)
+    profile_path = fetcher.profile_dir
+    assert profile_path.exists()
+
+    import camoufox.async_api as cam
+
+    class FailingBootCM:
+        """Camoufox CM whose __aenter__ raises BEFORE the page is captured."""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            raise RuntimeError("camoufox boot boom")
+
+        async def __aexit__(self, *exc):
+            return None
+
+    import pytest as _pytest
+
+    monkeypatch = _pytest.MonkeyPatch()
+    monkeypatch.setattr(cam, "AsyncCamoufox", FailingBootCM)
+    try:
+        with _pytest.raises(RuntimeError, match="camoufox boot boom"):
+            async with fetcher:
+                pass  # unreachable — CM's __aenter__ raises
+
+        # After exception: profile dir must be cleaned up (Pitfall 7).
+        assert not profile_path.exists(), (
+            "Camoufox-boot failure must trigger shutil.rmtree on profile_dir "
+            "(Pitfall 7 / D-311 invariant)"
+        )
+    finally:
+        monkeypatch.undo()
+
+
+@pytest.mark.asyncio
+async def test_warmup_goto_failure_does_not_abort_boot() -> None:
+    """D-314: warm-up `goto` is best-effort. A networkidle stall (or any
+    Exception from goto) MUST NOT abort __aenter__ — the unconditional
+    WARMUP_SETTLE_SECONDS sleep still runs, the boot completes, and the
+    profile dir is NOT cleaned up by warm-up failure (cleanup happens
+    only on Camoufox-boot failure OR on normal __aexit__).
+    """
+    from unittest.mock import AsyncMock as _AM
+
+    import camoufox.async_api as cam
+
+    sleep_calls: list[float] = []
+
+    class StallingPage:
+        def __init__(self):
+            self.goto = _AM(side_effect=RuntimeError("networkidle stall"))
+            self.title = _AM(return_value="")
+            self.content = _AM(return_value="")
+            self.wait_for_load_state = _AM()
+            self.wait_for_timeout = _AM()
+
+    class StallingBrowser:
+        def __init__(self, page):
+            self.pages = [page]
+
+        async def new_page(self):
+            return self.pages[0]
+
+    class StallingCM:
+        def __init__(self, *args, **kwargs):
+            self._page = StallingPage()
+            self._browser = StallingBrowser(self._page)
+
+        async def __aenter__(self):
+            return self._browser
+
+        async def __aexit__(self, *exc):
+            return None
+
+    import pytest as _pytest
+
+    monkeypatch = _pytest.MonkeyPatch()
+    monkeypatch.setattr(cam, "AsyncCamoufox", StallingCM)
+
+    # Record asyncio.sleep calls inside the fetcher module so we can verify
+    # the unconditional WARMUP_SETTLE_SECONDS sleep ran AFTER the failing goto.
+    import asyncio as _asyncio
+
+    import ga_crawler.fetchers.goldapple as fetcher_mod
+
+    real_sleep = _asyncio.sleep
+
+    async def recording_sleep(dt):
+        sleep_calls.append(dt)
+        await real_sleep(0)
+
+    monkeypatch.setattr(fetcher_mod.asyncio, "sleep", recording_sleep)
+
+    try:
+        fetcher = GoldappleFetcher(run_id=314)
+        profile_path = fetcher.profile_dir
+        assert profile_path.exists()
+
+        # __aenter__ must NOT raise — warm-up failure is best-effort.
+        async with fetcher:
+            # Inside the block: profile dir still exists (warm-up failure did
+            # NOT trigger cleanup; cleanup only happens on Camoufox-boot fail
+            # or on normal __aexit__).
+            assert profile_path.exists(), (
+                "profile dir cleaned up despite best-effort warm-up — regression"
+            )
+
+        # After clean __aexit__, profile dir gets cleaned up normally.
+        assert not profile_path.exists(), "__aexit__ should have cleaned up profile_dir"
+
+        # Settle sleep STILL ran with WARMUP_SETTLE_SECONDS even though goto raised.
+        from ga_crawler.fetchers.goldapple import WARMUP_SETTLE_SECONDS
+
+        assert WARMUP_SETTLE_SECONDS in sleep_calls, (
+            f"warm-up settle sleep (WARMUP_SETTLE_SECONDS={WARMUP_SETTLE_SECONDS}) "
+            f"was NOT called after the failing goto; recorded sleeps: {sleep_calls}"
+        )
+    finally:
+        monkeypatch.undo()
 
 
 @pytest.mark.asyncio
