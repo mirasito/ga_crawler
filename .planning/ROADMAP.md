@@ -89,7 +89,7 @@
 - [x] 03-06-PLAN.md - Wave 5: runners/goldapple_run.py orchestrator + cli.py (python -m ga_crawler) + stub Phase 2 protocol implementations + storage integration tests
 - [x] 03-07-PLAN.md - Wave 6: Manual operator checkpoint - live smoke probe + limited live run on KZ-laptop; Success Criteria 4 and 5 verification
 - [x] 03-08-PLAN.md - Wave 7 (gap_closure): brand-token bucket index in goldapple_sitemap.py + intersect_brand_pool refactor to brand_bucket shape; closes CRAWL-02 BLOCKER from 03-VERIFICATION.md (Truth 1: matched_url_count=0 against real 45,490-slug sitemap)
-- [ ] 03-09-PLAN.md - Wave 8 (gap_closure): warm-up navigation in GoldappleFetcher.__aenter__ + retry-once in smoke_probe for cold-start `Loading` race; closes Test 6 BLOCKER from 03-UAT.md (Operational Finding #1, reproduced 4-of-4 cold-runs 2026-05-11)
+- [x] 03-09-PLAN.md - Wave 8 (gap_closure): warm-up navigation in GoldappleFetcher.__aenter__ + retry-once in smoke_probe for cold-start `Loading` race; closes Test 6 BLOCKER from 03-UAT.md (Operational Finding #1, reproduced 4-of-4 cold-runs 2026-05-11). Operator re-verified 2026-05-11T11:18Z: 4 cold-spawn runs reached run_loop, status=success
 **UI hint**: no
 
 ### Phase 4: Matcher + Match-Rate KPI
@@ -171,7 +171,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 |-------|----------------|--------|-----------|
 | 1. Goldapple Reconnaissance Spike | 9/12 | Complete (3 plans skipped) | 2026-05-06 |
 | 2. Project Skeleton + viled Crawl + Storage | 6/6 | Complete | 2026-05-07 |
-| 3. Goldapple Crawl | 9/9 | Complete (re-opened 2026-05-11 for Finding #1 fix; awaiting operator re-verification) | 2026-05-11 |
+| 3. Goldapple Crawl | 9/9 | Complete (re-opened 2026-05-11 for Finding #1 fix; re-verified 2026-05-11T11:18Z, 4 cold-spawn runs reached run_loop) | 2026-05-11 |
 | 4. Matcher + Match-Rate KPI | 0/0 | Not started | - |
 | 5. Reporter (Excel + summary) | 0/0 | Not started | - |
 | 6. Telegram Delivery + Ops/Business Split | 0/0 | Not started | - |

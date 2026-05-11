@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 03-goldapple-crawl
 source:
   - 03-01-SUMMARY.md
@@ -12,12 +12,12 @@ source:
   - 03-08-SUMMARY.md
   - 03-09-SUMMARY.md
 started: 2026-05-06T12:22:30Z
-updated: 2026-05-11T15:30:00Z
+updated: 2026-05-11T11:18:00Z
 ---
 
 ## Current Test
 
-[testing complete — Test 6 closed as issue with diagnosed root causes]
+[testing complete — Test 6 closed as PASS after cold-spawn re-verification 2026-05-11T11:18Z]
 
 ## Tests
 
@@ -90,8 +90,60 @@ expected: |
   sustained 429/503. final_m_gate(10) passes. snapshots row count for
   `retailer='goldapple'` and the new run_id is non-zero with brand/name/price
   populated. run.status = "success".
-result: issue
-severity: major
+result: pass
+evidence: |
+  Cold-spawn re-verification 2026-05-11 (4 back-to-back invocations of
+  `uv run python scripts/uat3_live_run.py`, no inter-run cooldown). All 4
+  invocations ultimately reached `run_loop` and completed with
+  status=success, goldapple_count=33 each, snapshots written to prices.db.
+
+  Per-run evidence (verbatim from `.uat-run/run{N}.{out,err}` +
+  `.planning/runs/{run_id}/`):
+
+  - run-1 (run_id=6, 10:49:59Z→10:56:00Z, 360.5s): camoufox_booted
+    warmup_url=https://goldapple.kz/ warmup_elapsed_ms=3638; smoke_probe
+    passed url_count=3; 33 fetches; smoke_retry_used=false; status=success.
+  - run-2 (run_id=7, 10:56:34Z→11:02:58Z, 383.9s): warmup_elapsed_ms=3844;
+    smoke passed; 33 fetches; smoke_retry_used=false; status=success.
+    Started ~30s after run-1 finished — same back-to-back pattern that
+    failed on the original 2026-05-11 attempt.
+  - run-3 (run_id=8, 11:03:33Z→11:09:33Z, 360.1s): warmup_elapsed_ms=3734;
+    smoke passed; 33 fetches; smoke_retry_used=false; status=success.
+  - run-4 (run_ids=9 then 10, 11:10:02Z→11:17:43Z, 460.7s):
+    warmup_elapsed_ms=3623 on first boot; smoke_probe FAILED on
+    SMOKE_URLS[2] (`19000032744-givenchy-gentleman-reserve-privee-eau-de-
+    parfum`) — status=200, size=12367, title="ЗОЛОТОЕ ЯБЛОКО — интернет-
+    магазин косметики и парфюмерии", block=false, price_extracted=false
+    (stale-SKU 30x → homepage shape); URL[0] and URL[1] passed. Plan 03-09
+    retry-once safety net kicked in: 75s cooldown → new run_id=10 with
+    fresh Camoufox boot (warmup_elapsed_ms=3401) → all 3 smoke URLs passed
+    → 33 fetches → status=success, smoke_retry_used=true.
+
+  Pass criteria from Gaps `awaiting.action`:
+    [x] All 4 cold-spawn runs reach run_loop (run-1,2,3 directly;
+        run-4 via the 03-09 retry-once branch — exactly the residual case
+        the plan was designed to absorb).
+    [x] camoufox_booted event contains warmup_url + warmup_elapsed_ms
+        fields (all 4 runs, 3401–3844 ms; consistent with plan 03-09
+        target of ≤7s headroom).
+    [x] smoke_probe does NOT trip on URL[0] Loading state (URL[0]
+        passed cleanly across all 5 boot cycles; the one failure was a
+        URL[2] stale-SKU shape, NOT the Loading-race shape — different
+        failure class).
+
+  Operational observations (new, for Phase 7 ops-playbook backlog):
+  - SMOKE_URLS[2] (`19000032744-givenchy-gentleman-reserve-privee-eau-de-
+    parfum`) returned the generic-homepage stale-SKU shape on run-4
+    attempt 1. The retry-once branch caught it. URL is not reliably
+    stale (passed on runs 1/2/3). Treat as intermittent until repro'd
+    twice in a row, then rotate per the gates.py:33-35 rotation
+    procedure (Phase 7 ops-playbook).
+
+prior_diagnosis: |
+  Original 2026-05-11 attempt (status=issue) documented below was closed
+  structurally by plan 03-09 (warm-up navigation + retry-once safety net
+  + CR-01 GATE_TITLE_MARKER hardening). The empirical re-verification
+  above confirms the structural fix.
 reported: |
   2026-05-11 attempt via scripts/uat3_live_run.py (faithful translation of
   pre-D-212 `goldapple-run` invocation: viled_brands=[givenchy, jo_malone_london],
@@ -192,8 +244,8 @@ evidence: |
 ## Summary
 
 total: 9
-passed: 8
-issues: 1
+passed: 9
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -201,8 +253,16 @@ blocked: 0
 ## Gaps
 
 - truth: "Live goldapple run on KZ-laptop completes a clean 1-hour crawl with sanity gate passing, real snapshots written to DB."
-  status: partial
-  reason: "Operational Finding #1 (cold-start `Loading` race on URL[0]) closed structurally by plan 03-09: WARMUP_URL navigation in GoldappleFetcher.__aenter__ absorbs the bootstrap race onto goldapple.kz homepage; retry-once safety net in smoke_probe catches the rare residual case. CR-01 follow-up tightens the gate-shell guard to use canonical GATE_TITLE_MARKER. SMOKE_URLS[0] stale-SKU also fixed (fefed43). 392 non-live tests pass. Awaiting operator re-run of scripts/uat3_live_run.py on KZ-laptop with cold Camoufox spawn to flip from partial → pass."
+  status: resolved
+  reason: |
+    Operational Finding #1 (cold-start `Loading` race on URL[0]) closed structurally
+    by plan 03-09 (warm-up navigation in GoldappleFetcher.__aenter__ + retry-once
+    safety net in smoke_probe + CR-01 GATE_TITLE_MARKER hardening). Empirically
+    re-verified 2026-05-11T11:18Z with 4 back-to-back cold-spawn invocations of
+    `scripts/uat3_live_run.py`. All 4 reached `run_loop` and completed status=success
+    (run_ids 6/7/8/10; run-4 used the retry-once safety net to absorb an intermittent
+    URL[2] stale-SKU shape — different failure class from the Loading race, exactly
+    the residual case the plan was designed for). 392 non-live tests pass.
   severity: major
   test: 6
   resolution_plans:
@@ -221,20 +281,13 @@ blocked: 0
     - "src/ga_crawler/runner/gates.py:178-188 (smoke_probe retry-once branch + phase3_smoke_probe_retry event)"
     - "tests/integration/test_goldapple_fetch_loop_mocked.py:255,270,315 (3 fetcher lifecycle tests)"
     - "tests/unit/test_smoke_probe.py:141,208,236,283 (4 retry-once tests)"
-  remaining:
-    - "Operational Finding #2 (back-to-back gate-shell after short cooldown) — out of scope per plan 03-09; production weekly cadence won't see this; Phase 7 ops-playbook backlog item"
-    - "Headless-mode framebuffer workaround for Windows local QA — production Linux VPS unaffected"
-    - "Operator live re-run of scripts/uat3_live_run.py on KZ-laptop with cold Camoufox spawn to confirm reach of run_loop"
-  awaiting:
-    role: operator
-    action: |
-      Run `uv run python scripts/uat3_live_run.py` from KZ-laptop with cold Camoufox spawn.
-      Pass criterion: 4 cold-spawn runs all reach run_loop; camoufox_booted event contains
-      warmup_url + warmup_elapsed_ms fields; smoke_probe does not trip on URL[0] Loading state.
-    next: |
-      On pass: operator flips Test 6 `result: pass`, removes Gaps entry, and bumps frontmatter
-      `status: complete`. Phase 3 then closes for the second (final) time.
-    on_failure: |
-      Capture new run logs, file fresh `/gsd-verify-work 3` against this 03-UAT.md, and let
-      the verifier route to either a follow-up gap-closure plan or accept Phase 7 ops-playbook
-      escalation depending on the failure shape.
+  empirical_evidence:
+    - ".uat-run/run1.{out,err} — run_id=6, warmup_elapsed_ms=3638, smoke pass, 33 fetches, status=success, 360.5s"
+    - ".uat-run/run2.{out,err} — run_id=7, warmup_elapsed_ms=3844, smoke pass, 33 fetches, status=success, 383.9s"
+    - ".uat-run/run3.{out,err} — run_id=8, warmup_elapsed_ms=3734, smoke pass, 33 fetches, status=success, 360.1s"
+    - ".uat-run/run4.{out,err} — run_id=9 smoke FAIL on URL[2] stale-SKU shape → retry-once safety net → run_id=10 smoke pass, 33 fetches, status=success, smoke_retry_used=true, 460.7s"
+    - ".planning/runs/{6,7,8,10}/{runs.json,sitemap-slugs.txt,norm06-review.md} — persisted per-run artifacts"
+  remaining_phase7_ops_playbook:
+    - "SMOKE_URLS[2] intermittent stale-SKU shape on run-4 (one failure across 4 invocations). Retry-once absorbed it. Rotate per gates.py:33-35 if repro'd twice in a row."
+    - "Operational Finding #2 (back-to-back gate-shell after short cooldown) — production weekly cadence won't see this."
+    - "Headless-mode framebuffer workaround for Windows local QA — production Linux VPS unaffected."
