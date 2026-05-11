@@ -1,12 +1,13 @@
 ---
-tags: [debugging, anti-bot, camoufox, cold-start, race-condition, phase-3, goldapple, finding-1, production-defect, resolved-structurally]
+tags: [debugging, anti-bot, camoufox, cold-start, race-condition, phase-3, goldapple, finding-1, production-defect, resolved-empirically]
 date: 2026-05-11
 severity: production-blocking
 production_impact: weekly-cron-fails-each-sunday
-status: resolved-structurally
+status: resolved-empirically
 resolution_date: 2026-05-11
 resolution_plan: 03-09
-awaits: operator-live-confirmation
+empirical_confirmation_date: 2026-05-11T11:18Z
+empirical_confirmation: 4-of-4-cold-spawns-reached-run-loop
 ---
 
 # Cold-start `Loading` race на первой навигации после Camoufox boot
@@ -122,6 +123,23 @@ Success criteria для fix:
 **Test coverage:** +7 net new tests (3 fetcher lifecycle: `test_warmup_navigation_called_once_in_aenter`, `test_camoufox_boot_failure_cleans_profile_dir`, `test_warmup_goto_failure_does_not_abort_boot`; 4 smoke_probe: retry triggers on Loading-race, no-retry on happy-path, no-retry on gate-shell, no-retry on non-200). Полный non-live suite: **392 passed, 1 skipped, 0 failed**.
 
 **Verifier verdict:** `human_needed`, score **5/5 must_haves verified** structurally. Остался **один operator-driven item:** live re-run `scripts/uat3_live_run.py` на KZ-laptop с cold Camoufox spawn — нужно empirically подтвердить, что 4 cold-spawn runs достигают `run_loop` (а не упираются в smoke_probe). После confirmation Test 6 в `03-UAT.md` флипается `partial → pass`, Phase 3 закрывается окончательно.
+
+### Empirical confirmation (2026-05-11T11:18Z)
+
+4 back-to-back cold-spawn invocations `uv run python scripts/uat3_live_run.py` (KZ-laptop, headed Camoufox, no inter-run cooldown):
+
+| Run | run_id | warmup_ms | smoke | fetches | retry | duration | status |
+|---|---|---|---|---|---|---|---|
+| run-1 | 6 | 3638 | pass | 33 | no | 360.5s | success |
+| run-2 | 7 | 3844 | pass | 33 | no | 383.9s | success |
+| run-3 | 8 | 3734 | pass | 33 | no | 360.1s | success |
+| run-4 | 9→10 | 3623→3401 | FAIL→pass | 33 | YES | 460.7s | success |
+
+**Все 4 cold-spawn runs достигли `run_loop`.** URL[0] (Loading-race surface) прошёл cleanly во всех 5 boot-циклах. Единственный smoke fail на run-4 attempt 1 — **другой класс**: SMOKE_URLS[2] (`19000032744-givenchy-gentleman-reserve-privee-eau-de-parfum`) вернул stale-SKU 30x→homepage shape (`title="ЗОЛОТОЕ ЯБЛОКО..."`, size 12367, `block: false`, `price_extracted: false`). Retry-once safety net (Layer 2) сработал ровно как было задизайнено — 75s cooldown → fresh Camoufox boot (run_id=10) → smoke pass → 33 fetches → status=success.
+
+Phase 3 закрыт окончательно. Test 6 `result: pass`. Status: `partial → complete`. Commit `3bbbc39`.
+
+**Production prediction validated:** weekly cron на Linux VPS не будет ловить cold-start Loading race; warm-up navigation absorbs его в Camoufox boot. URL[2] stale-SKU — это intermittent operational concern (1 occurrence в 4 cold-spawns), Phase 7 ops-playbook backlog если repro'd twice in a row.
 
 **Open code-review findings** (отдельный цикл `/gsd-code-review 3 --fix` перед milestone close):
 - WR-01: `asyncio.sleep(1.0)` не injectable

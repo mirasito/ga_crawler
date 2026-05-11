@@ -9,7 +9,8 @@ date: 2026-05-11
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — Phase 3 plan 09 shipped, ждём operator UAT]]** — что делать прямо сейчас (plan 03-09 закрыл cold-start race structurally 2026-05-11 PM; verdict `human_needed`; оператор перезапускает `scripts/uat3_live_run.py` на KZ-laptop)
+- **[[Текущие приоритеты — Phase 3 closed окончательно, дальше Phase 4]]** — что делать прямо сейчас (Phase 3 закрыт 2026-05-11T11:18Z empirically; следующий шаг — `/gsd-discuss-phase 4` для Matcher + Match-Rate KPI)
+- Phase 3 plan-09 UAT trail: ~~[[Текущие приоритеты — Phase 3 plan 09 shipped, ждём operator UAT]]~~ — superseded 2026-05-11T11:18Z (operator UAT прошёл: 4/4 cold-spawn runs reached run_loop)
 - Phase 3 plan-gaps trail: ~~[[Текущие приоритеты — Phase 3 Finding 1 → plan-gaps]]~~ — superseded 2026-05-11 PM (plan-gaps выполнен; теперь ждём operator UAT)
 - Phase 2 trail: ~~[[Текущие приоритеты — Phase 2 ready для plan]]~~ — superseded 2026-05-11 (Phase 2 closed 2026-05-07; узкое горлышко переместилось на Phase 3 Finding #1)
 - Phase 2/4 fork point: ~~[[Текущие приоритеты — Phase 3 done, дальше Phase 2 или Phase 4]]~~ — superseded 2026-05-07 (выбран Phase 2 path)
@@ -35,7 +36,7 @@ date: 2026-05-11
 - **Решения (superseded):** ~~[[Tier 2 Patchright — стартовый tier для goldapple]]~~ → заменено Camoufox-экспериментом 2026-05-06 → финал [[Goldapple — Tier 2 Camoufox без proxy, 99 из 100]]
 - **Решения (superseded):** ~~[[Спайковый fetch-OK = HTML 200 плюс product JSON-LD]]~~ → D-14 revised 2026-05-06: goldapple uses inline microdata (`itemprop="price"`), not JSON-LD Product schema
 - **Паттерны:** [[JSON-LD первый, CSS резервный в парсерах]] · [[Per-SKU isolation вместо fail-on-first]] · [[Run-level sanity-gate перед доставкой]] · [[Volume как value-object с multipack-флагом]] · [[Тиры anti-bot эскалации]]
-- **Debugging:** [[Goldapple показывает Cloudflare-челлендж — эскалация tier]] · [[Match-rate резко упал — проверь brand-alias таблицу]] · [[Парсер тихо вернул 0 продуктов — sanity-gate должен был сработать]] · [[Anti-bot transient gate-shell на быстрых Camoufox cold-spawns]] · **[[Cold-start `Loading` race на первой навигации после Camoufox boot]]** (resolved structurally 2026-05-11 PM плана 03-09; ждёт operator confirmation)
+- **Debugging:** [[Goldapple показывает Cloudflare-челлендж — эскалация tier]] · [[Match-rate резко упал — проверь brand-alias таблицу]] · [[Парсер тихо вернул 0 продуктов — sanity-gate должен был сработать]] · [[Anti-bot transient gate-shell на быстрых Camoufox cold-spawns]] · **[[Cold-start `Loading` race на первой навигации после Camoufox boot]]** (resolved-empirically 2026-05-11T11:18Z — 4/4 cold-spawn runs reached run_loop)
 
 ## Сессии
 
@@ -49,6 +50,7 @@ date: 2026-05-11
 - [[2026-05-07 — Phase 3 audit-stack закрыт + Phase 2 контекст с scope-narrowing]]
 - [[2026-05-11 — Phase 3 UAT Test 6 re-opened, SMOKE_URLS rotation + cold-start race promoted]]
 - [[2026-05-11 — Phase 3 plan 03-09 ships, cold-start race закрыт structurally]]
+- [[2026-05-11 — Phase 3 UAT Test 6 closed empirically, cold-start race fix validated на live KZ-laptop]]
 
 ## Inbox
 
