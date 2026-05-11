@@ -57,12 +57,12 @@
 
 ### Report
 
-- [ ] **REPORT-01**: Excel-файл с листами: `Summary`, `Per-SKU deltas` (виледд × голдэпл по совпавшим), `Assortment gaps` (бренды на goldapple, отсутствующие на viled), `Goldapple promos` (где `was_price > current_price`)
-- [ ] **REPORT-02**: Conditional formatting в Excel: подсветка дельт (зелёный — viled дешевле, красный — viled дороже), frozen panes, autofilter
-- [ ] **REPORT-03**: Заголовки колонок и текст саммари — на русском
-- [ ] **REPORT-04**: Текстовая сводка: `viled_count`, `goldapple_count`, `match_count`, **`match_rate %`**, размер ассортиментного разрыва, top-3 наибольшие дельты, количество промо у goldapple
-- [ ] **REPORT-05**: Excel-файл записывается на диск в архив (`reports/YYYY-WNN.xlsx`) до отправки — отчёт независим от Telegram
-- [ ] **REPORT-06**: Размер xlsx проверяется перед отправкой — если > 45 MB, ругается явной ошибкой (Telegram limit 50 MB)
+- [x] **REPORT-01**: Excel-файл с листами: `Summary`, `Per-SKU deltas` (виледд × голдэпл по совпавшим), `Assortment gaps` (**SKU на goldapple, отсутствующие на viled по strict-key (brand_norm, name_norm, volume_norm), в пределах brand-overlap CRAWL-02 scope** — D-502 reinterpretation: brand-level gap = ∅ by CRAWL-02 construction, SKU-level = корректный intent), `Goldapple promos` (где `was_price > current_price`) — Plan 05-02 ships excel_builder.py with 4-sheet workbook via `pd.ExcelWriter(BytesIO, engine='xlsxwriter')` (Pitfall 1 explicit); Plan 05-04 ships orchestrator with D-506 always-4-sheets invariant.
+- [x] **REPORT-02**: Conditional formatting в Excel: подсветка дельт (зелёный — viled дешевле, красный — viled дороже), frozen panes, autofilter — Plan 05-02 excel_builder.py ships D-505 3-color-scale on `Дельта, %` + `Скидка, %` columns with `mid_type='num', mid_value=0` anchor (parity), D-508 CF-on-2-sheets-only (Per-SKU deltas + Goldapple promos; NOT Summary / Assortment gaps), `freeze_panes(1, 0)` + `autofilter` on all data sheets per Pattern 3.
+- [x] **REPORT-03**: Заголовки колонок и текст саммари — на русском — Plan 05-02 excel_builder.py ships D-503 verbatim PER_SKU_HEADERS_RU + GAPS_HEADERS_RU + PROMOS_HEADERS_RU dicts (Бренд / Название / Объём / Цена viled, ₸ / Старая цена viled, ₸ / URL viled / Цена goldapple, ₸ / Старая цена goldapple, ₸ / URL goldapple / Дельта, ₸ / Дельта, % / Скидка, ₸ / Скидка, %); summary_builder.py ships D-504 multi-line emoji template constants (📊/📦/🎯/🆕/💸/🔝) source-locked; `test_russian_headers_match_d503` source-lock canary + golden-file canary `tests/fixtures/reporter/expected-summary-text.txt`.
+- [x] **REPORT-04**: Текстовая сводка: `viled_count`, `goldapple_count`, `match_count`, **`match_rate %`**, размер ассортиментного разрыва, top-3 наибольшие дельты, количество промо у goldapple — Plan 05-02 summary_builder.build_summary ships D-504 canonical template; reads upstream stats `viled.fetch_count` / `goldapple.fetch_count` / `match.count` / `match.rate` flat dot-keyed (Pitfall 6) — D-405 KPI formula citation verbatim, no recompute; top-3 sorted by `ABS(price_delta_pct) DESC` via SQL `read_top_n_deltas` (Pattern 7 — doesn't materialize 50k matches into pandas); zero-match D-504 fallback (Top-3 header omitted entirely when match_count==0).
+- [x] **REPORT-05**: Excel-файл записывается на диск в архив (`reports/YYYY-WNN.xlsx`) до отправки — отчёт независим от Telegram — Plan 05-03 archive.py ships D-512 ISO-week filename via `Asia/Almaty` ZoneInfo + `date.isocalendar()` (Pitfall 4 year-boundary verified: 2027-01-01 UTC → 2026-W53, 2025-12-29 → 2026-W01) + D-510 atomic write `*.xlsx.tmp` + `os.replace` (crash-safe per Pitfall 5); Plan 05-04 orchestrator path-traversal containment check `target_path.relative_to(repo_root.resolve())`; Plan 05-05 standalone `python -m ga_crawler report-run --run-id N` subcommand (D-509) for SC#3 historical regeneration; ARCHITECTURE.md "reporter independent of delivery" structurally enforced — no Telegram imports in reporter package.
+- [x] **REPORT-06**: Размер xlsx проверяется перед отправкой — если > 45 MB, явная сигнализация (Telegram limit 50 MB) — Plan 05-03 archive.check_size_guard ships D-515 flag-only semantics (returns `(passed: bool, size_bytes: int)`, NEVER raises); orchestrator (Plan 05-04) sets `report.size_guard_passed=false` in stats + structlog warning `report_size_exceeded`; **xlsx ALWAYS persists on disk** (D-515 invariant — manual recovery / Phase 6 split-and-send-later) + Run status remains `success` (ARCHITECTURE.md "reporter independent of delivery" удерживается); **Phase 6 DELIVER-03 cascade**: must read `report.size_guard_passed` and route >45MB runs to ops-chat alert (NOT business-chat) — invariant cascaded to STATE.md Accumulated Key Decisions for Phase 6 planner.
 
 ### Deliver
 
@@ -165,12 +165,12 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 | DATA-04 | Phase 2 | Done (Plan 02-02 — WAL PRAGMA event listener + per-batch commit) |
 | DATA-05 | Phase 2 | Done (Plan 02-02 — SqliteRunWriter atomic json_patch lifecycle; try/finally orchestration in Plan 05) |
 | DATA-06 | Phase 2 | Closed (Plan 02-06 — bin/backup.sh online sqlite3 .backup + 4-rotate retention per D-219; 4 integration tests verify atomic backup + retention + error path + auto-mkdir) |
-| REPORT-01 | Phase 5 | Pending |
-| REPORT-02 | Phase 5 | Pending |
-| REPORT-03 | Phase 5 | Pending |
-| REPORT-04 | Phase 5 | Pending |
-| REPORT-05 | Phase 5 | Pending |
-| REPORT-06 | Phase 5 | Pending |
+| REPORT-01 | Phase 5 | Done (Plan 05-02 excel_builder.py 4-sheet workbook + D-502 SKU-level gap interpretation amendment; D-506 always-4-sheets) |
+| REPORT-02 | Phase 5 | Done (Plan 05-02 — D-505 3-color CF mid_value=0 anchor + D-508 CF-on-2-sheets-only + freeze_panes + autofilter) |
+| REPORT-03 | Phase 5 | Done (Plan 05-02 — D-503 Russian headers verbatim + D-504 emoji summary template source-locked; golden file canary) |
+| REPORT-04 | Phase 5 | Done (Plan 05-02 summary_builder.py — reads runs.stats.match.* flat keys per Pitfall 6 + D-405 KPI verbatim + top-3 SQL ABS LIMIT + zero-match fallback) |
+| REPORT-05 | Phase 5 | Done (Plan 05-03 archive.py — D-512 ISO-week + Pitfall 4 year-boundary + D-510 atomic write *.xlsx.tmp + os.replace; Plan 05-04 path-traversal containment; Plan 05-05 standalone report-run CLI per D-509) |
+| REPORT-06 | Phase 5 | Done (Plan 05-03 check_size_guard flag-only D-515 + Plan 05-04 orchestrator sets report.size_guard_passed flag + log warning; xlsx persists on disk; Phase 6 DELIVER-03 cascade invariant) |
 | DELIVER-01 | Phase 6 | Pending |
 | DELIVER-02 | Phase 6 | Pending |
 | DELIVER-03 | Phase 6 | Pending |
@@ -192,3 +192,4 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 *Requirements defined: 2026-05-05*
 *Last updated: 2026-05-05 — traceability filled by gsd-roadmapper*
 *Phase 4 update: 2026-05-11 — MATCH-01..04 closed; MATCH-02 schema amended to denormalized 13-column shape per 04-CONTEXT.md D-401 + Action Items.*
+*Phase 5 update: 2026-05-12 — REPORT-01..06 closed; REPORT-01 amended per 05-CONTEXT.md D-502 (Assortment gaps reinterpreted as SKU-level within brand-overlap CRAWL-02 scope since brand-level gap=∅ by construction). Plans 05-01..05-06 shipped Wave 0..5 (foundation → builders → archive → orchestrator → main_run + CLI composition → doc cascade); 6 v1 requirements satisfied bringing total to 37/48. D-514/D-515/D-405 cascade items propagated to STATE.md Accumulated Key Decisions for Phase 6 planner.*
