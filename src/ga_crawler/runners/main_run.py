@@ -41,7 +41,9 @@ from ga_crawler.alias.yaml_loader import YamlBrandAlias
 from ga_crawler.config import ViledConfig
 from ga_crawler.matcher.config import MatchConfig
 from ga_crawler.normalizers.facade import Normalizer
+from ga_crawler.reporter.config import ReportConfig
 from ga_crawler.runners.matcher_run import run_matcher_phase
+from ga_crawler.runners.reporter_run import run_reporter_phase
 from ga_crawler.runners.viled_run import run_viled_phase
 from ga_crawler.storage.norm06_writer import Norm06Writer
 from ga_crawler.storage.sqlite import (
@@ -66,6 +68,12 @@ class MainRunResult:
     match_rate: float = 0.0  # Plan 04-05 — Phase 4 match-rate percent
     reason: Optional[str] = None
     norm06_path: Optional[Path] = None
+    # ---- Plan 05-05 additions per D-514 (surface reporter outcome to CLI/caller) ----
+    xlsx_path: Optional[str] = None
+    xlsx_size_bytes: int = 0
+    summary_text: str = ""
+    size_guard_passed: bool = True
+    # ---- keep stats_delta last (default_factory) ----
     stats_delta: dict = field(default_factory=dict)
 
 
@@ -161,6 +169,14 @@ def run_weekly(
     match_rate = 0.0
     viled_unmatched: list[str] = []
     goldapple_new_slugs: list[str] = []
+    # Plan 05-05 — reporter outcome scoped above try so the except branch returns
+    # valid MainRunResult with sane defaults (None / 0 / "" / True). Phase 6
+    # DELIVER-03 sanity-gate reads size_guard_passed only when xlsx_path is non-empty,
+    # so the default True is semantically "no xlsx produced → no size violation".
+    xlsx_path: Optional[str] = None
+    xlsx_size_bytes: int = 0
+    summary_text: str = ""
+    size_guard_passed: bool = True
 
     try:
         # ---- Viled phase ----
@@ -301,6 +317,46 @@ def run_weekly(
                 )
                 # Skip is NOT a run-failure — fall through to Norm06 + finalize.
 
+            # ---- Reporter phase (Plan 05-05; D-507 skip-if-not-success handled inside) ----
+            # Composition rule (D-511): reporter needs matcher output (matches table).
+            # *_only modes skip both matcher and reporter. We invoke reporter ONLY when
+            # matcher returned 'success' — explicit gate, even though D-507 inside
+            # reporter_run would also skip on other statuses. Explicit > implicit.
+            # The 'failed' branch already early-returned above; the 'skipped' branch
+            # falls through here but we gate on '== "success"' to keep stats coherent
+            # (no report.* keys when there were no matches to report on).
+            if m_result.status == "success":
+                report_config = ReportConfig.from_pyproject(pyproject_path)
+                log.info(
+                    "weekly_run_reporter_starting",
+                    run_id=run_id,
+                    output_dir=report_config.output_dir,
+                )
+                r_result = run_reporter_phase(
+                    run_id=run_id,
+                    engine=engine,
+                    run_writer=run_writer,
+                    repo_root=repo_root,
+                    config=report_config,
+                )
+                xlsx_path = r_result.xlsx_path
+                xlsx_size_bytes = r_result.xlsx_size_bytes
+                summary_text = r_result.summary_text
+                size_guard_passed = r_result.size_guard_passed
+                stats_delta_acc.update(r_result.stats_delta)
+
+                if r_result.status == "skipped":
+                    # Defensive — should not fire if matcher.status was 'success'
+                    # moments ago (pre-finalize set runs.status='success'). But
+                    # D-507 inside reporter could trip if the row was tampered
+                    # with between. Reporter skip is NOT a run-failure — fall
+                    # through to Norm06 + final idempotent finalize.
+                    log.warning(
+                        "weekly_run_reporter_skipped",
+                        run_id=run_id,
+                        reason=r_result.reason,
+                    )
+
         # ---- Norm06 review queue (D-211) ----
         norm06_path = Norm06Writer(repo_root).persist(
             run_id, viled_unmatched, goldapple_new_slugs
@@ -320,6 +376,9 @@ def run_weekly(
             goldapple_count=goldapple_count,
             match_count=match_count,
             match_rate=match_rate,
+            xlsx_path=xlsx_path,
+            xlsx_size_bytes=xlsx_size_bytes,
+            size_guard_passed=size_guard_passed,
             norm06_path=str(norm06_path),
         )
         return MainRunResult(
@@ -330,6 +389,10 @@ def run_weekly(
             match_count=match_count,
             match_rate=match_rate,
             norm06_path=norm06_path,
+            xlsx_path=xlsx_path,
+            xlsx_size_bytes=xlsx_size_bytes,
+            summary_text=summary_text,
+            size_guard_passed=size_guard_passed,
             stats_delta=dict(stats_delta_acc),
         )
 
