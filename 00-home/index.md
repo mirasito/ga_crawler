@@ -9,7 +9,8 @@ date: 2026-05-11
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — Phase 3 closed окончательно, дальше Phase 4]]** — что делать прямо сейчас (Phase 3 закрыт 2026-05-11T11:18Z empirically; следующий шаг — `/gsd-discuss-phase 4` для Matcher + Match-Rate KPI)
+- **[[Текущие приоритеты — Phase 4 plan ready, execute next]]** — что делать прямо сейчас (Phase 4 spec + plan готовы 2026-05-11; 6 PLAN.md across 5 waves, 0 blockers, ready для `/gsd-execute-phase 4`)
+- Phase 3 transition: ~~[[Текущие приоритеты — Phase 3 closed окончательно, дальше Phase 4]]~~ — superseded 2026-05-11 PM (Phase 3 security re-audited, Phase 4 contexted + planned)
 - Phase 3 plan-09 UAT trail: ~~[[Текущие приоритеты — Phase 3 plan 09 shipped, ждём operator UAT]]~~ — superseded 2026-05-11T11:18Z (operator UAT прошёл: 4/4 cold-spawn runs reached run_loop)
 - Phase 3 plan-gaps trail: ~~[[Текущие приоритеты — Phase 3 Finding 1 → plan-gaps]]~~ — superseded 2026-05-11 PM (plan-gaps выполнен; теперь ждём operator UAT)
 - Phase 2 trail: ~~[[Текущие приоритеты — Phase 2 ready для plan]]~~ — superseded 2026-05-11 (Phase 2 closed 2026-05-07; узкое горлышко переместилось на Phase 3 Finding #1)
@@ -32,6 +33,7 @@ date: 2026-05-11
 - **Решения (живые):** [[Парсим viled целиком, goldapple только по пересекающимся брендам]] · [[Strict-key матчинг вместо fuzzy в v1]] · [[Хранить полную историю снапшотов, не только текущий срез]] · [[Brand-alias YAML — это v1 deliverable, не v2]] · [[Match-rate — KPI с первой недели]] · [[Stock state — enum в схеме, bool в отчёте]] · [[Camoufox а не Patchright — engine для goldapple]] · [[Goldapple anti-bot — это GroupIB FACCT, не Cloudflare]] · [[Tier 0 для goldapple — мёртв, JSON endpoints за gate'ом]] · [[Multi-geo измерение в спайке — laptop KZ плюс один proxy]] · [[JSON-endpoint hunt — явный deliverable Phase 1]] · [[Goldapple — Tier 2 Camoufox без proxy, 99 из 100]] (sign-off Phase 1)
 - **Решения Phase 3 (живые):** [[Sitemap-only URL pool для goldapple, без brand-facet rendering]] · [[Slug-эвристика для viled→goldapple, не explicit YAML]] · [[Sanity-gate M=1000 static с auto-suggest, не auto-tune]] · [[Fresh Camoufox profile per run + integrated smoke probe]] · **[[Brand-intersect через longest-prefix-in-whitelist, не exact-match]]** (D-305 refined Wave 7)
 - **Решения Phase 2 (живые):** **[[viled scope сужен до beauty+парфюм каталога catalog 1310]]** (D-223 mid-flight 2026-05-07; cascading на enumeration + N-gate)
+- **Решения Phase 4 (живые, 2026-05-11):** **[[Matches table — денормализованная, N→1 keep-all]]** (D-401/-403) · **[[Sanity-gate P — третий экземпляр паттерна auto-suggest 0.7×median]]** (D-406/-407 — третий retailer-domain экземпляр D-201/D-308 паттерна) · [[Match-rate — KPI с первой недели]] обновлено: формула frozen via D-405 source-locked canary
 - **Решения Phase 3 (живые, 2026-05-11):** **[[SMOKE_URLS rotation — операторская routine, не Phase 3 code defect]]** (первая ротация 2026-05-11; ops-procedure, не fix-plan материал)
 - **Решения (superseded):** ~~[[Tier 2 Patchright — стартовый tier для goldapple]]~~ → заменено Camoufox-экспериментом 2026-05-06 → финал [[Goldapple — Tier 2 Camoufox без proxy, 99 из 100]]
 - **Решения (superseded):** ~~[[Спайковый fetch-OK = HTML 200 плюс product JSON-LD]]~~ → D-14 revised 2026-05-06: goldapple uses inline microdata (`itemprop="price"`), not JSON-LD Product schema
@@ -51,6 +53,7 @@ date: 2026-05-11
 - [[2026-05-11 — Phase 3 UAT Test 6 re-opened, SMOKE_URLS rotation + cold-start race promoted]]
 - [[2026-05-11 — Phase 3 plan 03-09 ships, cold-start race закрыт structurally]]
 - [[2026-05-11 — Phase 3 UAT Test 6 closed empirically, cold-start race fix validated на live KZ-laptop]]
+- [[2026-05-11 — Phase 3 security re-audit + Phase 4 discuss и plan готовы]]
 
 ## Inbox
 
