@@ -264,3 +264,331 @@ def brand_corpus_cases() -> list[dict]:
     """
     raw = (NORMALIZE_FIXTURES_DIR / "brand-corpus.yaml").read_text(encoding="utf-8")
     return yaml.safe_load(raw)["cases"]
+
+
+# =====================================================================
+# Phase 5 reporter fixtures — appended per D-222 append-only pattern.
+# Closest analog: synthetic data planting in tests/integration/test_matcher_run.py
+# (Phase 4). Used by Plans 05-02 / 05-03 / 05-04 / 05-05.
+# Source: 05-VALIDATION.md Wave 0 Requirements + 05-PATTERNS.md
+# "tests/conftest.py extension" section.
+# =====================================================================
+
+from datetime import datetime, timezone  # noqa: E402  -- import-after-block intentional
+
+
+@pytest.fixture
+def tmp_reports_dir(tmp_path):
+    """tmp_path-based output_dir for Phase 5 archive tests.
+
+    Returns a Path to `tmp_path/reports/` (already mkdir'd). Mirror of
+    how Plan 04 tests use tmp_path engine — keeps each test isolated.
+    """
+    p = tmp_path / "reports"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+@pytest.fixture
+def openpyxl_workbook_reader():
+    """Returns a callable: open xlsx (bytes or Path) → openpyxl.Workbook.
+
+    Used by excel_builder/reporter_run tests to assert sheet names,
+    freeze_panes coord, autofilter range, and conditional_formatting rules
+    on the xlsx produced by xlsxwriter.
+
+    Source: 05-RESEARCH.md Pitfall 3 — assert *behavioral* structure
+    (sheet existence + freeze coord + cf rule type) NOT exact hex colors.
+    """
+    import io as _io
+
+    from openpyxl import load_workbook
+
+    def _open(src):
+        if isinstance(src, (bytes, bytearray)):
+            return load_workbook(_io.BytesIO(src), read_only=False)
+        return load_workbook(str(src), read_only=False)
+
+    return _open
+
+
+@pytest.fixture
+def synthetic_report_run(tmp_path):
+    """In-memory SQLite engine + 1 Run + paired viled/goldapple snapshots + matches + promos.
+
+    Returns: (engine, run_writer, run_id, repo_root)
+
+    Populated state — week-1 baseline test fixture for Plans 05-02/03/04/05:
+      - 1 Run row (status='success', started_at = 2026-05-10 14:00 UTC → ISO 2026-W19
+        in Asia/Almaty)
+      - 3 viled snapshots (all matched)
+      - 8 goldapple snapshots (3 matched + 3 gap-only + 2 promo gap-only)
+      - 3 Match rows with KNOWN price_delta_pct values for top-3 assertion:
+          * (givenchy, eau de parfum, 50ml): delta_pct = +15.50  (goldapple more expensive)
+          * (creed, aventus, 100ml): delta_pct = -22.30 (viled more expensive)
+          * (dior, sauvage, 100ml): delta_pct = +5.00 (goldapple slightly more)
+        Top-3 sort by ABS(delta_pct) DESC = creed > givenchy > dior.
+
+    Source: 05-VALIDATION.md Wave 0 Requirements + 05-PATTERNS.md
+    "tests/conftest.py extension" section.
+    """
+    from sqlalchemy import text as _text
+
+    from ga_crawler.storage.sqlite import (
+        SqliteRunWriter,
+        SqliteSnapshotWriter,
+        init_db,
+        make_engine,
+    )
+
+    db_path = tmp_path / "reporter.db"
+    init_db(db_path)
+    engine = make_engine(db_path)
+    run_writer = SqliteRunWriter(engine)
+
+    # Create run, then UPDATE started_at to deterministic value → ISO 2026-W19 in Asia/Almaty.
+    # (SqliteRunWriter.create() does not accept started_at; default uses now(UTC).)
+    run_id = run_writer.create()
+    started_at = datetime(2026, 5, 10, 14, 0, 0, tzinfo=timezone.utc)
+    with engine.begin() as conn:
+        conn.execute(
+            _text("UPDATE runs SET started_at = :sa WHERE run_id = :rid"),
+            {"sa": started_at, "rid": run_id},
+        )
+
+    # Plant viled snapshots (3 matched)
+    viled_rows = [
+        dict(
+            sku_id="v-givenchy-edp-50",
+            url="https://viled.kz/p/givenchy-edp-50",
+            name="Givenchy Eau de Parfum 50ml",
+            brand="Givenchy",
+            volume_raw="50 мл",
+            current_price=50000,
+            was_price=None,
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="givenchy",
+            name_norm="eau de parfum",
+            volume_norm="(50, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 5, 0, tzinfo=timezone.utc),
+        ),
+        dict(
+            sku_id="v-creed-aventus-100",
+            url="https://viled.kz/p/creed-aventus-100",
+            name="Creed Aventus 100ml",
+            brand="Creed",
+            volume_raw="100 мл",
+            current_price=180000,
+            was_price=None,
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="creed",
+            name_norm="aventus",
+            volume_norm="(100, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 6, 0, tzinfo=timezone.utc),
+        ),
+        dict(
+            sku_id="v-dior-sauvage-100",
+            url="https://viled.kz/p/dior-sauvage-100",
+            name="Dior Sauvage 100ml",
+            brand="Dior",
+            volume_raw="100 мл",
+            current_price=60000,
+            was_price=None,
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="dior",
+            name_norm="sauvage",
+            volume_norm="(100, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 7, 0, tzinfo=timezone.utc),
+        ),
+    ]
+
+    # Plant goldapple snapshots: 3 matched + 3 gap-only + 2 promo gap-only (was_price > current)
+    goldapple_rows = [
+        # 3 matched (same strict key as viled)
+        dict(
+            sku_id="g-givenchy-edp-50",
+            url="https://goldapple.kz/p/givenchy-edp-50",
+            name="Givenchy Eau de Parfum 50ml",
+            brand="Givenchy",
+            volume_raw="50 мл",
+            current_price=57750,  # +15.5% vs viled 50000
+            was_price=None,
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="givenchy",
+            name_norm="eau de parfum",
+            volume_norm="(50, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 10, 0, tzinfo=timezone.utc),
+        ),
+        dict(
+            sku_id="g-creed-aventus-100",
+            url="https://goldapple.kz/p/creed-aventus-100",
+            name="Creed Aventus 100ml",
+            brand="Creed",
+            volume_raw="100 мл",
+            current_price=139860,  # -22.3% vs viled 180000
+            was_price=None,
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="creed",
+            name_norm="aventus",
+            volume_norm="(100, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 11, 0, tzinfo=timezone.utc),
+        ),
+        dict(
+            sku_id="g-dior-sauvage-100",
+            url="https://goldapple.kz/p/dior-sauvage-100",
+            name="Dior Sauvage 100ml",
+            brand="Dior",
+            volume_raw="100 мл",
+            current_price=63000,  # +5% vs viled 60000
+            was_price=None,
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="dior",
+            name_norm="sauvage",
+            volume_norm="(100, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 12, 0, tzinfo=timezone.utc),
+        ),
+        # 3 gap-only (no viled counterpart)
+        dict(
+            sku_id="g-chanel-no5-50",
+            url="https://goldapple.kz/p/chanel-no5-50",
+            name="Chanel No 5 50ml",
+            brand="Chanel",
+            volume_raw="50 мл",
+            current_price=70000,
+            was_price=None,
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="chanel",
+            name_norm="no 5",
+            volume_norm="(50, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 13, 0, tzinfo=timezone.utc),
+        ),
+        dict(
+            sku_id="g-armani-acqua-50",
+            url="https://goldapple.kz/p/armani-acqua-50",
+            name="Armani Acqua di Gio 50ml",
+            brand="Armani",
+            volume_raw="50 мл",
+            current_price=45000,
+            was_price=None,
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="armani",
+            name_norm="acqua di gio",
+            volume_norm="(50, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 14, 0, tzinfo=timezone.utc),
+        ),
+        dict(
+            sku_id="g-ysl-libre-50",
+            url="https://goldapple.kz/p/ysl-libre-50",
+            name="YSL Libre 50ml",
+            brand="YSL",
+            volume_raw="50 мл",
+            current_price=55000,
+            was_price=None,
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="ysl",
+            name_norm="libre",
+            volume_norm="(50, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 15, 0, tzinfo=timezone.utc),
+        ),
+        # 2 promos (was_price > current_price) — gap-only too, so they show on gap + promo sheets
+        dict(
+            sku_id="g-tom-ford-noir-50",
+            url="https://goldapple.kz/p/tom-ford-noir-50",
+            name="Tom Ford Noir 50ml",
+            brand="Tom Ford",
+            volume_raw="50 мл",
+            current_price=80000,
+            was_price=100000,  # 20% promo
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="tom ford",
+            name_norm="noir",
+            volume_norm="(50, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 16, 0, tzinfo=timezone.utc),
+        ),
+        dict(
+            sku_id="g-givenchy-irresistible-30",
+            url="https://goldapple.kz/p/givenchy-irresistible-30",
+            name="Givenchy Irresistible 30ml",
+            brand="Givenchy",
+            volume_raw="30 мл",
+            current_price=25000,
+            was_price=30000,  # ~16.67% promo
+            currency="KZT",
+            stock_state="IN_STOCK",
+            brand_norm="givenchy",
+            name_norm="irresistible",
+            volume_norm="(30, ml, 1)",
+            multipack_flag=False,
+            scraped_at=datetime(2026, 5, 10, 14, 17, 0, tzinfo=timezone.utc),
+        ),
+    ]
+
+    snap_writer = SqliteSnapshotWriter(engine, batch_size=20)
+    snap_writer.append(run_id, "viled", viled_rows)
+    snap_writer.append(run_id, "goldapple", goldapple_rows)
+
+    # Plant 3 matches directly (skip running real matcher to keep fixture deterministic).
+    # Schema: matches(run_id, viled_sku, goldapple_sku, brand_norm, name_norm,
+    #  volume_norm, viled_price, goldapple_price, viled_was_price,
+    #  goldapple_was_price, price_delta, price_delta_pct, matched_at)
+    matches = [
+        (run_id, "v-givenchy-edp-50", "g-givenchy-edp-50", "givenchy", "eau de parfum",
+         "(50, ml, 1)", 50000, 57750, None, None, 7750, 15.50, "2026-05-10T14:20:00Z"),
+        (run_id, "v-creed-aventus-100", "g-creed-aventus-100", "creed", "aventus",
+         "(100, ml, 1)", 180000, 139860, None, None, -40140, -22.30, "2026-05-10T14:20:00Z"),
+        (run_id, "v-dior-sauvage-100", "g-dior-sauvage-100", "dior", "sauvage",
+         "(100, ml, 1)", 60000, 63000, None, None, 3000, 5.00, "2026-05-10T14:20:00Z"),
+    ]
+    with engine.begin() as conn:
+        conn.execute(
+            _text(
+                "INSERT INTO matches (run_id, viled_sku, goldapple_sku, brand_norm, "
+                "name_norm, volume_norm, viled_price, goldapple_price, viled_was_price, "
+                "goldapple_was_price, price_delta, price_delta_pct, matched_at) "
+                "VALUES (:rid,:vs,:gs,:bn,:nn,:vn,:vp,:gp,:vw,:gw,:pd,:pp,:mat)"
+            ),
+            [
+                dict(rid=m[0], vs=m[1], gs=m[2], bn=m[3], nn=m[4], vn=m[5],
+                     vp=m[6], gp=m[7], vw=m[8], gw=m[9], pd=m[10], pp=m[11], mat=m[12])
+                for m in matches
+            ],
+        )
+
+    # Finalize run as success (D-507 status-gate requirement).
+    run_writer.finalize(run_id, "success")
+
+    # Pre-populate runs.stats with upstream namespaces reporter will read.
+    # match.count = 3, match.rate = 60.0 (Phase 4 D-405 formula frozen; for this
+    # fixture we set the rate directly so reporter tests have a known value).
+    run_writer.patch_stats(
+        run_id,
+        {
+            "viled.fetch_count": 3,
+            "goldapple.fetch_count": 8,
+            "match.count": 3,
+            "match.rate": 60.0,
+            "match.denominator": 5,
+        },
+    )
+
+    return engine, run_writer, run_id, tmp_path
