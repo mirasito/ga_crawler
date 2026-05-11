@@ -14,6 +14,7 @@ dependencies = [
     # Backup if upstream stalls: switch to coryking/camoufox fork (see SKILL maintenance note).
     "camoufox[geoip]==0.4.11",
     "curl-cffi>=0.15,<0.16",
+    "pandas>=2.2,<2.3",
     "patchright>=1.55",
     "pydantic>=2.10,<3.0",
     "python-dotenv>=1.0,<2.0",
@@ -22,10 +23,13 @@ dependencies = [
     "sqlmodel>=0.0.24,<0.1",
     "structlog>=25.0,<26.0",
     "tenacity>=9.0,<10.0",
+    "tzdata; sys_platform == 'win32'",
+    "xlsxwriter>=3.2,<3.3",
 ]
 
 [dependency-groups]
 dev = [
+    "openpyxl>=3.1,<3.2",
     "pytest>=8,<9",
     "pytest-asyncio>=0.24",
     "pytest-mock>=3.14",
@@ -94,3 +98,11 @@ catalog_urls = [                              # D-227 operator-managed list (add
 sanity_gate_p = 20                            # D-406/D-408 seed; auto-suggest from week 5
 p_auto_suggest_factor = 0.7                   # D-407 mirror D-203/D-310: 0.7 × 4-week-median
 p_auto_suggest_after_runs = 4                 # D-407 mirror D-203/D-310: needs 4+ history rows
+
+[tool.ga_crawler.report]
+# Phase 5 operational constants. Type-locked; operator edits via git PR.
+# Source anchors: 05-CONTEXT.md (D-509, D-510, D-512, D-515, D-516).
+output_dir = "reports"                        # D-510 relative to repo_root
+size_limit_mb = 45                            # D-515 REPORT-06 threshold (50 MB Telegram - 5 MB safety)
+top_n_deltas = 3                              # D-504 REPORT-04 summary top-N
+timezone = "Asia/Almaty"                      # D-512 ISO-week derivation tz
