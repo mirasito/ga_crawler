@@ -8,7 +8,8 @@ threats_closed: 35
 asvs_level: not_configured
 block_on: high
 created: 2026-05-06
-verified: 2026-05-06
+verified: 2026-05-11
+re_audited: 2026-05-11
 ---
 
 # Phase 3 — Security
@@ -100,6 +101,7 @@ verified: 2026-05-06
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-05-06 | 35 | 35 | 0 | gsd-security-auditor (sonnet) — State B (built from PLAN threat models + SUMMARY evidence + impl grep) |
+| 2026-05-11 | 35 | 35 | 0 | gsd-security-auditor (opus 4.7) — Re-audit after gap-closure plans 03-08 (brand-token bucket) + 03-09 (Camoufox warm-up + smoke retry-once) |
 
 ### 2026-05-06 Audit Notes
 
@@ -111,6 +113,41 @@ verified: 2026-05-06
 - Live operator validation (run-43, 2026-05-06) per `03-VERIFICATION.md` confirms profile-dir cleanup and structured logging hygiene
 - One advisory caveat (NOT a gap): T-03-07-08 records Camoufox Python-wrapper version (`0.4.11`) into stats rather than the embedded Firefox build (`135.0.1.beta24`). Transitively safe due to exact wrapper pin in `pyproject.toml:15`. Optional enhancement: extend `_camoufox_version_at_runtime` to expose Firefox build for explicit assertion against `camoufox_version_expected = "135.0.1.beta24"`. Tracked as enhancement, not security gap.
 
+### 2026-05-11 Re-Audit Notes (after plans 03-08 + 03-09)
+
+Re-verified all 35 closed threats against post-plan-08 + post-plan-09 code. Neither gap-closure plan declared new threats (no `## Threat Flags` section in 03-08-SUMMARY.md or 03-09-SUMMARY.md). Both plans operate within already-mitigated surface; no regressions detected.
+
+**Plan 03-08 surface (brand-token bucket index) — re-verified:**
+- T-03-02-04 (sitemap poisoning): `PRODUCT_URL_RE` whitelist at `enumeration/goldapple_sitemap.py:36-39` UNCHANGED. New `index_by_brand_token` (lines 96-146) operates on post-`fetch_sitemap_slugs` slug_map — bucket keys are derived from already-regex-validated slugs split on `-`. No bypass.
+- T-03-02-05 (path traversal via run_id): `persist_sitemap_slugs` at line 156 still uses pathlib `/` operator on int run_id; `find_previous_slug_file` line 180 still ValueError-skips non-numeric dirnames.
+- T-03-05-06 (stats namespace contention): `compute_norm06_forward` signature change at `runner/stats.py:112-137` forwards a new `brand_bucket` arg to `intersect_brand_pool`, but does NOT touch the stats namespace. `StatsNamespaceError` raise at lines 69-71 (goldapple) and 185-188 (viled) preserved. `_BARE_TO_NAMESPACED` whitelist gating UNCHANGED.
+- T-03-03-09b (path traversal via SKU id): `parse_pdp` SKU extraction at `parsers/goldapple_microdata.py:312-316` UNCHANGED. No FS use on sku_id.
+- Orchestrator `runners/goldapple_run.py:130-151` builds `known_brand_tokens` whitelist from viled-side aliases via `slug_fy_bilingual` — input is operator-controlled brand list, not network-controlled.
+
+**Plan 03-09 surface (Camoufox warm-up + smoke retry-once) — re-verified:**
+- T-03-04-07 / T-03-04-07b / T-03-04-09 (profile dir cleanup invariant under warm-up changes): Verified `fetchers/goldapple.py:192-250` `__aenter__` and `:252-259` `__aexit__`. Cleanup invariant preserved across THREE failure modes:
+  1. Camoufox boot failure (AsyncCamoufox.__aenter__ raises): caught by outer try at line 212-240, `shutil.rmtree(profile_dir)` at line 239.
+  2. Warm-up `goto` failure (networkidle stall): caught by INNER try at lines 222-233, logged as `camoufox_warmup_networkidle_timeout` warning, NOT re-raised — warm-up is best-effort by design (Truth 4 in plan 03-09).
+  3. Any later exception: `__aexit__` `finally:` block at lines 257-258 runs `shutil.rmtree(profile_dir, ignore_errors=True)` unconditionally.
+  Regression tests confirm: `tests/integration/test_goldapple_fetch_loop_mocked.py::test_camoufox_boot_failure_cleans_profile_dir` (line 270), `test_warmup_goto_failure_does_not_abort_boot` (line 315), `test_warmup_navigation_called_once_in_aenter` (line 255).
+- T-03-05-01 / T-03-05-02 (smoke gate semantics preserved under retry-once): Verified `runner/gates.py:142-215` `smoke_probe`:
+  - Single outer `for url in smoke_urls:` loop at line 174 (no nested while/for retry construct) — D-312 outer pass criterion intact.
+  - Retry-once branch at lines 178-188 is NARROW: triggered only by `_is_loading_race(rec, price_extracted)` predicate (lines 100-139) requiring ALL of: `isinstance(rec, dict)`, `status==200`, `price_extracted==False`, `rec.block` is False, `block_reason != "gate_shell_not_cleared"`, title contains lowercase "loading ", title does NOT contain `GATE_TITLE_MARKER` (canonical gate-shell marker imported from parsers).
+  - Final pass criteria at lines 205-208 still ALL-must-succeed: `all(r["price_extracted"])` AND `all(status in {200,304} and not block)`.
+  - No-retry tests verify shape exclusion: `tests/unit/test_smoke_probe.py::test_smoke_probe_no_retry_on_happy_path` (line 208), `test_smoke_probe_no_retry_on_gate_shell` (line 236), `test_smoke_probe_no_retry_on_non_200` (line 283).
+- T-03-04-13 (log hygiene): New structured events audited:
+  - `phase3_smoke_probe_retry` at `gates.py:179-185` — only logs `url`, `first_attempt_title`, `first_attempt_size`, `first_attempt_status`. No raw HTML body, no cookies, no headers.
+  - `camoufox_warmup_networkidle_timeout` at `fetchers/goldapple.py:229-233` — only logs `run_id` + `error` (typename + repr truncated to 200 chars). No response body / cookies / headers.
+  - Extended `camoufox_booted` event at `fetchers/goldapple.py:242-249` — adds `warmup_url` (constant `"https://goldapple.kz/"`, not user-controlled) and `warmup_elapsed_ms` (integer). No sensitive material.
+
+**Supply-chain pin re-verified:**
+- T-03-01-01 / T-03-01-02 / T-03-07-08: `pyproject.toml:15` retains `"camoufox[geoip]==0.4.11"` exact pin; `:68` retains `camoufox_version_expected = "135.0.1.beta24"`. `uv.lock` retains sha256 hashes for both sdist (line 186) and wheel (line 188) of camoufox-0.4.11.
+
+**`.gitignore` re-verified:**
+- T-03-06-12 / T-03-07-12: `.planning/runs/` now at `.gitignore:60` (was line 50 — shifted by 10 lines as block was extended with `/runs/` at line 62 and `/.uat-run/` at line 64 covering additional UAT artifact paths). Pattern present, threat closed.
+
+**Threat Flags scan:** Grep of all 9 SUMMARY files (03-01 through 03-09) returned no `## Threat Flags` sections. No unregistered attack surface declared by any executor invocation.
+
 ---
 
 ## Sign-Off
@@ -119,5 +156,6 @@ verified: 2026-05-06
 - [x] Accepted risks documented in Accepted Risks Log
 - [x] `threats_open: 0` confirmed
 - [x] `status: verified` set in frontmatter
+- [x] Re-audit 2026-05-11 confirms 35/35 closed; no regressions from plans 03-08 + 03-09
 
-**Approval:** verified 2026-05-06
+**Approval:** re-verified 2026-05-11
