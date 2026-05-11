@@ -41,10 +41,10 @@
 
 ### Match
 
-- [ ] **MATCH-01**: Strict-key матчинг по `(brand_norm, name_norm, volume_norm)` через SQL JOIN между viled и goldapple snapshots для текущего `run_id`
-- [ ] **MATCH-02**: Результат записывается в таблицу `matches(run_id, viled_sku, goldapple_sku, price_delta, price_delta_pct)`
-- [ ] **MATCH-03**: Match-rate (`matches / viled_skus_with_brand_in_goldapple_brands * 100%`) вычисляется и логируется на каждом запуске
-- [ ] **MATCH-04**: Sanity-gate — `match_count > P` (порог конфигурируется); меньше — `runs.status = 'failed'`, отчёт в business-чат **не отправляется**
+- [x] **MATCH-01**: Strict-key матчинг по `(brand_norm, name_norm, volume_norm)` через SQL JOIN между viled и goldapple snapshots для текущего `run_id` — Plan 04-03 ships `src/ga_crawler/matcher/strict_key.py::INSERT_MATCHES_SQL` with symmetric filter per D-402 (`multipack_flag=0 AND volume_norm IS NOT NULL AND stock_state != 'DELISTED'` applied to BOTH retailers); strict-key JOIN ON `v.brand_norm = g.brand_norm AND v.name_norm = g.name_norm AND v.volume_norm = g.volume_norm`. N→1 keep-all per D-403 — composite PK `(run_id, viled_sku, goldapple_sku)` allows multiple goldapple SKUs sharing the same key to map to one viled SKU.
+- [x] **MATCH-02**: Результат записывается в денормализованную таблицу `matches(run_id, viled_sku, goldapple_sku, brand_norm, name_norm, volume_norm, viled_price, goldapple_price, viled_was_price, goldapple_was_price, price_delta, price_delta_pct, matched_at)` per D-401 — Plan 04-01 ships `Match` SQLModel + composite PK; Plan 04-03 ships DELETE+INSERT in single SQLite transaction (D-410 idempotency); `price_delta = goldapple_price − viled_price` (signed per D-401); `price_delta_pct = ROUND((g.current_price − v.current_price) × 100.0 / v.current_price, 2)` (D-405 formula frozen with week-1 baseline).
+- [x] **MATCH-03**: Match-rate (`matches / viled_skus_with_brand_in_goldapple_brands × 100%`) вычисляется и логируется на каждом запуске — Plan 04-03 ships `compute_denominator(engine, run_id)` per D-404 (symmetric filter: viled comparable SKUs whose brand_norm appears on goldapple this run); Plan 04-04 orchestrator computes `match.rate = round(count * 100.0 / denominator, 2)` with zero-denominator guard (rate=0.0 + structured-log warning `match_zero_denominator`); D-405 KPI formula frozen with week-1 baseline — `test_match_rate_formula_canary` pins formula structurally (source-locked SQL substring + numerical 6/5/3 → 60.0 regression fixture).
+- [x] **MATCH-04**: Sanity-gate — `match_count > P` (порог конфигурируется); меньше — `runs.status = 'failed'`, отчёт в business-чат **не отправляется** — Plan 04-01 ships `[tool.ga_crawler.match] sanity_gate_p = 20` (D-408 seed) + `MatchConfig.from_pyproject`; Plan 04-04 orchestrator calls `final_threshold_gate(match_count, threshold_p)` (D-203 retailer-agnostic helper reused) + `run_writer.fail(run_id, reason='match_count_below_threshold:{count}<{threshold}')` on trip; D-409 audit-trail invariant — matches rows ALREADY inserted persist (mirror D-218 gate-fail-but-snapshot-persists). D-407 auto-suggest emits `match_auto_suggest_p` log line after 4+ runs (NEVER auto-tunes — operator-PR only).
 
 ### Data
 
@@ -155,10 +155,10 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 | NORM-04 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |
 | NORM-05 | Phase 2 (modules shared with Phase 3) | Plan 02-03 |
 | NORM-06 | Phase 2 (log defined; populated by real goldapple run in Phase 3) | Done (Plan 02-02 — Norm06Writer ships D-208 markdown ledger) |
-| MATCH-01 | Phase 4 | Pending |
-| MATCH-02 | Phase 4 | Pending |
-| MATCH-03 | Phase 4 | Pending |
-| MATCH-04 | Phase 4 | Pending |
+| MATCH-01 | Phase 4 | Done (Plan 04-03 — strict-key SQL JOIN + D-402 symmetric filter + D-403 N→1 keep-all + D-405 source-locked formula canary) |
+| MATCH-02 | Phase 4 | Done (Plan 04-01 denormalized Match SQLModel D-401 + Plan 04-03 DELETE+INSERT single TX D-410; schema amended above) |
+| MATCH-03 | Phase 4 | Done (Plan 04-03 compute_denominator D-404 + Plan 04-04 orchestrator match.rate D-405 + zero-denominator guard) |
+| MATCH-04 | Phase 4 | Done (Plan 04-01 [tool.ga_crawler.match] D-408 + Plan 04-04 final_threshold_gate D-409 + auto_suggest_threshold D-407 log-only) |
 | DATA-01 | Phase 2 | Done (Plan 02-02 — Run + Snapshot SQLModel tables) |
 | DATA-02 | Phase 2 | Done (Plan 02-02 — 18-col Snapshot table with all 13 required fields) |
 | DATA-03 | Phase 2 | Done (Plan 02-02 — UNIQUE constraint + append-only writer + v_current_snapshots VIEW) |
@@ -191,3 +191,4 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 ---
 *Requirements defined: 2026-05-05*
 *Last updated: 2026-05-05 — traceability filled by gsd-roadmapper*
+*Phase 4 update: 2026-05-11 — MATCH-01..04 closed; MATCH-02 schema amended to denormalized 13-column shape per 04-CONTEXT.md D-401 + Action Items.*
