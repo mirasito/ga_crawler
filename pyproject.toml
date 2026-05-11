@@ -87,3 +87,10 @@ catalog_urls = [                              # D-227 operator-managed list (add
     "https://viled.kz/men/catalog/1310",
     "https://viled.kz/women/catalog/1310",
 ]
+
+[tool.ga_crawler.match]
+# Phase 4 operational constants. Type-locked; operator edits via git PR.
+# Source anchors: 04-CONTEXT.md (D-406..D-408, D-413).
+sanity_gate_p = 20                            # D-406/D-408 seed; auto-suggest from week 5
+p_auto_suggest_factor = 0.7                   # D-407 mirror D-203/D-310: 0.7 × 4-week-median
+p_auto_suggest_after_runs = 4                 # D-407 mirror D-203/D-310: needs 4+ history rows
