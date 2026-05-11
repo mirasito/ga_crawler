@@ -29,8 +29,11 @@ log = structlog.get_logger(__name__)
 # 3 known-good Givenchy URLs from spike (A12: avoid spike row 0 = 7681000002 stale).
 # Operator updates these via Phase 7 ops-playbook rotation procedure.
 # Source: 03-RESEARCH.md §"Code Examples" lines 908-913 + A12 mitigation.
+# Rotation 2026-05-11 (UAT Phase 3 Test 6): index 0
+#   `7680100018-very-irresistible-givenchy` went stale (SKU removed → 30x to
+#   home). Replaced with `19000488678-givenchy-irresistible` (current sitemap).
 SMOKE_URLS: tuple[str, ...] = (
-    "https://goldapple.kz/7680100018-very-irresistible-givenchy",
+    "https://goldapple.kz/19000488678-givenchy-irresistible",
     "https://goldapple.kz/7681000001-givenchy-pour-homme-blue-label",
     "https://goldapple.kz/19000032744-givenchy-gentleman-reserve-privee-eau-de-parfum",
 )
