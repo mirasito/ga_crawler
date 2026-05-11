@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 05 plan 03 complete (reporter archive: derive_filename + write_atomic + check_size_guard + reports/.gitkeep + .gitignore)
-last_updated: "2026-05-12T00:25:00.000Z"
+status: Phase 05 plan 04 complete (reporter orchestrator: run_reporter_phase 7-step sync mirror of matcher_run + D-507 status-gate REUSE read_run_status + path-traversal containment + Pitfall 6 single patch_stats + D-515 flag-only never-fails-run + 15 integration tests)
+last_updated: "2026-05-12T00:48:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 34
-  completed_plans: 34
+  total_plans: 35
+  completed_plans: 35
   percent: 100
-  phase_05_plans_complete: 3
+  phase_05_plans_complete: 4
   phase_05_plans_total: 6
 ---
 
@@ -28,7 +28,7 @@ progress:
 ## Current Position
 
 Phase: 05 — IN PROGRESS
-Plan: 3 of 6 SHIPPED (05-01 Wave 0 foundation + 05-02 Wave 1 builders + 05-03 Wave 2 archive). Next: `/gsd-execute-phase 05 04` (Wave 3 orchestrator — runners/reporter_run.py 7-step pipeline composing queries.* → build_workbook → write_atomic → check_size_guard → patch_stats with D-507 status-gate + D-511 main_run composition).
+Plan: 4 of 6 SHIPPED (05-01 Wave 0 foundation + 05-02 Wave 1 builders + 05-03 Wave 2 archive + 05-04 Wave 3 orchestrator). Next: `/gsd-execute-phase 05 05` (Wave 4 main_run + CLI composition — wire run_reporter_phase into runners/main_run.run_weekly after run_matcher_phase per D-511 + add `report-run --run-id N` standalone D-412-style CLI subcommand mirror of matcher-run).
 | Field | Value |
 |-------|-------|
 | Phase | 04 — matcher-match-rate-kpi **COMPLETE** (Wave 1..5 all shipped 2026-05-11) |
@@ -67,6 +67,7 @@ Plan: 3 of 6 SHIPPED (05-01 Wave 0 foundation + 05-02 Wave 1 builders + 05-03 Wa
 | Phase 04 P05 | ~12 min | 2 tasks | 1 created (test_cli_matcher_subcommand.py) + 3 modified (runners/main_run.py + cli.py + test_main_run_e2e.py) |
 | Phase 04 P06 | ~5 min | 2 tasks | 0 created + 3 modified (REQUIREMENTS.md + STATE.md + ROADMAP.md doc cascade) |
 | Phase 05 P03 | ~15 min | 3 tasks | 6 created (reporter/archive.py + reports/.gitkeep + 4 test files: test_archive_smoke + test_archive_iso_week + test_archive_atomic_write + test_archive_size_guard) + 1 modified (.gitignore +6 lines) |
+| Phase 05 P04 | ~15 min | 2 tasks | 2 created (runners/reporter_run.py + tests/integration/test_reporter_run.py) + 0 modified |
 
 ### Plan Execution Metrics
 
@@ -103,6 +104,7 @@ Plan: 3 of 6 SHIPPED (05-01 Wave 0 foundation + 05-02 Wave 1 builders + 05-03 Wa
 | 05-01 (Wave 0 — reporter foundation: pyproject [tool.ga_crawler.report] D-516 + reporter/{__init__,config,stats}.py + ReportConfig D-516 defaults + REPORT_STATS_KEYS 7-tuple D-514 + ReportStatsBuilder with 4-way disjoint invariant + conftest synthetic_report_run + tmp_reports_dir + openpyxl_workbook_reader + D-504 golden summary fixture) | ~25 min | 3/3 | 7 created (reporter/__init__.py + reporter/config.py + reporter/stats.py + tests/unit/test_report_config.py + tests/unit/test_report_stats.py + tests/unit/test_phase05_fixtures_smoke.py + tests/fixtures/reporter/expected-summary-text.txt) + 3 modified (pyproject.toml + uv.lock + tests/conftest.py); 472 → 495 tests (+23, +4 smoke = 27 new); 0 deviations | 2026-05-11 |
 | 05-02 (Wave 1 — pure builders: reporter/queries.py 5 SQL constants with JOIN-back per Pitfall 9 + NOT EXISTS per Pitfall 8 + SQL-side discount per Pitfall 10 + ABS LIMIT per Pattern 7 + all parameterized via :rid binds T-05-sql-injection; reporter/excel_builder.py 3 D-503 Russian header dicts + build_workbook 4-sheet xlsx via engine='xlsxwriter' explicit Pitfall 1 + D-505 3-color CF mid_value=0 parity anchor on Per-SKU deltas + Goldapple promos only D-508 + D-506 always-4-sheets + T-05-injection sanitization via single-quote prefix on =/+/-/@/\t/\r + Pitfall 2 US-locale '#,##0 ₸'/'0.00' num_formats + freeze_panes(1,0) + autofilter + 50-char width cap; reporter/summary_builder.py SUMMARY_TEMPLATE + TOP3_HEADER + TOP3_LINE module constants source-locked D-504 + keyword-only build_summary reading flat dotted stats keys Pitfall 6 + D-504 zero-match Top-3 omission + byte-for-byte golden file canary against tests/fixtures/reporter/expected-summary-text.txt) | ~10 min | 3/3 | 6 created (src: queries.py + excel_builder.py + summary_builder.py; tests: test_reporter_queries.py 14 tests + test_excel_builder.py 23 tests + test_summary_builder.py 12 tests) + 0 modified; 495 → 544 tests (+49 across 3 new test files); 0 deviations | 2026-05-11 |
 | 05-03 (Wave 2 — reporter archive primitives: reporter/archive.py 3 module-level callables — derive_filename D-512 ISO-week from tz-aware started_at with Pitfall 4 year-boundary edge cases (2027-01-01 UTC → 2026-W53; 2025-12-29 UTC → 2026-W01), write_atomic D-510 crash-safe disk write via *.xlsx.tmp sibling + os.replace POSIX/NTFS atomic + auto-mkdir parent + report_overwritten audit event, check_size_guard D-515 / REPORT-06 flag-only tuple-return never-raises with inclusive <= boundary; reports/.gitkeep directory-tracking sentinel mirror Phase 2 D-219 backups/ pattern; .gitignore +6 lines reports/*.xlsx + reports/*.xlsx.tmp exclusion block; source-inspection canary for .xlsx.tmp + os.replace structural invariant; sparse-file truncate(n) O(1) for 1 GB never-raises integration test) | ~15 min | 3/3 | 6 created (src: archive.py + reports/.gitkeep + tests: test_archive_smoke.py 5 RED-gate + test_archive_iso_week.py 10 year-boundary + test_archive_atomic_write.py 12 crash-safety + test_archive_size_guard.py 8 integration) + 1 modified (.gitignore); 544 → 579 tests (+35); 0 deviations | 2026-05-12 |
+| 05-04 (Wave 3 — runners/reporter_run.py 7-step sync orchestrator mirroring runners/matcher_run.py shape: D-507 status-gate REUSES read_run_status from matcher.strict_key (D-411 helper, no re-implementation); ReporterPhaseResult dataclass with 8 fields + _skip_path private helper; Step 1 status-gate → Step 2-5 read upstream stats + DataFrames + top-3 + started_at + pure builders → Step 6 archive primitives + path-traversal containment check + flag-only size guard → Step 7 SINGLE atomic patch_stats per code path (Pitfall 6 success + skip both canary-tested via mock call_count==1); D-515 size guard FLAG-ONLY — oversize logs report_size_exceeded warning + sets report.size_guard_passed=False but status='success' + xlsx persists; D-405 KPI verbatim from stats['match.rate'] (no recompute); cross-platform path normalization \\→/ on report.xlsx_path storage; reporter does NOT catch own exceptions — DATA-05 boundary in main_run per Plan 02-05 invariant + canary test_uncaught_exception_propagates; defensive NULL started_at raise; 15 integration tests covering all 6 REPORT-XX + D-507 (3 skip cases: failed/running/missing) + D-510 idempotency + D-514 namespace 7-key atomic merge + D-515 flag-only + T-05-injection e2e + Pitfall 6 single patch_stats canaries on both paths) | ~15 min | 2/2 | 2 created (runners/reporter_run.py + tests/integration/test_reporter_run.py); 579 → 594 tests (+15); 0 deviations (1 minor inline test-mechanism adjustment: test_raises_on_null_started_at mocks read_run_started_at→None instead of UPDATE NULL because schema enforces NOT NULL on runs.started_at — same defensive surface, different injection vector) | 2026-05-12 |
 
 ## Accumulated Context
 
