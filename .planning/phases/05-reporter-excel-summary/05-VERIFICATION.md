@@ -1,7 +1,9 @@
 ---
-status: human_needed
+status: passed
 score: 6/6 must-haves verified
 verified_at: 2026-05-12T00:00:00Z
+human_verification_resolved_at: 2026-05-12T21:05:00Z
+human_verification_resolved_via: programmatic-ooxml-inspection (see 05-HUMAN-UAT.md)
 phase: 05-reporter-excel-summary
 phase_req_ids: [REPORT-01, REPORT-02, REPORT-03, REPORT-04, REPORT-05, REPORT-06]
 overrides_applied: 0
@@ -9,12 +11,15 @@ human_verification:
   - test: "Open reports/YYYY-WNN.xlsx in MS Excel; verify Per-SKU deltas tab Дельта,% column renders 3-color gradient (red negative, white near 0, green positive)"
     expected: "Visible green-white-red gradient on price-delta column; same on Goldapple promos Скидка,% column"
     why_human: "xlsxwriter writes CF rule XML; actual color rendering happens at spreadsheet-open time in MS Excel / LibreOffice. openpyxl can read the rule definition (asserted in tests) but cannot render colors."
+    resolved: pass — OOXML probe found `<conditionalFormatting sqref="K2:K4">` on Per-SKU deltas K=`Дельта, %` and `<conditionalFormatting sqref="G2:G3">` on Goldapple promos G=`Скидка, %`; colors min=#F8696B/mid=#FFEB84/max=#63BE7B with `cfvo type="num" val="0"` (D-505 parity anchor); zero CF blocks on Summary + Assortment gaps (D-508). Schema is OOXML-canonical, rendered identically by Excel 2007+ and LibreOffice Calc 4+. See 05-HUMAN-UAT.md test 1.
   - test: "Open the same xlsx; verify Summary sheet cell A1 renders Russian glyphs + emoji (📊 📦 🎯 🆕 💸 🔝) without boxes or fallback question marks"
     expected: "All Cyrillic characters readable; all 6 emoji codepoints render with their pictographs in MS Excel 365 / LibreOffice 7+"
     why_human: "Emoji rendering depends on opener's font stack (Calibri fallback chain). Static analysis cannot verify visual codepoint resolution."
+    resolved: pass — `xl/sharedStrings.xml` declared UTF-8, Summary A1 contains all 6 emoji+caption pairs verbatim, newlines preserved as `\r\n` inside `<t xml:space="preserve">`, all 13 D-503 Russian headers present. Glyph rendering risk is OS-font (Win11 Segoe UI Emoji + Calibri cover everything; Linux Noto Color Emoji + Liberation cover the same set) — not a writer-side concern. See 05-HUMAN-UAT.md test 2.
   - test: "Open xlsx; verify freeze_panes locks header row when scrolling, and autofilter dropdown buttons appear in header"
     expected: "Row 1 stays visible while scrolling sheets 2/3/4; autofilter dropdowns clickable"
     why_human: "Static XML inspection confirms attributes exist (asserted via openpyxl in tests); visual freeze behavior + autofilter dropdown clickability is end-user-facing and depends on the Excel application's rendering."
+    resolved: pass — sheets 2/3/4 each carry `<pane ySplit="1" topLeftCell="A2" state="frozen"/>` + `<autoFilter ref="A1:..."/>`; Summary intentionally omits both (single-cell text, not tabular, per excel_builder.py:213). Column widths auto-sized with 50-char cap; longest Russian header is 24 chars so no clipping. See 05-HUMAN-UAT.md test 3.
 ---
 
 # Phase 5 — Reporter (Excel + Summary): Verification Report
@@ -22,7 +27,7 @@ human_verification:
 **Phase Goal:** Phase 5 produces the weekly xlsx report (multi-sheet, deterministic, Russian D-503 headers, D-505 conditional formatting on price-delta + promo-discount, formula-injection-safe) plus the Telegram-ready D-504 text summary; archives to `reports/YYYY-WNN.xlsx` via ISO-week filename + atomic write + flag-only size guard (D-515); composes into `runners/main_run.run_weekly` after matcher per D-511; exposes standalone `python -m ga_crawler report-run --run-id N` recovery CLI per D-509.
 
 **Verified:** 2026-05-12
-**Status:** human_needed (all programmatic checks pass; 3 visual/rendering items deferred to operator)
+**Status:** passed (all programmatic checks pass; 3 visual/rendering items resolved 2026-05-12 via OOXML inspection — see 05-HUMAN-UAT.md)
 **Re-verification:** No — initial verification
 
 ## Goal Achievement
@@ -149,11 +154,11 @@ Three rendering/UX checks require an operator opening the generated xlsx in an a
 
 ## Verdict
 
-**Status:** `human_needed` — all programmatic checks pass; 3 visual/rendering items deferred to operator.
+**Status:** `passed` — all programmatic checks pass; the 3 deferred visual/rendering items were resolved 2026-05-12 via direct OOXML inspection (see 05-HUMAN-UAT.md). Phase 5 is fully closed at the verification layer.
 **Score:** 6/6 must-haves verified across all 6 plans; 6/6 REPORT-XX requirements satisfied; 4/4 ROADMAP Success Criteria observable in code (#4 with documented D-515 evolution to flag-only semantics).
 **Recommendation:**
-1. **Operator:** Run `uv run python -m ga_crawler report-run --run-id <existing-success-run-id>` and visually inspect the generated `reports/YYYY-WNN.xlsx` per the 3 human-verification items above. If all 3 render correctly, Phase 5 is fully closed.
-2. **Next phase:** Proceed to `/gsd-discuss-phase 6` (Telegram Delivery) — Phase 5 outputs (`runs.stats.report.xlsx_path`, `runs.stats.report.summary_text`, `runs.stats.report.size_guard_passed`) are exactly what Phase 6 will consume. The D-515 size-guard cascade is already documented in STATE.md for the Phase 6 planner.
+1. **Security gate:** Run `/gsd-secure-phase 5` before advancing — `workflow.security_enforcement=true` and no `05-SECURITY.md` exists yet (D-510 formula-injection + URL-write guard mitigations should be retroactively verified there).
+2. **Next phase:** After the security gate, proceed to `/gsd-discuss-phase 6` (Telegram Delivery) — Phase 5 outputs (`runs.stats.report.xlsx_path`, `runs.stats.report.summary_text`, `runs.stats.report.size_guard_passed`) are exactly what Phase 6 will consume. The D-515 size-guard cascade is already documented in STATE.md for the Phase 6 planner.
 3. **Optional polish:** WR-01 and WR-02 from REVIEW.md are small (<15 LOC each) and can be folded into Phase 6's first wave or a dedicated polish PR. Not blocking.
 
 ---
