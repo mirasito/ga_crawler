@@ -58,6 +58,10 @@ build/
 
 # Phase 3 runtime artifacts (T-03-07-12: never commit live snapshot/sitemap data)
 .planning/runs/
+# Top-level runs/ written by scripts/uat3_live_run.py (repo_root=. driver)
+/runs/
+# UAT live-run driver log dir
+/.uat-run/
 
 # Editor/agent local state (Obsidian vault config + Claude Code scheduler lock)
 .obsidian/
