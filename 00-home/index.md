@@ -9,7 +9,8 @@ date: 2026-05-12
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — Phase 5 done, Phase 6 next]]** — что делать прямо сейчас (Phase 5 executed 2026-05-12; 6 plans across 6 waves, 472→610 tests, 0 regressions, 2 Warning advisory findings; готов к `/gsd-discuss-phase 6` Telegram Delivery)
+- **[[Текущие приоритеты — Phase 6 contexted, plan next]]** — что делать прямо сейчас (Phase 6 CONTEXT GATHERED 2026-05-12; D-601..D-616 16 решений across 4 областей; aiogram 3.27 + asyncio.run() sync wrapper; tenacity 3-retry с TelegramRetryAfter; 4-check pre-send gate; delivery_status DECOUPLED от runs.status; готов к `/gsd-plan-phase 6`)
+- Phase 5 done trail: ~~[[Текущие приоритеты — Phase 5 done, Phase 6 next]]~~ — superseded 2026-05-12 (Phase 6 contexted; D-601..D-616 locked; Phase 5 cascade D-514/D-515/D-405 honored verbatim)
 - Phase 5 execute trail: ~~[[Текущие приоритеты — Phase 5 plan ready, execute next]]~~ — superseded 2026-05-12 (Phase 5 executed end-to-end; verifier 6/6 must-haves; 3 visual items в HUMAN-UAT)
 - Phase 5 discuss trail: ~~[[Текущие приоритеты — Phase 5 reporter ready для discuss]]~~ — superseded 2026-05-11 (Phase 5 contexted + planned в одном сеансе)
 - Phase 4 execute trail: ~~[[Текущие приоритеты — Phase 4 plan ready, execute next]]~~ — superseded 2026-05-11 evening (Phase 4 executed end-to-end, verifier PASS 11/11)
@@ -38,6 +39,7 @@ date: 2026-05-12
 - **Решения Phase 2 (живые):** **[[viled scope сужен до beauty+парфюм каталога catalog 1310]]** (D-223 mid-flight 2026-05-07; cascading на enumeration + N-gate)
 - **Решения Phase 4 (живые, 2026-05-11):** **[[Matches table — денормализованная, N→1 keep-all]]** (D-401/-403) · **[[Sanity-gate P — третий экземпляр паттерна auto-suggest 0.7×median]]** (D-406/-407 — третий retailer-domain экземпляр D-201/D-308 паттерна) · [[Match-rate — KPI с первой недели]] обновлено: формула frozen via D-405 source-locked canary
 - **Решения Phase 5 (живые, 2026-05-11):** **[[Reporter — source-of-truth для Telegram caption через runs.stats.report.summary_text]]** (D-514 — 7-key namespace + caption-without-regen invariant; cascades в Phase 6 — verified runtime 2026-05-12) · **[[REPORT-06 size guard — delivery-time concern, не reporter-time]]** (D-515 — xlsx ВСЕГДА пишется + `size_guard_passed=false` flag для Phase 6 DELIVER-03 gate — verified runtime 2026-05-12)
+- **Решения Phase 6 (живые, 2026-05-12):** **[[Delivery failure decoupled from runs.status — Telegram outage stays success]]** (D-605 — ARCHITECTURE «reporter independent of delivery» расширено: Telegram outage → status=success + delivery_status=undelivered + xlsx на диске; manual recovery via `deliver-run --run-id N`; Phase 7 two-tier Healthchecks) · **[[aiogram 3.27 + asyncio.run() sync wrapper — SDK для Telegram delivery]]** (D-601/D-602 — CLAUDE.md lock + mirror goldapple_run precedent в main_run.py:224)
 - **Решения Phase 3 (живые, 2026-05-11):** **[[SMOKE_URLS rotation — операторская routine, не Phase 3 code defect]]** (первая ротация 2026-05-11; ops-procedure, не fix-plan материал)
 - **Решения (superseded):** ~~[[Tier 2 Patchright — стартовый tier для goldapple]]~~ → заменено Camoufox-экспериментом 2026-05-06 → финал [[Goldapple — Tier 2 Camoufox без proxy, 99 из 100]]
 - **Решения (superseded):** ~~[[Спайковый fetch-OK = HTML 200 плюс product JSON-LD]]~~ → D-14 revised 2026-05-06: goldapple uses inline microdata (`itemprop="price"`), not JSON-LD Product schema
@@ -61,6 +63,7 @@ date: 2026-05-12
 - [[2026-05-11 — Phase 4 executed — matcher + KPI shipped через 5 waves]]
 - [[2026-05-11 — Phase 5 discuss + plan ready, 6 plans across 6 waves для execute]]
 - [[2026-05-12 — Phase 5 executed — reporter shipped через 6 waves]]
+- [[2026-05-12 — Phase 6 contexted — Telegram delivery decisions D-601..D-616]]
 
 ## Inbox
 
