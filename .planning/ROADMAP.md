@@ -140,7 +140,13 @@
   2. On `runs.status != 'success'`, the business chat receives nothing and the ops chat receives an alert containing run_id, the failed phase, and the recorded error — verified by a deliberate-failure test.
   3. Bot configuration (`TG_BOT_TOKEN`, `TG_BUSINESS_CHAT_ID`, `TG_OPS_CHAT_ID`) is loaded from ENV; missing variables produce an ops-chat alert (or, if the bot itself can't start, a fail-loud crash logged to disk).
   4. Telegram rate-limit / `retry-after` is honored on transient failures; if Telegram is unreachable after retries, the report remains on disk and is marked as undelivered for manual recovery.
-**Plans**: TBD
+**Plans**: 6 plans across 6 waves (Wave 0 setup -> Wave 1 foundations -> Wave 2 gate+client -> Wave 3 orchestrator+CLI -> Wave 4 composition+E2E -> Wave 5 doc cascade)
+- [ ] 06-01-PLAN.md - Wave 0: pyproject [tool.ga_crawler.deliver] namespace (D-614) + aiogram>=3.27,<4.0 dep + .env.example (D-612) + .gitignore audit + 3 new tests/conftest.py fixtures + 10 skip-marked test stubs + golden-file scaffold
+- [ ] 06-02-PLAN.md - Wave 1: delivery/__init__.py + config.py (DeliverConfig + DeliverEnvConfig D-611/D-614/RESEARCH caveat #4) + stats.py (DELIVER_STATS_KEYS 8-tuple D-607 + 5-way disjoint) + message_builder.py (build_ops_alert D-609/D-610 + Pitfall A html.escape + Pitfall E Asia/Almaty tz)
+- [ ] 06-03-PLAN.md - Wave 2: delivery/gate.py (evaluate_gate D-604 4-check first-fail-wins REUSES matcher.strict_key.read_run_status) + delivery/telegram_client.py (open_bot + send_*_with_policy + tenacity wait_chain(5,15,45) per RESEARCH caveat #2 + Pitfall A fail-fast exclusions)
+- [ ] 06-04-PLAN.md - Wave 3: runners/delivery_run.py (run_delivery_phase 7-step + asyncio.run sync->async + Pitfall C path containment + Pitfall 6 single patch_stats + D-605/D-606/D-608) + cli.py AMEND (deliver-run subcommand + _cmd_deliver + load_dotenv only here per caveat #4)
+- [ ] 06-05-PLAN.md - Wave 4: main_run.py AMEND (5 amend points: imports + MainRunResult D-616 + pre-init + composition D-615 + 5 return-sites) + tests/integration/test_weekly_run_with_delivery.py E2E (SC#1 + SC#2 + D-605 invariant) + tests/test_delivery_source_lock.py structural canaries
+- [ ] 06-06-PLAN.md - Wave 5: doc cascade - REQUIREMENTS.md DELIVER-01..05 closed + STATE.md D-605/D-606/D-607 cascade + ROADMAP.md Phase 6 plan list + Progress 6/6
 **UI hint**: no
 
 ### Phase 7: Scheduler + Observability Hardening
@@ -186,7 +192,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 | 3. Goldapple Crawl | 9/9 | Complete (re-opened 2026-05-11 for Finding #1 fix; re-verified 2026-05-11T11:18Z, 4 cold-spawn runs reached run_loop) | 2026-05-11 |
 | 4. Matcher + Match-Rate KPI | 6/6 | Complete (all 6 plans shipped Wave 1..5; matches table per D-401, match-rate KPI frozen with week-1 baseline per D-405, sanity-gate P + auto-suggest D-406..-409, idempotency D-410, skip-protocol D-411, standalone matcher-run CLI D-412) | 2026-05-11 |
 | 5. Reporter (Excel + summary) | 6/6 | Complete (all 6 plans shipped Wave 0..5; reports/YYYY-WNN.xlsx archived per D-510 atomic write + D-512 ISO-week derivation; D-514 7-key report.* stats namespace + 4-way disjoint invariant; D-507 status-gate REUSES D-411 read_run_status; D-405 KPI verbatim citation; D-515 size-guard flag-only with Phase 6 DELIVER-03 cascade invariant; 138 net new tests Wave 0..4; doc cascade Wave 5 closes REPORT-01..06 + amends REPORT-01 per D-502 + propagates D-514/D-515/D-405 to STATE.md for Phase 6 inheritance) | 2026-05-12 |
-| 6. Telegram Delivery + Ops/Business Split | 0/0 | Not started | - |
+| 6. Telegram Delivery + Ops/Business Split | 0/6 | In progress (planned 2026-05-12: 6 plans Wave 0..5; ready for /gsd-execute-phase 6) | - |
 | 7. Scheduler + Observability Hardening | 0/0 | Not started | - |
 
 ## Coverage Validation

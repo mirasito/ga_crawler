@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 06 CONTEXT GATHERED (2026-05-12; D-601..D-616 16 decisions locked across 4 areas; aiogram 3.27 + asyncio.run() sync wrapper; tenacity 3-retry with TelegramRetryAfter; 4-check pre-send gate; delivery_status decoupled from runs.status; 6-value delivery_status enum + 8-key deliver.* stats namespace; standalone deliver-run CLI with --force/--dry-run; single HTML ops-alert template; asymmetric ENV-handling; .env.example pattern; delivery/ package mirror D-513; main_run composition after reporter per Plan 05-05 explicit-gate; Phase 5 cascade D-514/D-515/D-405 honored verbatim. Ready for `/gsd-plan-phase 6`.)
-last_updated: "2026-05-12T21:30:00.000Z"
+status: Executing Phase 6
+last_updated: "2026-05-11T22:31:27.317Z"
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 37
-  completed_plans: 37
-  percent: 100
-  phase_05_plans_complete: 6
-  phase_05_plans_total: 6
+  total_plans: 45
+  completed_plans: 39
+  percent: 87
 ---
 
 # State: GA Crawler
@@ -23,12 +21,12 @@ progress:
 
 **Core value:** Команда viled.kz один раз в неделю получает детализированный, сопоставленный по позициям отчёт о ценах конкурента (goldapple.kz) и может корректировать собственное ценообразование, видеть ассортиментные разрывы и отслеживать чужие промо-акции.
 
-**Current focus:** Phase 05 — reporter-excel-summary **COMPLETE** (next: Phase 06 — Telegram Delivery)
+**Current focus:** Phase 6 — Telegram Delivery + Ops/Business Split
 
 ## Current Position
 
-Phase: 06 — **CONTEXT GATHERED** (2026-05-12; D-601..D-616 locked; ready for /gsd-plan-phase 6)
-Plan: TBD — `/gsd-plan-phase 6` (Telegram Delivery + Ops/Business Split — DELIVER-01..05; CONTEXT.md inherits Phase 5 D-514/D-515/D-405 cascade verbatim; SDK aiogram 3.27 + tenacity 3-retry locked; 4-check gate composition locked; delivery_status decoupled from runs.status; 8-key deliver.* namespace).
+Phase: 6 (Telegram Delivery + Ops/Business Split) — EXECUTING
+Plan: 1 of 6
 Phase 5 status: **COMPLETE** (2026-05-12; all 6 plans shipped Wave 0..5; REPORT-01..06 closed; D-514/D-515/D-405 cascade persisted to STATE.md for Phase 6 inheritance).
 | Field | Value |
 |-------|-------|
