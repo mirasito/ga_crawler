@@ -130,6 +130,21 @@ def _run_cli(*args, cwd=None):
     )
 
 
+def _extract_payload(stdout: str) -> dict:
+    """Extract the indented JSON payload from stdout.
+
+    structlog JSONRenderer emits single-line JSON to stdout for log events
+    (without indent), then our CLI handler emits the result payload via
+    `json.dumps(..., indent=2)`. The payload always starts with a `{\\n` (open
+    brace followed by newline) — single-line log events use `{"...}\\n` with
+    content on the same line. Split on `{\n` to find the payload start.
+    """
+    # The payload starts with literal "{\n" — log events are single-line.
+    idx = stdout.find("{\n")
+    assert idx != -1, f"no indented JSON payload found in stdout: {stdout!r}"
+    return json.loads(stdout[idx:])
+
+
 # ---- Tests ----
 
 
@@ -184,7 +199,7 @@ def test_report_run_nonexistent_run_exits_2(tmp_path):
         cwd=str(tmp_path),
     )
     assert r.returncode == 2, f"stderr={r.stderr}\nstdout={r.stdout}"
-    payload = json.loads(r.stdout)
+    payload = _extract_payload(r.stdout)
     assert payload["status"] == "skipped"
     assert payload["reason"] == "missing_run_row"
 
@@ -204,7 +219,7 @@ def test_report_run_success_writes_xlsx_and_exits_0(planted_db, tmp_path):
         cwd=str(tmp_path),
     )
     assert r.returncode == 0, f"stderr={r.stderr}\nstdout={r.stdout}"
-    payload = json.loads(r.stdout)
+    payload = _extract_payload(r.stdout)
     assert payload["status"] == "success"
     assert payload["run_id"] == rid
     assert payload["xlsx_path"].endswith(".xlsx")
@@ -242,7 +257,7 @@ def test_report_run_output_dir_override(planted_db, tmp_path):
         cwd=str(tmp_path),
     )
     assert r.returncode == 0, f"stderr={r.stderr}\nstdout={r.stdout}"
-    payload = json.loads(r.stdout)
+    payload = _extract_payload(r.stdout)
     assert payload["xlsx_path"].startswith("custom_reports/"), payload["xlsx_path"]
     assert (tmp_path / payload["xlsx_path"]).exists()
 
@@ -264,7 +279,7 @@ def test_report_run_idempotent_re_invocation(planted_db, tmp_path):
     r2 = _run_cli(*args, cwd=str(tmp_path))
     assert r2.returncode == 0, f"second run: stderr={r2.stderr}\nstdout={r2.stdout}"
 
-    p1 = json.loads(r1.stdout)
-    p2 = json.loads(r2.stdout)
+    p1 = _extract_payload(r1.stdout)
+    p2 = _extract_payload(r2.stdout)
     assert p1["xlsx_path"] == p2["xlsx_path"]
     assert p1["status"] == p2["status"] == "success"
