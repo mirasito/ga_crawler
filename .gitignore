@@ -47,6 +47,12 @@ prices.db-journal
 prices.db-wal
 prices.db-shm
 
+# Phase 5 reporter artifacts (D-510 output_dir + D-516 namespace).
+# Directory tracked via reports/.gitkeep (mirror Phase 2 D-219 backups/ pattern);
+# xlsx outputs + orphan .xlsx.tmp from interrupted writes ignored.
+reports/*.xlsx
+reports/*.xlsx.tmp
+
 # Logs
 *.log
 logs/
