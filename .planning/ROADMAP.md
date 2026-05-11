@@ -80,7 +80,7 @@
   3. The post-crawl sanity-assertion gate marks the run `failed` when `goldapple_count < M` (configurable threshold) — a single gate now protects both retailers.
   4. A 1-hour live run completes without sustained 429/503 spikes or Cloudflare interstitial encounters at the chosen tier; per-page proxy/cookie reuse is verified.
   5. The "brands seen on goldapple but not in alias table" review queue (defined in Phase 2) is populated by a real goldapple run and committed for weekly manual review.
-**Plans**: 8 plans across 8 waves (Wave 0 bootstrap -> Wave 1 enumeration -> Wave 2 parser -> Wave 3 fetcher -> Wave 4 gates+stats -> Wave 5 orchestrator+CLI -> Wave 6 live smoke checkpoint -> Wave 7 gap-closure: brand-token bucket index for CRAWL-02)
+**Plans**: 9 plans across 9 waves (Wave 0 bootstrap -> Wave 1 enumeration -> Wave 2 parser -> Wave 3 fetcher -> Wave 4 gates+stats -> Wave 5 orchestrator+CLI -> Wave 6 live smoke checkpoint -> Wave 7 gap-closure: brand-token bucket index for CRAWL-02 -> Wave 8 gap-closure: warm-up nav + smoke_probe retry-once for cold-start Loading race)
 - [x] 03-01-PLAN.md - Wave 0: pyproject.toml pins (Camoufox 135.0.1.beta24, tenacity, sqlmodel, pydantic, pytest), interfaces.py Phase 2 Protocols, conftest.py fixtures, spike sample-payloads as test fixtures
 - [x] 03-02-PLAN.md - Wave 1: enumeration/slug.py bilingual slug-fy + intersect_brand_pool (CRAWL-02), enumeration/goldapple_sitemap.py curl_cffi Tier 0 + week-over-week NEW slug diff (D-307)
 - [x] 03-03-PLAN.md - Wave 2: parsers/goldapple_microdata.py priceType-aware extractor (PARSE-01..06) + detect_state three-axis classifier (Pitfall 4 / D-303)
@@ -89,6 +89,7 @@
 - [x] 03-06-PLAN.md - Wave 5: runners/goldapple_run.py orchestrator + cli.py (python -m ga_crawler) + stub Phase 2 protocol implementations + storage integration tests
 - [x] 03-07-PLAN.md - Wave 6: Manual operator checkpoint - live smoke probe + limited live run on KZ-laptop; Success Criteria 4 and 5 verification
 - [x] 03-08-PLAN.md - Wave 7 (gap_closure): brand-token bucket index in goldapple_sitemap.py + intersect_brand_pool refactor to brand_bucket shape; closes CRAWL-02 BLOCKER from 03-VERIFICATION.md (Truth 1: matched_url_count=0 against real 45,490-slug sitemap)
+- [ ] 03-09-PLAN.md - Wave 8 (gap_closure): warm-up navigation in GoldappleFetcher.__aenter__ + retry-once in smoke_probe for cold-start `Loading` race; closes Test 6 BLOCKER from 03-UAT.md (Operational Finding #1, reproduced 4-of-4 cold-runs 2026-05-11)
 **UI hint**: no
 
 ### Phase 4: Matcher + Match-Rate KPI
@@ -170,7 +171,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 |-------|----------------|--------|-----------|
 | 1. Goldapple Reconnaissance Spike | 9/12 | Complete (3 plans skipped) | 2026-05-06 |
 | 2. Project Skeleton + viled Crawl + Storage | 6/6 | Complete | 2026-05-07 |
-| 3. Goldapple Crawl | 8/8 | Complete | 2026-05-06 |
+| 3. Goldapple Crawl | 9/9 | Complete (re-opened 2026-05-11 for Finding #1 fix; awaiting operator re-verification) | 2026-05-11 |
 | 4. Matcher + Match-Rate KPI | 0/0 | Not started | - |
 | 5. Reporter (Excel + summary) | 0/0 | Not started | - |
 | 6. Telegram Delivery + Ops/Business Split | 0/0 | Not started | - |
