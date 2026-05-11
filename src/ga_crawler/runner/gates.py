@@ -22,7 +22,7 @@ from typing import Any, Optional
 
 import structlog
 
-from ga_crawler.parsers.goldapple_microdata import has_microdata_price, parse_pdp
+from ga_crawler.parsers.goldapple_microdata import GATE_TITLE_MARKER, has_microdata_price, parse_pdp
 
 log = structlog.get_logger(__name__)
 
@@ -108,8 +108,14 @@ def _is_loading_race(rec: Any, price_extracted: bool) -> bool:
         - title is not None and contains 'loading ' (case-insensitive, trailing
           space — matches `Loading https://...` from runs 3+4 evidence; rejects
           product titles that happen to contain the substring 'loading')
-        - title does NOT contain 'checking device' (Operational Finding #2 —
-          gate-shell is a real fingerprint failure, must fail-fast per D-312)
+        - title does NOT contain the canonical GATE_TITLE_MARKER (Operational
+          Finding #2 — gate-shell is a real fingerprint failure, must fail-fast
+          per D-312). Reused from parsers.goldapple_microdata so any future
+          challenge-page revision (e.g., GroupIB dropping the " device" suffix)
+          is caught by the single source of truth, not a literal string.
+        - block_reason != "gate_shell_not_cleared" (defence-in-depth — fetcher
+          may have already classified this as gate-shell via fetch_one's poll
+          loop, in which case retry would mask a real fingerprint failure).
 
     Source: 03-UAT.md Test 6 empirical evidence (run-3 + run-4 captured
     2026-05-11 by scripts/uat3_live_run.py).
@@ -122,11 +128,13 @@ def _is_loading_race(rec: Any, price_extracted: bool) -> bool:
         return False
     if rec.get("block", True):
         return False
+    if rec.get("block_reason") == "gate_shell_not_cleared":
+        return False
     title = rec.get("title") or ""
     title_l = title.lower()
     if "loading " not in title_l:
         return False
-    if "checking device" in title_l:
+    if GATE_TITLE_MARKER in title_l:
         return False
     return True
 
