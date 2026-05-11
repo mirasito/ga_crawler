@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 05 plan 02 complete (reporter builders: queries.py + excel_builder.py + summary_builder.py)
-last_updated: "2026-05-11T19:05:00.000Z"
+status: Phase 05 plan 03 complete (reporter archive: derive_filename + write_atomic + check_size_guard + reports/.gitkeep + .gitignore)
+last_updated: "2026-05-12T00:25:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 33
-  completed_plans: 33
+  total_plans: 34
+  completed_plans: 34
   percent: 100
-  phase_05_plans_complete: 2
+  phase_05_plans_complete: 3
   phase_05_plans_total: 6
 ---
 
@@ -28,7 +28,7 @@ progress:
 ## Current Position
 
 Phase: 05 — IN PROGRESS
-Plan: 2 of 6 SHIPPED (05-01 Wave 0 foundation + 05-02 Wave 1 builders). Next: `/gsd-execute-phase 05 03` (Wave 2 archive — reporter/archive.py with D-512 ISO-week derivation + D-510 atomic write + D-515 size-guard flag-only).
+Plan: 3 of 6 SHIPPED (05-01 Wave 0 foundation + 05-02 Wave 1 builders + 05-03 Wave 2 archive). Next: `/gsd-execute-phase 05 04` (Wave 3 orchestrator — runners/reporter_run.py 7-step pipeline composing queries.* → build_workbook → write_atomic → check_size_guard → patch_stats with D-507 status-gate + D-511 main_run composition).
 | Field | Value |
 |-------|-------|
 | Phase | 04 — matcher-match-rate-kpi **COMPLETE** (Wave 1..5 all shipped 2026-05-11) |
@@ -66,6 +66,7 @@ Plan: 2 of 6 SHIPPED (05-01 Wave 0 foundation + 05-02 Wave 1 builders). Next: `/
 | Phase 04 P04 | ~8 min | 2 tasks | 2 created (runners/matcher_run.py + test_matcher_run.py) |
 | Phase 04 P05 | ~12 min | 2 tasks | 1 created (test_cli_matcher_subcommand.py) + 3 modified (runners/main_run.py + cli.py + test_main_run_e2e.py) |
 | Phase 04 P06 | ~5 min | 2 tasks | 0 created + 3 modified (REQUIREMENTS.md + STATE.md + ROADMAP.md doc cascade) |
+| Phase 05 P03 | ~15 min | 3 tasks | 6 created (reporter/archive.py + reports/.gitkeep + 4 test files: test_archive_smoke + test_archive_iso_week + test_archive_atomic_write + test_archive_size_guard) + 1 modified (.gitignore +6 lines) |
 
 ### Plan Execution Metrics
 
@@ -101,6 +102,7 @@ Plan: 2 of 6 SHIPPED (05-01 Wave 0 foundation + 05-02 Wave 1 builders). Next: `/
 | 04-06 (Wave 5 — doc cascade: REQUIREMENTS.md MATCH-01..04 + MATCH-02 schema amend; STATE.md D-405 KPI formula freeze accumulated decision; ROADMAP.md Phase 4 plan list filled + status COMPLETE) | ~5 min | 2/2 | 0 created + 3 modified (REQUIREMENTS.md + STATE.md + ROADMAP.md); 465/465 tests unchanged (docs-only) | 2026-05-11 |
 | 05-01 (Wave 0 — reporter foundation: pyproject [tool.ga_crawler.report] D-516 + reporter/{__init__,config,stats}.py + ReportConfig D-516 defaults + REPORT_STATS_KEYS 7-tuple D-514 + ReportStatsBuilder with 4-way disjoint invariant + conftest synthetic_report_run + tmp_reports_dir + openpyxl_workbook_reader + D-504 golden summary fixture) | ~25 min | 3/3 | 7 created (reporter/__init__.py + reporter/config.py + reporter/stats.py + tests/unit/test_report_config.py + tests/unit/test_report_stats.py + tests/unit/test_phase05_fixtures_smoke.py + tests/fixtures/reporter/expected-summary-text.txt) + 3 modified (pyproject.toml + uv.lock + tests/conftest.py); 472 → 495 tests (+23, +4 smoke = 27 new); 0 deviations | 2026-05-11 |
 | 05-02 (Wave 1 — pure builders: reporter/queries.py 5 SQL constants with JOIN-back per Pitfall 9 + NOT EXISTS per Pitfall 8 + SQL-side discount per Pitfall 10 + ABS LIMIT per Pattern 7 + all parameterized via :rid binds T-05-sql-injection; reporter/excel_builder.py 3 D-503 Russian header dicts + build_workbook 4-sheet xlsx via engine='xlsxwriter' explicit Pitfall 1 + D-505 3-color CF mid_value=0 parity anchor on Per-SKU deltas + Goldapple promos only D-508 + D-506 always-4-sheets + T-05-injection sanitization via single-quote prefix on =/+/-/@/\t/\r + Pitfall 2 US-locale '#,##0 ₸'/'0.00' num_formats + freeze_panes(1,0) + autofilter + 50-char width cap; reporter/summary_builder.py SUMMARY_TEMPLATE + TOP3_HEADER + TOP3_LINE module constants source-locked D-504 + keyword-only build_summary reading flat dotted stats keys Pitfall 6 + D-504 zero-match Top-3 omission + byte-for-byte golden file canary against tests/fixtures/reporter/expected-summary-text.txt) | ~10 min | 3/3 | 6 created (src: queries.py + excel_builder.py + summary_builder.py; tests: test_reporter_queries.py 14 tests + test_excel_builder.py 23 tests + test_summary_builder.py 12 tests) + 0 modified; 495 → 544 tests (+49 across 3 new test files); 0 deviations | 2026-05-11 |
+| 05-03 (Wave 2 — reporter archive primitives: reporter/archive.py 3 module-level callables — derive_filename D-512 ISO-week from tz-aware started_at with Pitfall 4 year-boundary edge cases (2027-01-01 UTC → 2026-W53; 2025-12-29 UTC → 2026-W01), write_atomic D-510 crash-safe disk write via *.xlsx.tmp sibling + os.replace POSIX/NTFS atomic + auto-mkdir parent + report_overwritten audit event, check_size_guard D-515 / REPORT-06 flag-only tuple-return never-raises with inclusive <= boundary; reports/.gitkeep directory-tracking sentinel mirror Phase 2 D-219 backups/ pattern; .gitignore +6 lines reports/*.xlsx + reports/*.xlsx.tmp exclusion block; source-inspection canary for .xlsx.tmp + os.replace structural invariant; sparse-file truncate(n) O(1) for 1 GB never-raises integration test) | ~15 min | 3/3 | 6 created (src: archive.py + reports/.gitkeep + tests: test_archive_smoke.py 5 RED-gate + test_archive_iso_week.py 10 year-boundary + test_archive_atomic_write.py 12 crash-safety + test_archive_size_guard.py 8 integration) + 1 modified (.gitignore); 544 → 579 tests (+35); 0 deviations | 2026-05-12 |
 
 ## Accumulated Context
 
