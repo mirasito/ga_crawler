@@ -362,7 +362,7 @@ def test_run_weekly_composes_matcher_step(setup_repo):
     matched snapshots (bypassing crawl) and returns a GoldappleRunResult-ish
     object with status='success'. Then matcher will compute count=1.
     """
-    from ga_crawler.runners.goldapple_run import GoldappleRunResult
+    from ga_crawler.runners.goldapple_run import PhaseResult as GoldappleRunResult
 
     async def fake_goldapple_phase(*, run_id, viled_brands, repo_root,
                                    brand_alias, normalizer, snapshot_writer,
@@ -371,11 +371,10 @@ def test_run_weekly_composes_matcher_step(setup_repo):
         _plant_matched_snapshots(snapshot_writer.engine, run_id)
         return GoldappleRunResult(
             status="success",
-            run_id=run_id,
             goldapple_count=1,
-            new_goldapple_slugs=[],
-            unmatched_viled_brands=[],
             stats_delta={"goldapple.count": 1},
+            unmatched_viled_brands=[],
+            new_goldapple_slugs=[],
         )
 
     with patch(
@@ -417,7 +416,7 @@ def test_run_weekly_matcher_gate_fail_returns_failed(setup_repo):
     'match_count_below_threshold:'. matches table still has 1 row
     (audit-trail invariant — D-409).
     """
-    from ga_crawler.runners.goldapple_run import GoldappleRunResult
+    from ga_crawler.runners.goldapple_run import PhaseResult as GoldappleRunResult
 
     async def fake_goldapple_phase(*, run_id, viled_brands, repo_root,
                                    brand_alias, normalizer, snapshot_writer,
@@ -425,11 +424,10 @@ def test_run_weekly_matcher_gate_fail_returns_failed(setup_repo):
         _plant_matched_snapshots(snapshot_writer.engine, run_id)
         return GoldappleRunResult(
             status="success",
-            run_id=run_id,
             goldapple_count=1,
-            new_goldapple_slugs=[],
-            unmatched_viled_brands=[],
             stats_delta={"goldapple.count": 1},
+            unmatched_viled_brands=[],
+            new_goldapple_slugs=[],
         )
 
     with patch(
@@ -471,7 +469,7 @@ def test_run_weekly_matcher_skip_still_finalizes_success(setup_repo):
     Patch run_matcher_phase directly to return skipped — the actual upstream
     can succeed; we just exercise the composition-layer skip handling.
     """
-    from ga_crawler.runners.goldapple_run import GoldappleRunResult
+    from ga_crawler.runners.goldapple_run import PhaseResult as GoldappleRunResult
 
     async def fake_goldapple_phase(*, run_id, viled_brands, repo_root,
                                    brand_alias, normalizer, snapshot_writer,
@@ -479,7 +477,6 @@ def test_run_weekly_matcher_skip_still_finalizes_success(setup_repo):
         # Don't plant — goldapple "succeeded" but matcher will be stubbed-skipped.
         return GoldappleRunResult(
             status="success",
-            run_id=run_id,
             goldapple_count=0,
             new_goldapple_slugs=[],
             unmatched_viled_brands=[],

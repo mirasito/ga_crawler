@@ -39,7 +39,9 @@ from sqlalchemy import text
 
 from ga_crawler.alias.yaml_loader import YamlBrandAlias
 from ga_crawler.config import ViledConfig
+from ga_crawler.matcher.config import MatchConfig
 from ga_crawler.normalizers.facade import Normalizer
+from ga_crawler.runners.matcher_run import run_matcher_phase
 from ga_crawler.runners.viled_run import run_viled_phase
 from ga_crawler.storage.norm06_writer import Norm06Writer
 from ga_crawler.storage.sqlite import (
@@ -60,6 +62,8 @@ class MainRunResult:
     run_id: int
     viled_count: int = 0
     goldapple_count: int = 0
+    match_count: int = 0  # Plan 04-05 — Phase 4 matcher count
+    match_rate: float = 0.0  # Plan 04-05 — Phase 4 match-rate percent
     reason: Optional[str] = None
     norm06_path: Optional[Path] = None
     stats_delta: dict = field(default_factory=dict)
@@ -103,6 +107,7 @@ def run_weekly(
     goldapple_only: bool = False,
     sanity_gate_n: Optional[int] = None,
     sanity_gate_m: Optional[int] = None,
+    sanity_gate_p: Optional[int] = None,
     aliases_path: Optional[Path | str] = None,
     pyproject_path: Path | str = "pyproject.toml",
 ) -> MainRunResult:
@@ -112,12 +117,15 @@ def run_weekly(
         repo_root:        project root for Norm06 ledger + week-over-week artifacts
         db_path:          SQLite DB file (auto-created via init_db)
         headless:         Camoufox headless flag for goldapple phase
-        viled_only:       skip the goldapple phase
-        goldapple_only:   skip the viled phase (reads brand list from previous run's view)
+        viled_only:       skip the goldapple phase (matcher also skipped — needs both retailers)
+        goldapple_only:   skip the viled phase (reads brand list from previous run's view;
+                          matcher also skipped — needs both retailers)
         sanity_gate_n:    override viled config N
         sanity_gate_m:    override goldapple gate M
+        sanity_gate_p:    Plan 04-05 — override matcher sanity-P threshold
+                          (default: MatchConfig.from_pyproject().sanity_gate_p)
         aliases_path:     override config/brand-aliases.yaml location
-        pyproject_path:   path to pyproject.toml (for ViledConfig.from_pyproject)
+        pyproject_path:   path to pyproject.toml (for ViledConfig.from_pyproject / MatchConfig)
 
     Returns:
         MainRunResult — status / run_id / counts / reason / norm06_path / stats_delta.
@@ -148,6 +156,9 @@ def run_weekly(
     stats_delta_acc: dict = {}
     viled_count = 0
     goldapple_count = 0
+    # Plan 04-05 — matcher counters scoped above try so the except branch can read them.
+    match_count = 0
+    match_rate = 0.0
     viled_unmatched: list[str] = []
     goldapple_new_slugs: list[str] = []
 
@@ -230,18 +241,85 @@ def run_weekly(
                     stats_delta=dict(stats_delta_acc),
                 )
 
+        # ---- Matcher phase (Plan 04-05; D-411 skip-if-failed handled inside) ----
+        # Composition rule: matcher needs BOTH retailer datasets. *_only modes skip it.
+        # D-411 makes this fire-and-let-it-handle: matcher reads runs.status itself
+        # and decides skip vs run. We do NOT pre-gate on upstream status here.
+        #
+        # Pre-finalize the runs row to status='success' BEFORE invoking the matcher
+        # so D-411's read_run_status returns 'success' (matcher proceeds) instead
+        # of 'running' (matcher skips). D-409 gate-fail path then calls
+        # run_writer.fail(...) which flips status back to 'failed' — fail() has no
+        # `WHERE status='running'` guard (DATA-05 idempotency).
+        if not viled_only and not goldapple_only:
+            run_writer.finalize(run_id, status="success")
+            match_config = MatchConfig.from_pyproject(pyproject_path)
+            effective_p = (
+                sanity_gate_p
+                if sanity_gate_p is not None
+                else match_config.sanity_gate_p
+            )
+            m_result = run_matcher_phase(
+                run_id=run_id,
+                engine=engine,
+                run_writer=run_writer,
+                threshold_p=effective_p,
+                p_auto_suggest_factor=match_config.p_auto_suggest_factor,
+                p_auto_suggest_after_runs=match_config.p_auto_suggest_after_runs,
+            )
+            match_count = m_result.match_count
+            match_rate = m_result.match_rate
+            stats_delta_acc.update(m_result.stats_delta)
+            if m_result.status == "failed":
+                # D-409: matcher already called run_writer.fail; matches rows persisted.
+                # Norm06 ledger still written below for the audit artifact.
+                norm06_path = Norm06Writer(repo_root).persist(
+                    run_id, viled_unmatched, goldapple_new_slugs
+                )
+                log.error(
+                    "weekly_run_matcher_failed",
+                    run_id=run_id,
+                    reason=m_result.reason,
+                    match_count=match_count,
+                )
+                return MainRunResult(
+                    status="failed",
+                    run_id=run_id,
+                    viled_count=viled_count,
+                    goldapple_count=goldapple_count,
+                    match_count=match_count,
+                    match_rate=match_rate,
+                    reason=m_result.reason,
+                    norm06_path=norm06_path,
+                    stats_delta=dict(stats_delta_acc),
+                )
+            elif m_result.status == "skipped":
+                log.warning(
+                    "weekly_run_matcher_skipped",
+                    run_id=run_id,
+                    reason=m_result.reason,
+                )
+                # Skip is NOT a run-failure — fall through to Norm06 + finalize.
+
         # ---- Norm06 review queue (D-211) ----
         norm06_path = Norm06Writer(repo_root).persist(
             run_id, viled_unmatched, goldapple_new_slugs
         )
 
         # ---- Finalize ----
+        # If matcher ran (viled+goldapple both invoked), the run was already
+        # pre-finalized to 'success' before matcher; finalize() is idempotent
+        # (guard `WHERE status='running'`) so a second call is a no-op when
+        # matcher succeeded or was skipped. *_only modes did NOT pre-finalize,
+        # so this is the canonical close.
         run_writer.finalize(run_id, status="success")
         log.info(
             "weekly_run_complete",
             run_id=run_id,
             viled_count=viled_count,
             goldapple_count=goldapple_count,
+            match_count=match_count,
+            match_rate=match_rate,
             norm06_path=str(norm06_path),
         )
         return MainRunResult(
@@ -249,6 +327,8 @@ def run_weekly(
             run_id=run_id,
             viled_count=viled_count,
             goldapple_count=goldapple_count,
+            match_count=match_count,
+            match_rate=match_rate,
             norm06_path=norm06_path,
             stats_delta=dict(stats_delta_acc),
         )
@@ -285,6 +365,8 @@ def run_weekly(
             run_id=run_id,
             viled_count=viled_count,
             goldapple_count=goldapple_count,
+            match_count=match_count,
+            match_rate=match_rate,
             reason=reason,
             norm06_path=norm06_path,
             stats_delta=dict(stats_delta_acc),
