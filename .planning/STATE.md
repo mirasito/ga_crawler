@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 05 COMPLETE (Wave 5 doc cascade — Plan 05-06 ships REQUIREMENTS.md REPORT-01..06 closed + REPORT-01 amendment per D-502 + STATE.md gains D-514/D-515/D-405 cascade rows + Plan Execution Metrics for 05-01..05-06 + ROADMAP.md Phase 5 Plans 6/6 Complete; all 6 v1 requirements satisfied bringing project total to 37/48; Phase 6 Telegram Delivery unblocked)
-last_updated: "2026-05-12T20:40:00.000Z"
+status: Phase 06 CONTEXT GATHERED (2026-05-12; D-601..D-616 16 decisions locked across 4 areas; aiogram 3.27 + asyncio.run() sync wrapper; tenacity 3-retry with TelegramRetryAfter; 4-check pre-send gate; delivery_status decoupled from runs.status; 6-value delivery_status enum + 8-key deliver.* stats namespace; standalone deliver-run CLI with --force/--dry-run; single HTML ops-alert template; asymmetric ENV-handling; .env.example pattern; delivery/ package mirror D-513; main_run composition after reporter per Plan 05-05 explicit-gate; Phase 5 cascade D-514/D-515/D-405 honored verbatim. Ready for `/gsd-plan-phase 6`.)
+last_updated: "2026-05-12T21:30:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 5
@@ -27,8 +27,9 @@ progress:
 
 ## Current Position
 
-Phase: 05 — **COMPLETE** (2026-05-12; all 6 plans shipped Wave 0..5; REPORT-01..06 closed; D-514/D-515/D-405 cascade persisted to STATE.md for Phase 6 inheritance)
-Plan: 6 of 6 SHIPPED (05-01 Wave 0 foundation + 05-02 Wave 1 builders + 05-03 Wave 2 archive + 05-04 Wave 3 orchestrator + 05-05 Wave 4 main_run + CLI composition + 05-06 Wave 5 doc cascade). Next: `/gsd-discuss-phase 6` (Telegram Delivery + Ops/Business Split — DELIVER-01..05; Phase 6 planner inherits D-514 reporter-source-of-truth-for-caption + D-515 size-guard-flag-routes-to-ops-chat + D-405 KPI-verbatim invariants from Accumulated Key Decisions).
+Phase: 06 — **CONTEXT GATHERED** (2026-05-12; D-601..D-616 locked; ready for /gsd-plan-phase 6)
+Plan: TBD — `/gsd-plan-phase 6` (Telegram Delivery + Ops/Business Split — DELIVER-01..05; CONTEXT.md inherits Phase 5 D-514/D-515/D-405 cascade verbatim; SDK aiogram 3.27 + tenacity 3-retry locked; 4-check gate composition locked; delivery_status decoupled from runs.status; 8-key deliver.* namespace).
+Phase 5 status: **COMPLETE** (2026-05-12; all 6 plans shipped Wave 0..5; REPORT-01..06 closed; D-514/D-515/D-405 cascade persisted to STATE.md for Phase 6 inheritance).
 | Field | Value |
 |-------|-------|
 | Phase | 05 — reporter-excel-summary **COMPLETE** (Wave 0..5 all shipped 2026-05-11..05-12; 6 plans + 6 v1 requirements closed) |
@@ -40,7 +41,7 @@ Plan: 6 of 6 SHIPPED (05-01 Wave 0 foundation + 05-02 Wave 1 builders + 05-03 Wa
 | Phase 3 status | Phase 3 — Goldapple Crawl **COMPLETE** (Waves 0-8 shipped; UAT re-verified 2026-05-11T11:18Z, 4 cold-spawn runs reached run_loop, status=success, snapshots persisted). Plan 03-09 (warm-up nav + retry-once safety net + CR-01 GATE_TITLE_MARKER hardening) closed Operational Finding #1 structurally. Confirmed unaffected by Phase 2 close-out (385/385 non-live tests pass after 02-06; 392 non-live tests pass after 03-09). |
 | Progress | `[██████████████░░░░░░] 5/7 phases` (Phase 1 complete: 9/12 plans; Phase 2 complete: 6/6 plans 2026-05-07; Phase 3 complete: 9/9 plans 2026-05-11; Phase 4 complete: 6/6 plans 2026-05-11; Phase 5 complete: 6/6 plans 2026-05-12) |
 | Branch strategy | none (single-trunk) |
-| Resume file | `.planning/phases/06-telegram-delivery/` (run `/gsd-discuss-phase 6` to begin Phase 6 — Telegram Delivery + Ops/Business Split; Phase 5 fully closed 2026-05-12 with reporter source-of-truth for caption + xlsx archive on disk + 4-namespace stats {viled, goldapple, match, report} available for delivery consumption; D-514/D-515/D-405 cascade invariants persisted in STATE.md Accumulated Key Decisions below) |
+| Resume file | `.planning/phases/06-telegram-delivery/06-CONTEXT.md` (Phase 6 context gathered 2026-05-12; D-601..D-616 16 decisions locked across 4 areas — SDK/retry/gate/idempotency/ops-alert/ENV; next: `/gsd-plan-phase 6`. Phase 5 fully closed with reporter source-of-truth for caption + xlsx archive on disk + 5-namespace stats {viled, goldapple, match, report, deliver} ready after Phase 6; D-514/D-515/D-405 cascade invariants honored verbatim per CONTEXT.md decisions block.) |
 
 ## Performance Metrics
 
