@@ -1,4 +1,4 @@
-﻿# Roadmap: GA Crawler
+# Roadmap: GA Crawler
 
 **Created:** 2026-05-05
 **Granularity:** standard
@@ -121,7 +121,13 @@
   2. A text summary string is generated containing `viled_count`, `goldapple_count`, `match_count`, `match_rate %`, assortment-gap size, top-3 largest deltas, and goldapple promo count — all computed from the DB only.
   3. The reporter reads exclusively from the database (no Telegram, no network, no orchestrator state) and can be invoked for any historical `run_id` to regenerate its archive.
   4. Pre-send file-size validation raises an explicit error if the `.xlsx` exceeds 45 MB (Telegram 50 MB limit guard) — visible to the operator before any delivery is attempted.
-**Plans**: TBD
+**Plans**: 6 plans across 6 waves (Wave 0 foundation -> Wave 1 builders -> Wave 2 archive -> Wave 3 orchestrator -> Wave 4 main_run + CLI composition -> Wave 5 doc cascade)
+- [ ] 05-01-PLAN.md - Wave 0: foundation — pyproject `[tool.ga_crawler.report]` namespace (D-516) + `reporter/__init__.py` + `config.py` (ReportConfig mirror MatchConfig) + `stats.py` (REPORT_STATS_KEYS 7-tuple D-514 + ReportStatsBuilder 4-way disjoint); pandas+xlsxwriter+openpyxl+tzdata deps; synthetic_report_run + tmp_reports_dir + openpyxl_workbook_reader conftest fixtures; D-504 golden summary fixture
+- [ ] 05-02-PLAN.md - Wave 1: pure builders — reporter/queries.py 5 SQL constants (PER_SKU JOIN-back per Pitfall 9 + NOT EXISTS per Pitfall 8 + SQL discount per Pitfall 10) + reporter/excel_builder.py (D-503 Russian headers + D-505 3-color CF mid_value=0 anchor + D-506 always-4-sheets + D-508 CF-2-sheets-only + Pitfall 1 engine=xlsxwriter explicit + T-05-injection sanitization) + reporter/summary_builder.py (D-504 template source-locked + zero-match Top-3 omission)
+- [ ] 05-03-PLAN.md - Wave 2: filesystem service — reporter/archive.py (D-512 ISO-week derivation with Pitfall 4 year-boundary 2027-01-01→2026-W53 + D-510 atomic write `*.xlsx.tmp`+os.replace + D-515 check_size_guard flag-only never-raises); reports/.gitkeep + .gitignore exclude reports/*.xlsx
+- [ ] 05-04-PLAN.md - Wave 3: orchestrator — runners/reporter_run.py 7-step sync mirror matcher_run + D-507 status-gate REUSE read_run_status from matcher.strict_key + path-traversal containment + Pitfall 6 single patch_stats + D-515 flag-only never-fails-run
+- [ ] 05-05-PLAN.md - Wave 4: composition — main_run.py reporter step post-matcher with explicit m_result.status=='success' gate + MainRunResult extended 4 fields per D-514 + DATA-05 reporter-exception path; cli.py D-509 report-run --run-id N subcommand mirror matcher-run (type=int + --output-dir via dataclasses.replace)
+- [ ] 05-06-PLAN.md - Wave 5: doc cascade — REQUIREMENTS.md REPORT-01..06 closed + REPORT-01 amendment per D-502 + STATE.md D-514/D-515/D-405 cascade + Plan Execution Metrics + ROADMAP.md Phase 5 plan list + Progress 6/6
 **UI hint**: no
 
 ### Phase 6: Telegram Delivery + Ops/Business Split
@@ -179,7 +185,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 | 2. Project Skeleton + viled Crawl + Storage | 6/6 | Complete | 2026-05-07 |
 | 3. Goldapple Crawl | 9/9 | Complete (re-opened 2026-05-11 for Finding #1 fix; re-verified 2026-05-11T11:18Z, 4 cold-spawn runs reached run_loop) | 2026-05-11 |
 | 4. Matcher + Match-Rate KPI | 6/6 | Complete (all 6 plans shipped Wave 1..5; matches table per D-401, match-rate KPI frozen with week-1 baseline per D-405, sanity-gate P + auto-suggest D-406..-409, idempotency D-410, skip-protocol D-411, standalone matcher-run CLI D-412) | 2026-05-11 |
-| 5. Reporter (Excel + summary) | 0/0 | Not started | - |
+| 5. Reporter (Excel + summary) | 0/6 | Planned (6 plans across 6 waves; ready for /gsd-execute-phase) | - |
 | 6. Telegram Delivery + Ops/Business Split | 0/0 | Not started | - |
 | 7. Scheduler + Observability Hardening | 0/0 | Not started | - |
 
@@ -215,3 +221,4 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 
 ---
 *Roadmap created: 2026-05-05*
+*Phase 5 plan list filled: 2026-05-11 (6 plans across 6 waves — Wave 0 foundation → Wave 5 doc cascade; reporter independent of delivery per ARCHITECTURE.md; D-514 source-of-truth for Telegram caption; D-515 size-guard flag-only with Phase 6 cascade)*
