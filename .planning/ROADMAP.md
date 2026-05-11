@@ -102,7 +102,13 @@
   2. Match-rate (`matches / viled_skus_with_brand_in_goldapple_brands * 100%`) is computed, logged in structured JSON, and stored on the `runs` row for every run — establishing the historical baseline from week 1.
   3. A configurable match-count sanity-gate (`match_count > P`) marks the run `failed` and records the failure reason on the `runs` row when the threshold is not met.
   4. The matcher is idempotent for a given `run_id` — re-running matching against existing snapshots produces the same `matches` rows without re-crawling.
-**Plans**: TBD
+**Plans**: 6 plans across 5 waves (Wave 1 foundation + namespace stats -> Wave 2 SQL primitives -> Wave 3 orchestrator -> Wave 4 main_run + CLI integration -> Wave 5 doc cascade)
+- [ ] 04-01-PLAN.md - Wave 1: Match SQLModel table (D-401) + [tool.ga_crawler.match] pyproject namespace (D-408) + matcher/ package skeleton + MatchConfig loader; 9 regression tests
+- [ ] 04-02-PLAN.md - Wave 1: MATCH_STATS_KEYS 10-key tuple + MatchStatsBuilder mirror of ViledStatsBuilder (D-414); 13+ namespace tests including three-way disjoint invariant
+- [ ] 04-03-PLAN.md - Wave 2: matcher/strict_key.py SQL primitives - INSERT_MATCHES_SQL (D-401+D-402), DENOMINATOR_SQL (D-404), brand_overlap, comparable counts, read_run_status (D-411); 17 regression tests + D-405 source-locked formula canary
+- [ ] 04-04-PLAN.md - Wave 3: runners/matcher_run.py orchestrator - 7-step sync pipeline (D-411 skip -> D-410 build -> D-405 rate -> D-409 gate -> Pitfall 6 single patch_stats); 12 integration tests
+- [ ] 04-05-PLAN.md - Wave 4: main_run.py matcher composition (D-411 skip / D-409 fail handling) + CLI matcher-run subcommand (D-412) + --sanity-gate-p flag; 11+ integration tests
+- [ ] 04-06-PLAN.md - Wave 5: doc cascade - REQUIREMENTS.md MATCH-01..04 + MATCH-02 schema amend; STATE.md accumulated decision (D-405 KPI freeze); ROADMAP.md Phase 4 plan list (this plan)
 **UI hint**: no
 
 ### Phase 5: Reporter (Excel + summary)
@@ -172,7 +178,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 | 1. Goldapple Reconnaissance Spike | 9/12 | Complete (3 plans skipped) | 2026-05-06 |
 | 2. Project Skeleton + viled Crawl + Storage | 6/6 | Complete | 2026-05-07 |
 | 3. Goldapple Crawl | 9/9 | Complete (re-opened 2026-05-11 for Finding #1 fix; re-verified 2026-05-11T11:18Z, 4 cold-spawn runs reached run_loop) | 2026-05-11 |
-| 4. Matcher + Match-Rate KPI | 0/0 | Not started | - |
+| 4. Matcher + Match-Rate KPI | 0/6 | Planned (Phase 4 plans 04-01..04-06 created 2026-05-11; ready for execution) | - |
 | 5. Reporter (Excel + summary) | 0/0 | Not started | - |
 | 6. Telegram Delivery + Ops/Business Split | 0/0 | Not started | - |
 | 7. Scheduler + Observability Hardening | 0/0 | Not started | - |
