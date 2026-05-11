@@ -87,6 +87,35 @@ class Snapshot(SQLModel, table=True):
     )
 
 
+class Match(SQLModel, table=True):
+    """Denormalized strict-key matches per run. Phase 4 owns schema (D-401).
+
+    PK is composite (run_id, viled_sku, goldapple_sku) — supports N→1 keep-all
+    (D-403): one viled SKU may match multiple goldapple SKUs sharing the same
+    (brand_norm, name_norm, volume_norm). Denormalized columns are projected
+    from snapshots so Phase 5 reporter renders directly without JOIN-back.
+    """
+
+    __tablename__ = "matches"
+    run_id: int = Field(foreign_key="runs.run_id", primary_key=True, index=True)
+    viled_sku: str = Field(primary_key=True)
+    goldapple_sku: str = Field(primary_key=True)
+    brand_norm: str
+    name_norm: str
+    volume_norm: str
+    viled_price: int
+    goldapple_price: int
+    viled_was_price: Optional[int] = None
+    goldapple_was_price: Optional[int] = None
+    price_delta: int
+    price_delta_pct: float
+    matched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        Index("ix_match_run_brand", "run_id", "brand_norm"),
+    )
+
+
 # ---- Engine factory + PRAGMAs (DATA-04) ----
 
 
@@ -262,6 +291,7 @@ class SqliteRunWriter:
 __all__ = [
     "Run",
     "Snapshot",
+    "Match",
     "SqliteSnapshotWriter",
     "SqliteRunWriter",
     "make_engine",
