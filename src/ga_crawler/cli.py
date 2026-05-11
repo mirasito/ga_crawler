@@ -1,14 +1,19 @@
 """GA Crawler CLI — Phase 2 production cutover (Plan 02-05 / D-212).
 
-Two subcommands:
+Three subcommands (Plan 04-05 adds the third):
 
   python -m ga_crawler goldapple-smoke
       One-off smoke probe against live goldapple. Prints diagnostics. No DB writes.
       KEPT verbatim from Phase 3 (Plan 03-06).
 
-  python -m ga_crawler weekly-run [--db-path ...] [--sanity-gate-n ...] ...
-      Full weekly run (viled + goldapple) writing to real SQLite + Norm06 ledger.
-      Replaces the deleted `goldapple-run` Phase 3 stub-bound subcommand.
+  python -m ga_crawler weekly-run [--db-path ...] [--sanity-gate-n ...] [--sanity-gate-p ...] ...
+      Full weekly run (viled + goldapple + matcher) writing to real SQLite +
+      Norm06 ledger. Plan 04-05 adds --sanity-gate-p override (matcher P-gate).
+
+  python -m ga_crawler matcher-run --run-id N [--sanity-gate-p P] [--db-path ...]
+      D-412 standalone matcher recovery tool. Re-runs strict-key matcher against
+      an EXISTING runs row (idempotent — Plan 04-03 DELETE+INSERT in one TX).
+      Use case: matcher bug found, fix code, re-match without 4h crawl re-run.
 
 D-212 cutover (Plan 02-05):
   - DELETED: 4 Stub classes (StubBrandAlias, StubNormalizer, StubSnapshotWriter,
@@ -16,6 +21,10 @@ D-212 cutover (Plan 02-05):
   - DELETED: `goldapple-run` subcommand + `_cmd_run` handler.
   - ADDED: `weekly-run` subcommand backed by `runners/main_run.py::run_weekly`.
   - KEPT: `goldapple-smoke` subcommand + `_cmd_smoke` handler (unchanged).
+
+Plan 04-05 additions:
+  - ADDED: `matcher-run` subcommand + `_cmd_matcher` handler (D-412).
+  - AMENDED: `weekly-run` gains `--sanity-gate-p N` flag (mirrors --sanity-gate-m).
 """
 
 from __future__ import annotations
@@ -47,7 +56,10 @@ async def _cmd_smoke(args) -> int:
 
 
 def _cmd_weekly(args) -> int:
-    """ADDED Plan 02-05. Full weekly run via runners/main_run.run_weekly."""
+    """ADDED Plan 02-05. Full weekly run via runners/main_run.run_weekly.
+
+    Plan 04-05: pass through --sanity-gate-p to override matcher P-threshold.
+    """
     from ga_crawler.runners.main_run import run_weekly
 
     repo_root = Path(args.repo_root).resolve()
@@ -59,6 +71,7 @@ def _cmd_weekly(args) -> int:
         goldapple_only=args.goldapple_only,
         sanity_gate_n=args.sanity_gate_n,
         sanity_gate_m=args.sanity_gate_m,
+        sanity_gate_p=args.sanity_gate_p,
     )
     print(
         json.dumps(
@@ -67,8 +80,64 @@ def _cmd_weekly(args) -> int:
                 "run_id": result.run_id,
                 "viled_count": result.viled_count,
                 "goldapple_count": result.goldapple_count,
+                "match_count": result.match_count,
+                "match_rate": result.match_rate,
                 "reason": result.reason,
                 "norm06_path": str(result.norm06_path) if result.norm06_path else None,
+                "stats_delta_keys": sorted(result.stats_delta.keys()),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0 if result.status == "success" else 2
+
+
+def _cmd_matcher(args) -> int:
+    """ADDED Plan 04-05 (D-412): standalone matcher re-run for recovery.
+
+    Idempotent — calling against the same run_id twice produces the same
+    matches rows (Plan 04-03 DELETE+INSERT in single TX). No re-crawl;
+    matcher reads existing snapshots and computes match.* stats + matches table.
+
+    Exit codes:
+      0  -> matcher status='success'
+      2  -> matcher status='failed' (P-gate trip) OR status='skipped'
+            (upstream not in 'success'/'partial' state — D-411)
+    """
+    from ga_crawler.matcher.config import MatchConfig
+    from ga_crawler.runners.matcher_run import run_matcher_phase
+    from ga_crawler.storage.sqlite import (
+        SqliteRunWriter,
+        init_db,
+        make_engine,
+    )
+
+    init_db(args.db_path)
+    engine = make_engine(args.db_path)
+    run_writer = SqliteRunWriter(engine)
+    cfg = MatchConfig.from_pyproject(args.pyproject)
+    effective_p = (
+        args.sanity_gate_p if args.sanity_gate_p is not None else cfg.sanity_gate_p
+    )
+
+    result = run_matcher_phase(
+        run_id=args.run_id,
+        engine=engine,
+        run_writer=run_writer,
+        threshold_p=effective_p,
+        p_auto_suggest_factor=cfg.p_auto_suggest_factor,
+        p_auto_suggest_after_runs=cfg.p_auto_suggest_after_runs,
+    )
+    print(
+        json.dumps(
+            {
+                "status": result.status,
+                "run_id": args.run_id,
+                "match_count": result.match_count,
+                "match_rate": result.match_rate,
+                "reason": result.reason,
+                "threshold_p": effective_p,
                 "stats_delta_keys": sorted(result.stats_delta.keys()),
             },
             ensure_ascii=False,
@@ -136,6 +205,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="Override goldapple sanity-M threshold (default: pyproject.toml value)",
     )
     weekly.add_argument(
+        "--sanity-gate-p",
+        type=int,
+        default=None,
+        help="Plan 04-05: Override matcher sanity-P threshold "
+             "(default: pyproject.toml [tool.ga_crawler.match].sanity_gate_p)",
+    )
+    weekly.add_argument(
         "--headless",
         type=_parse_bool,
         default=True,
@@ -152,11 +228,43 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="Run only the goldapple phase (skip viled)",
     )
 
+    # ADDED Plan 04-05 (D-412) — matcher-run standalone recovery tool.
+    matcher = sub.add_parser(
+        "matcher-run",
+        help="Run strict-key matcher on existing snapshots for a given run_id "
+             "(idempotent, D-412)",
+    )
+    matcher.add_argument(
+        "--run-id",
+        type=int,
+        required=True,
+        help="runs.run_id of an existing run to (re-)match",
+    )
+    matcher.add_argument(
+        "--db-path",
+        default="prices.db",
+        help="SQLite database file path",
+    )
+    matcher.add_argument(
+        "--sanity-gate-p",
+        type=int,
+        default=None,
+        help="Override match-count sanity threshold P "
+             "(default: pyproject.toml [tool.ga_crawler.match].sanity_gate_p = 20)",
+    )
+    matcher.add_argument(
+        "--pyproject",
+        default="pyproject.toml",
+        help="Path to pyproject.toml for [tool.ga_crawler.match] config",
+    )
+
     args = parser.parse_args(argv)
     if args.cmd == "goldapple-smoke":
         return asyncio.run(_cmd_smoke(args))
     if args.cmd == "weekly-run":
         return _cmd_weekly(args)
+    if args.cmd == "matcher-run":
+        return _cmd_matcher(args)
     parser.print_help()
     return 2
 
