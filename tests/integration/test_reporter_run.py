@@ -431,21 +431,24 @@ def test_idempotent_re_run_same_state(synthetic_report_run):
 
 
 def test_raises_on_null_started_at(synthetic_report_run):
-    """Defensive: status='success' but started_at NULL → ValueError (data integrity bug)."""
-    from sqlalchemy import text as _text
+    """Defensive: status='success' but started_at NULL → ValueError (data integrity bug).
+
+    The DB schema enforces NOT NULL on `started_at` so this corruption case
+    can only happen via a query path returning None (test path). Mock
+    `read_run_started_at` to simulate the integrity bug surface; the
+    defensive raise in `run_reporter_phase` is the canary.
+    """
     engine, run_writer, run_id, repo_root = synthetic_report_run
-    # Simulate corruption: NULL out started_at
-    with engine.begin() as conn:
-        conn.execute(
-            _text("UPDATE runs SET started_at=NULL WHERE run_id=:rid"),
-            {"rid": run_id},
-        )
     cfg = ReportConfig(output_dir="reports_t_null")
-    with pytest.raises(ValueError, match="started_at"):
-        run_reporter_phase(
-            run_id=run_id, engine=engine, run_writer=run_writer,
-            repo_root=repo_root, config=cfg,
-        )
+    with patch(
+        "ga_crawler.runners.reporter_run.read_run_started_at",
+        return_value=None,
+    ):
+        with pytest.raises(ValueError, match="started_at"):
+            run_reporter_phase(
+                run_id=run_id, engine=engine, run_writer=run_writer,
+                repo_root=repo_root, config=cfg,
+            )
 
 
 # ---------------------------------------------------------------------------
