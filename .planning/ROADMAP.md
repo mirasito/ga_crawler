@@ -16,7 +16,7 @@
 - [ ] **Phase 1: Goldapple Reconnaissance Spike** — Anti-bot tier and proxy provider for goldapple.kz are decided and validated against 100 sequential live product fetches; throwaway code, decision memo committed.
 - [ ] **Phase 2: Project Skeleton + viled Crawl + Storage** — `python -m ga_crawler` executes end-to-end against viled.kz (beauty+parfumery scope: /men/catalog/1310 + /women/catalog/1310) and persists a complete, idempotent weekly snapshot with shared parser + normalizer modules.
 - [ ] **Phase 3: Goldapple Crawl** — Goldapple snapshots, scoped to viled brands, are written to the same `snapshots` table at the same quality bar as viled, using the anti-bot tier from the spike.
-- [ ] **Phase 4: Matcher + Match-Rate KPI** — Strict-key matches between viled and goldapple are persisted per `run_id`, match-rate is logged as a tracked KPI, and a sanity-gate blocks delivery on low match counts.
+- [x] **Phase 4: Matcher + Match-Rate KPI** — Strict-key matches between viled and goldapple are persisted per `run_id`, match-rate is logged as a tracked KPI, and a sanity-gate blocks delivery on low match counts.
 - [ ] **Phase 5: Reporter (Excel + summary)** — A multi-sheet Russian-headed Excel file and text summary are produced from the database alone, archived to disk, independent of any delivery channel.
 - [ ] **Phase 6: Telegram Delivery + Ops/Business Split** — Successful runs deliver Excel + summary to the business chat; failed/incomplete runs deliver alerts only to the ops chat; pre-send sanity-gate enforces the boundary.
 - [ ] **Phase 7: Scheduler + Observability Hardening** — Weekly cron in Asia/Almaty fires reliably, dead-man's-switch monitoring catches missed runs, and a deliberate-failure test confirms ops alerts route correctly.
@@ -103,12 +103,12 @@
   3. A configurable match-count sanity-gate (`match_count > P`) marks the run `failed` and records the failure reason on the `runs` row when the threshold is not met.
   4. The matcher is idempotent for a given `run_id` — re-running matching against existing snapshots produces the same `matches` rows without re-crawling.
 **Plans**: 6 plans across 5 waves (Wave 1 foundation + namespace stats -> Wave 2 SQL primitives -> Wave 3 orchestrator -> Wave 4 main_run + CLI integration -> Wave 5 doc cascade)
-- [ ] 04-01-PLAN.md - Wave 1: Match SQLModel table (D-401) + [tool.ga_crawler.match] pyproject namespace (D-408) + matcher/ package skeleton + MatchConfig loader; 9 regression tests
-- [ ] 04-02-PLAN.md - Wave 1: MATCH_STATS_KEYS 10-key tuple + MatchStatsBuilder mirror of ViledStatsBuilder (D-414); 13+ namespace tests including three-way disjoint invariant
-- [ ] 04-03-PLAN.md - Wave 2: matcher/strict_key.py SQL primitives - INSERT_MATCHES_SQL (D-401+D-402), DENOMINATOR_SQL (D-404), brand_overlap, comparable counts, read_run_status (D-411); 17 regression tests + D-405 source-locked formula canary
-- [ ] 04-04-PLAN.md - Wave 3: runners/matcher_run.py orchestrator - 7-step sync pipeline (D-411 skip -> D-410 build -> D-405 rate -> D-409 gate -> Pitfall 6 single patch_stats); 12 integration tests
-- [ ] 04-05-PLAN.md - Wave 4: main_run.py matcher composition (D-411 skip / D-409 fail handling) + CLI matcher-run subcommand (D-412) + --sanity-gate-p flag; 11+ integration tests
-- [ ] 04-06-PLAN.md - Wave 5: doc cascade - REQUIREMENTS.md MATCH-01..04 + MATCH-02 schema amend; STATE.md accumulated decision (D-405 KPI freeze); ROADMAP.md Phase 4 plan list (this plan)
+- [x] 04-01-PLAN.md - Wave 1: Match SQLModel table (D-401 13-col denormalized + composite PK supporting D-403 N→1) + [tool.ga_crawler.match] pyproject namespace (D-408 seed P=20 + D-407 auto-suggest 0.7×4-week-median) + matcher/ package skeleton + MatchConfig.from_pyproject loader (mirror of ViledConfig pattern); 9 regression tests
+- [x] 04-02-PLAN.md - Wave 1: MATCH_STATS_KEYS frozen 10-tuple namespace (count/rate/numerator/denominator/brand_overlap_count/viled_comparable_count/goldapple_comparable_count/skipped_reason/threshold_p/gate_passed per D-414) + MatchStatsBuilder mirror of ViledStatsBuilder reusing StatsNamespaceError; 23 namespace tests including three-way disjoint invariant (viled ∩ goldapple ∩ match = ∅ per Pitfall 6)
+- [x] 04-03-PLAN.md - Wave 2: matcher/strict_key.py SQL primitives — INSERT_MATCHES_SQL (D-401 13-col INSERT + D-402 symmetric multipack/volume/DELISTED filter on both retailers), DENOMINATOR_SQL (D-404 viled comparable SKUs in brand-overlap), BRAND_OVERLAP_SQL, COMPARABLE_COUNT_SQL, DELETE_MATCHES_SQL, RUN_STATUS_SQL (D-411 status read); single-TX DELETE+INSERT idempotency via engine.begin() (D-410); 17 regression tests including D-405 source-locked formula canary (substring + 6/5/3 → 60.0 fixture)
+- [x] 04-04-PLAN.md - Wave 3: runners/matcher_run.py sync 7-step orchestrator pipeline (D-411 skip-if-upstream-failed → compute stats → D-410 build matches → D-405 rate calc with zero-denominator guard → D-409 gate + D-407 auto-suggest log-only → Pitfall 6 single patch_stats per code path → D-409 fail-flip on gate-trip preserves matches rows); MatcherPhaseResult dataclass; 13 integration tests against real on-disk SQLite
+- [x] 04-05-PLAN.md - Wave 4: runners/main_run.py matcher composition AFTER goldapple step with pre-finalize-before-matcher pattern (Rule 3 deviation auto-fixed for D-411 contract gap in composition context — gate-fail flips back via run_writer.fail() preserving D-409 audit invariant); MainRunResult gains match_count/match_rate fields; cli.py ships matcher-run --run-id N standalone D-412 recovery subcommand + weekly-run --sanity-gate-p flag override; 11 integration tests including 6 CLI subprocess invocations
+- [x] 04-06-PLAN.md - Wave 5: doc cascade — REQUIREMENTS.md MATCH-01..04 closed + MATCH-02 schema amended to denormalized 13-column shape per D-401; STATE.md gains D-405 KPI formula freeze accumulated decision row + Plan 04-05 pre-finalize invariant row; ROADMAP.md Phase 4 plan list filled (this plan) + Progress table → 6/6 Complete
 **UI hint**: no
 
 ### Phase 5: Reporter (Excel + summary)
@@ -178,7 +178,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 | 1. Goldapple Reconnaissance Spike | 9/12 | Complete (3 plans skipped) | 2026-05-06 |
 | 2. Project Skeleton + viled Crawl + Storage | 6/6 | Complete | 2026-05-07 |
 | 3. Goldapple Crawl | 9/9 | Complete (re-opened 2026-05-11 for Finding #1 fix; re-verified 2026-05-11T11:18Z, 4 cold-spawn runs reached run_loop) | 2026-05-11 |
-| 4. Matcher + Match-Rate KPI | 0/6 | Planned (Phase 4 plans 04-01..04-06 created 2026-05-11; ready for execution) | - |
+| 4. Matcher + Match-Rate KPI | 6/6 | Complete (all 6 plans shipped Wave 1..5; matches table per D-401, match-rate KPI frozen with week-1 baseline per D-405, sanity-gate P + auto-suggest D-406..-409, idempotency D-410, skip-protocol D-411, standalone matcher-run CLI D-412) | 2026-05-11 |
 | 5. Reporter (Excel + summary) | 0/0 | Not started | - |
 | 6. Telegram Delivery + Ops/Business Split | 0/0 | Not started | - |
 | 7. Scheduler + Observability Hardening | 0/0 | Not started | - |
