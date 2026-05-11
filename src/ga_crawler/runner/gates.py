@@ -15,6 +15,7 @@ Source: 03-RESEARCH.md §"Code Examples" lines 904-955 (verbatim).
 
 from __future__ import annotations
 
+import asyncio
 import statistics
 from pathlib import Path
 from typing import Any, Optional
@@ -80,6 +81,56 @@ def _camoufox_version_at_runtime() -> str:
         return "unknown"
 
 
+def _compute_price_extracted(rec: Any, url: str) -> tuple[bool, Optional[str]]:
+    """Extract (price_extracted, html) from a fetch_one record.
+
+    Returns (False, None) for any record shape that does not yield a
+    parseable microdata price. Pure helper — no side effects.
+    """
+    html: Optional[str] = None
+    price_extracted = False
+    if isinstance(rec, dict):
+        html = rec.get("html")
+        if html:
+            product = parse_pdp(html, url)
+            price_extracted = product is not None and product.current_price > 0
+    return price_extracted, html
+
+
+def _is_loading_race(rec: Any, price_extracted: bool) -> bool:
+    """Identify the cold-start `Loading` race shape (Operational Finding #1).
+
+    Conditions (ALL must hold):
+        - rec is a dict (defensive)
+        - status == 200 (only 200-with-Loading-body is the race; non-200 is real failure)
+        - price_extracted is False (no microdata parsed yet)
+        - rec.block is False (fetcher did NOT already classify this as blocked)
+        - title is not None and contains 'loading ' (case-insensitive, trailing
+          space — matches `Loading https://...` from runs 3+4 evidence; rejects
+          product titles that happen to contain the substring 'loading')
+        - title does NOT contain 'checking device' (Operational Finding #2 —
+          gate-shell is a real fingerprint failure, must fail-fast per D-312)
+
+    Source: 03-UAT.md Test 6 empirical evidence (run-3 + run-4 captured
+    2026-05-11 by scripts/uat3_live_run.py).
+    """
+    if not isinstance(rec, dict):
+        return False
+    if rec.get("status") != 200:
+        return False
+    if price_extracted:
+        return False
+    if rec.get("block", True):
+        return False
+    title = rec.get("title") or ""
+    title_l = title.lower()
+    if "loading " not in title_l:
+        return False
+    if "checking device" in title_l:
+        return False
+    return True
+
+
 async def smoke_probe(fetcher: Any, smoke_urls: tuple[str, ...] = SMOKE_URLS) -> dict:
     """D-312 pre-crawl probe.
 
@@ -101,16 +152,33 @@ async def smoke_probe(fetcher: Any, smoke_urls: tuple[str, ...] = SMOKE_URLS) ->
       - Every smoke URL: rec.block is False
       - Every smoke URL: parse_pdp returns a non-None GoldappleRawProduct with current_price > 0
 
-    Source: 03-RESEARCH.md §"Code Examples" lines 906-935 (verbatim).
+    Retry-once (Operational Finding #1 fix, 2026-05-11): if a per-URL probe
+    result matches the cold-start `Loading` race shape (200 + Loading-title +
+    no-microdata + not gate-shell + not pre-blocked), sleep 1 s and re-fetch
+    the URL ONCE. Replace the failing result entry in place. Retry-once is
+    narrow on purpose — it does NOT mask gate-shell failures (Operational
+    Finding #2), non-200 statuses, or happy paths.
+
+    Source: 03-RESEARCH.md §"Code Examples" lines 906-935 (base);
+            03-UAT.md Test 6 (retry-once layer, run-3 + run-4 evidence).
     """
     results: list[dict] = []
     for url in smoke_urls:
         rec = await fetcher.fetch_one(fetcher._page, url)
-        price_extracted = False
-        html = rec.get("html") if isinstance(rec, dict) else None
-        if html:
-            product = parse_pdp(html, url)
-            price_extracted = product is not None and product.current_price > 0
+        price_extracted, _ = _compute_price_extracted(rec, url)
+
+        if _is_loading_race(rec, price_extracted):
+            log.info(
+                "phase3_smoke_probe_retry",
+                url=url,
+                first_attempt_title=rec.get("title") if isinstance(rec, dict) else None,
+                first_attempt_size=rec.get("html_size") if isinstance(rec, dict) else None,
+                first_attempt_status=rec.get("status") if isinstance(rec, dict) else None,
+            )
+            await asyncio.sleep(1.0)
+            rec = await fetcher.fetch_one(fetcher._page, url)
+            price_extracted, _ = _compute_price_extracted(rec, url)
+
         results.append(
             {
                 "url": url,
