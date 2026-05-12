@@ -24,11 +24,13 @@ Phase 6 — **тонкий delivery-wrapper** над Phase 5: читает `runs
   @retry(
       retry=retry_if_exception_type((TelegramNetworkError, TelegramServerError)),
       stop=stop_after_attempt(3),
-      wait=wait_exponential(multiplier=5, min=5, max=45),  # 5/15/45 backoff
+      wait=wait_chain(wait_fixed(5), wait_fixed(15), wait_fixed(45)),  # 5/15/45 backoff per RESEARCH caveat #2 (wait_exponential with multiplier=5 gives 10/20, NOT 5/15/45)
       reraise=True,
   )
   ```
   `TelegramRetryAfter` обрабатывается **отдельно** (не в `retry_if_exception_type`): catch → `await asyncio.sleep(exc.retry_after)` → retry counter увеличивается. Общий budget ≤ 75s (5+15+45+ramp) + max single retry-after wait (Telegram обычно ≤ 30s). После 3 retry → `TelegramNetworkError` пробрасывается наружу, `deliver-run` помечает `delivery_status=undelivered_telegram_unreachable`. Mirror viled fetcher tenacity pattern (Plan 02-04).
+
+  > **Note (B5 FIX, revision 2026-05-12):** Earlier draft of D-603 cited a `wait_exponential`-based formula with multiplier=5, min=5, max=45. Empirical verification in `06-RESEARCH.md §Library Verification caveat #2` showed that formula produces the sequence `10s, 20s` (capped at max=45 only past attempt 4), not the intended `5s, 15s, 45s`. Plans 06-01..06-05 already use the corrected `wait_chain(wait_fixed(5), wait_fixed(15), wait_fixed(45))`; this footnote brings D-603 into sync.
 
 ### Pre-send gate composition + run-status policy (DELIVER-03 + cascade)
 
