@@ -53,11 +53,16 @@ def test_gate_fails_on_run_status_failed(synthetic_delivered_run):
 
 
 def test_gate_fails_on_missing_run_row(synthetic_delivered_run):
-    """Check #1 fail: run row deleted → upstream_status_None."""
-    engine, run_writer, run_id, _ = synthetic_delivered_run
-    with engine.begin() as conn:
-        conn.execute(text("DELETE FROM runs WHERE run_id=:rid"), {"rid": run_id})
-    result = evaluate_gate(engine, run_writer, run_id)
+    """Check #1 fail: run row absent (read_run_status returns None) → upstream_status_None.
+
+    We probe a run_id that does not exist (synthetic fixture used run_id=1; we
+    ask the gate about run_id=99999). DELETE of the seeded row would cascade-fail
+    against snapshots/matches FK — using a never-created id is cleaner and
+    exactly matches the production scenario the canary cares about.
+    """
+    engine, run_writer, _run_id, _ = synthetic_delivered_run
+    nonexistent_run_id = 99999
+    result = evaluate_gate(engine, run_writer, nonexistent_run_id)
     assert result.route == "ops_only"
     assert result.gate_failed_check == "run_status"
     assert result.gate_failure_reason == "upstream_status_None"
