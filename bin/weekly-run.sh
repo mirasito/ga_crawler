@@ -40,6 +40,12 @@
 set -euo pipefail
 cd /opt/ga_crawler
 
+# 0. PATH for uv — Astral installer puts `uv` под ~/.local/bin (i.e.
+#    /opt/ga_crawler/.local/bin для ga_crawler). Non-interactive shells (cron,
+#    sudo -u) НЕ читают ~/.bashrc, поэтому PATH здесь explicit. Defense-in-depth:
+#    /etc/cron.d/ga_crawler также задаёт PATH= directive.
+export PATH="/opt/ga_crawler/.local/bin:$PATH"
+
 # 1. ENV load (bash is the env-loading authority for cron context;
 #    python-dotenv lives only in cli.py per Phase 6 RESEARCH caveat #4).
 set -a

@@ -20,5 +20,6 @@
 
 CRON_TZ=Asia/Almaty
 MAILTO=""
+PATH=/opt/ga_crawler/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 0 23 * * 0 ga_crawler /opt/ga_crawler/bin/weekly-run.sh
 0 1  * * * ga_crawler /opt/ga_crawler/bin/backup.sh

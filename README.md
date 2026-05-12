@@ -29,11 +29,12 @@ sudo -u ga_crawler bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
 
 # 4. Клонирование репо + sync deps + Playwright/Firefox binary.
 #    /opt/ga_crawler уже создан (шаг 2) и пуст — git clone в пустой существующий dir
-#    разрешён.
+#    разрешён. uv вызываем по абсолютному пути: sudo НЕ наследует ~/.local/bin
+#    через secure_path в /etc/sudoers, а ~/.bashrc не читается non-login shell'ом.
 sudo -u ga_crawler git clone <repo-url> /opt/ga_crawler
 cd /opt/ga_crawler
-sudo -u ga_crawler uv sync
-sudo -u ga_crawler uv run playwright install firefox
+sudo -u ga_crawler /opt/ga_crawler/.local/bin/uv sync
+sudo -u ga_crawler /opt/ga_crawler/.local/bin/uv run playwright install firefox
 
 # 5. Лог-директория (owned by ga_crawler — logrotate `create 0644 ga_crawler ga_crawler`).
 sudo install -d -o ga_crawler -g ga_crawler -m 0755 /var/log/ga_crawler
