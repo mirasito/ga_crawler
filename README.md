@@ -219,7 +219,9 @@ tail -f /var/log/ga_crawler/weekly-run-$(date +%F).log | jq .
 grep '"level":"error"' /var/log/ga_crawler/weekly-run-$(date +%F).log | jq .
 
 # История по run_id (включая gzipped archives):
-zgrep '"run_id":42' /var/log/ga_crawler/*.log.gz | jq .
+# -h обязателен: при multi-file match zgrep по умолчанию префиксит каждую строку
+# "filename:" → jq падает на parse error и теряет весь stream.
+zgrep -h '"run_id":42' /var/log/ga_crawler/*.log.gz | jq .
 
 # Phase-level inspection (например только goldapple):
 grep '"phase":"goldapple"' /var/log/ga_crawler/weekly-run-$(date +%F).log | jq .
