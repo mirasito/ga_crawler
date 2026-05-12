@@ -9,7 +9,8 @@ date: 2026-05-12
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — Phase 6 done, Phase 7 next]]** — что делать прямо сейчас (Phase 6 SHIPPED 2026-05-12 через `/gsd-plan-phase 6` + `/gsd-execute-phase 6 --auto`; 6 plans across 5 waves; 30 commits; 746 passed / 0 failed; verifier PASSED 4/4 SC + все архитектурные инварианты; Phase 7 = Scheduler + Observability Hardening, финал v1)
+- **[[Текущие приоритеты — Phase 7 planned, execute next]]** — что делать прямо сейчас (Phase 7 PLANNED 2026-05-12 через `/gsd-plan-phase 7`; 5 plans across 4 waves; researcher + validation + pattern-mapper + planner + plan-checker отработали автономно YOLO; plan-checker PASSED с 2 non-blocking warnings; Phase 7 = Scheduler + Observability Hardening — ZERO production Python, all shell+cron+logrotate+Markdown ops layer; финал v1)
+- Phase 6 done trail: ~~[[Текущие приоритеты — Phase 6 done, Phase 7 next]]~~ — superseded 2026-05-12 (Phase 7 planned end-to-end в одной сессии; 5 plans готовы к execute)
 - Phase 6 contexted trail: ~~[[Текущие приоритеты — Phase 6 contexted, plan next]]~~ — superseded 2026-05-12 (Phase 6 planned + executed end-to-end в одной сессии)
 - Phase 5 done trail: ~~[[Текущие приоритеты — Phase 5 done, Phase 6 next]]~~ — superseded 2026-05-12 (Phase 6 contexted; D-601..D-616 locked; Phase 5 cascade D-514/D-515/D-405 honored verbatim)
 - Phase 5 execute trail: ~~[[Текущие приоритеты — Phase 5 plan ready, execute next]]~~ — superseded 2026-05-12 (Phase 5 executed end-to-end; verifier 6/6 must-haves; 3 visual items в HUMAN-UAT)
@@ -41,6 +42,7 @@ date: 2026-05-12
 - **Решения Phase 4 (живые, 2026-05-11):** **[[Matches table — денормализованная, N→1 keep-all]]** (D-401/-403) · **[[Sanity-gate P — третий экземпляр паттерна auto-suggest 0.7×median]]** (D-406/-407 — третий retailer-domain экземпляр D-201/D-308 паттерна) · [[Match-rate — KPI с первой недели]] обновлено: формула frozen via D-405 source-locked canary
 - **Решения Phase 5 (живые, 2026-05-11):** **[[Reporter — source-of-truth для Telegram caption через runs.stats.report.summary_text]]** (D-514 — 7-key namespace + caption-without-regen invariant; cascades в Phase 6 — verified runtime 2026-05-12) · **[[REPORT-06 size guard — delivery-time concern, не reporter-time]]** (D-515 — xlsx ВСЕГДА пишется + `size_guard_passed=false` flag для Phase 6 DELIVER-03 gate — verified runtime 2026-05-12)
 - **Решения Phase 6 (живые, 2026-05-12, runtime-verified):** **[[Delivery failure decoupled from runs.status — Telegram outage stays success]]** (D-605 — ARCHITECTURE «reporter independent of delivery» расширено: Telegram outage → status=success + delivery_status=undelivered + xlsx на диске; manual recovery via `deliver-run --run-id N`; Phase 7 two-tier Healthchecks) · **[[aiogram 3.27 + asyncio.run() sync wrapper — SDK для Telegram delivery]]** (D-601/D-602 — CLAUDE.md lock + mirror goldapple_run precedent в main_run.py:224) · **[[Asymmetric ENV handling — fail-loud для bot token, degrade для chat_id]]** (D-611 — pattern для secrets vs config endpoint distinction; decision rule «без ENV minimum viable operation возможен?» → нет=fail-loud, да=degrade)
+- **Решения Phase 7 (живые, 2026-05-12, plan-stage):** **[[Bash wrapper владеет Healthchecks pings, не Python — hard-crash coverage critical]]** (D-701 — OOM/segfault/kill-9 coverage; Python in-process pings blind, bash wrapper after `set +e` always reaches cleanup) · **[[Phase 7 ships zero production Python — ops layer over frozen pipeline]]** (структурный canary `tests/test_phase07_structural_canaries.py` ловит любое изменение в `src/ga_crawler/*.py`; 5-way `runs.stats.*` + pyproject namespace invariants preserved) · **[[bin weekly-run.sh — rigid contract with flock and fail-loud HC_PING_URL]]** (D-709 — 9 invariants; exit code 4 reserved HC_PING_URL missing, exit 5 reserved flock-double-run-refused; shebang reconciled `#!/usr/bin/env bash` vs D-709 verbatim `#!/bin/bash`) · **[[README 10 sections RU primary EN code — single file для operator-is-developer team]]** (D-707 — single-file не split; H2 canary enforces order + Cyrillic)
 - **Решения Phase 3 (живые, 2026-05-11):** **[[SMOKE_URLS rotation — операторская routine, не Phase 3 code defect]]** (первая ротация 2026-05-11; ops-procedure, не fix-plan материал)
 - **Решения (superseded):** ~~[[Tier 2 Patchright — стартовый tier для goldapple]]~~ → заменено Camoufox-экспериментом 2026-05-06 → финал [[Goldapple — Tier 2 Camoufox без proxy, 99 из 100]]
 - **Решения (superseded):** ~~[[Спайковый fetch-OK = HTML 200 плюс product JSON-LD]]~~ → D-14 revised 2026-05-06: goldapple uses inline microdata (`itemprop="price"`), not JSON-LD Product schema
@@ -66,6 +68,7 @@ date: 2026-05-12
 - [[2026-05-12 — Phase 5 executed — reporter shipped через 6 waves]]
 - [[2026-05-12 — Phase 6 contexted — Telegram delivery decisions D-601..D-616]]
 - [[2026-05-12 — Phase 6 planned + executed end-to-end, Telegram delivery shipped]]
+- [[2026-05-12 — Phase 7 planned end-to-end, 5 plans across 4 waves ready для execute]]
 
 ## Inbox
 
