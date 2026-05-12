@@ -41,7 +41,9 @@ from ga_crawler.alias.yaml_loader import YamlBrandAlias
 from ga_crawler.config import ViledConfig
 from ga_crawler.matcher.config import MatchConfig
 from ga_crawler.normalizers.facade import Normalizer
+from ga_crawler.delivery.config import DeliverConfig, DeliverEnvConfig
 from ga_crawler.reporter.config import ReportConfig
+from ga_crawler.runners.delivery_run import run_delivery_phase
 from ga_crawler.runners.matcher_run import run_matcher_phase
 from ga_crawler.runners.reporter_run import run_reporter_phase
 from ga_crawler.runners.viled_run import run_viled_phase
@@ -73,6 +75,9 @@ class MainRunResult:
     xlsx_size_bytes: int = 0
     summary_text: str = ""
     size_guard_passed: bool = True
+    # ---- Plan 06-05 additions per D-616 (Phase 7 Healthchecks cascade) ----
+    delivery_status: str = "pending"
+    delivery_route: str = ""
     # ---- keep stats_delta last (default_factory) ----
     stats_delta: dict = field(default_factory=dict)
 
@@ -177,6 +182,10 @@ def run_weekly(
     xlsx_size_bytes: int = 0
     summary_text: str = ""
     size_guard_passed: bool = True
+    # Plan 06-05 — delivery outcome scoped above try so the except branch returns
+    # valid MainRunResult with sane defaults. D-616 + Phase 7 health-probe.
+    delivery_status: str = "pending"
+    delivery_route: str = ""
 
     try:
         # ---- Viled phase ----
@@ -205,6 +214,8 @@ def run_weekly(
                     viled_count=viled_count,
                     reason=v_result.reason,
                     norm06_path=norm06_path,
+                    delivery_status=delivery_status,
+                    delivery_route=delivery_route,
                     stats_delta=dict(stats_delta_acc),
                 )
 
@@ -254,6 +265,8 @@ def run_weekly(
                     goldapple_count=goldapple_count,
                     reason=g_result.reason,
                     norm06_path=norm06_path,
+                    delivery_status=delivery_status,
+                    delivery_route=delivery_route,
                     stats_delta=dict(stats_delta_acc),
                 )
 
@@ -307,6 +320,8 @@ def run_weekly(
                     match_rate=match_rate,
                     reason=m_result.reason,
                     norm06_path=norm06_path,
+                    delivery_status=delivery_status,
+                    delivery_route=delivery_route,
                     stats_delta=dict(stats_delta_acc),
                 )
             elif m_result.status == "skipped":
@@ -357,6 +372,37 @@ def run_weekly(
                         reason=r_result.reason,
                     )
 
+                # ---- Delivery phase (Plan 06-05; D-604 gate + D-605 never-fails-run) ----
+                # Composition rule (D-615): delivery needs reporter output (xlsx + summary).
+                # Explicit gate above D-507/D-604 (Plan 05-05 pattern preserved).
+                # On Telegram unreachable: delivery_status='undelivered_*' but runs.status
+                # remains 'success' (D-605 invariant) and xlsx persists on disk.
+                # Outer DATA-05 try/except catches only programmer bugs.
+                if r_result.status == "success" and r_result.xlsx_path:
+                    deliver_config = DeliverConfig.from_pyproject(pyproject_path)
+                    deliver_env = DeliverEnvConfig.from_env()
+                    log.info(
+                        "weekly_run_delivery_starting",
+                        run_id=run_id,
+                    )
+                    d_result = run_delivery_phase(
+                        run_id=run_id,
+                        engine=engine,
+                        run_writer=run_writer,
+                        repo_root=repo_root,
+                        config=deliver_config,
+                        env=deliver_env,
+                    )
+                    delivery_status = d_result.delivery_status
+                    delivery_route = d_result.route
+                    stats_delta_acc.update(d_result.stats_delta)
+                    log.info(
+                        "weekly_run_delivery_complete",
+                        run_id=run_id,
+                        status=delivery_status,
+                        route=delivery_route,
+                    )
+
         # ---- Norm06 review queue (D-211) ----
         norm06_path = Norm06Writer(repo_root).persist(
             run_id, viled_unmatched, goldapple_new_slugs
@@ -393,6 +439,8 @@ def run_weekly(
             xlsx_size_bytes=xlsx_size_bytes,
             summary_text=summary_text,
             size_guard_passed=size_guard_passed,
+            delivery_status=delivery_status,
+            delivery_route=delivery_route,
             stats_delta=dict(stats_delta_acc),
         )
 
@@ -432,6 +480,8 @@ def run_weekly(
             match_rate=match_rate,
             reason=reason,
             norm06_path=norm06_path,
+            delivery_status=delivery_status,
+            delivery_route=delivery_route,
             stats_delta=dict(stats_delta_acc),
         )
 
