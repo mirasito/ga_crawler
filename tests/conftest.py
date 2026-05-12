@@ -592,3 +592,70 @@ def synthetic_report_run(tmp_path):
     )
 
     return engine, run_writer, run_id, tmp_path
+
+
+# ============================================================================
+# Plan 06-01 (Wave 0) — Phase 6 delivery fixtures.
+# ============================================================================
+
+
+@pytest.fixture
+def synthetic_delivered_run(synthetic_report_run):
+    """Phase 6 Pitfall F superset of synthetic_report_run.
+
+    Populates report.* (xlsx_path + summary_text + size_guard_passed=True)
+    on top of the report.* keys planted by synthetic_report_run. Also
+    plants a fake xlsx file on disk so FSInputFile would succeed.
+    Returns: (engine, run_writer, run_id, repo_root).
+    """
+    engine, run_writer, run_id, repo_root = synthetic_report_run
+    reports_dir = repo_root / "reports"
+    reports_dir.mkdir(exist_ok=True)
+    fake_xlsx = reports_dir / "2026-W19.xlsx"
+    fake_xlsx.write_bytes(b"PK\x03\x04fake-xlsx-content-for-tests")
+    run_writer.patch_stats(run_id, {
+        "report.xlsx_path": "reports/2026-W19.xlsx",
+        "report.xlsx_size_bytes": fake_xlsx.stat().st_size,
+        "report.summary_text": "\U0001f4ca Weekly report 2026-W19\nmatch_count: 3 (60.0%)",
+        "report.sheet_row_counts": {"summary": 1, "per_sku_deltas": 3},
+        "report.skipped_reason": "",
+        "report.size_guard_passed": True,
+        "report.generated_at": "2026-05-10T14:30:00+00:00",
+    })
+    return engine, run_writer, run_id, repo_root
+
+
+@pytest.fixture
+def mock_aiogram_bot(mocker):
+    """Mock aiogram Bot — send_message/send_document return Message with stub id.
+
+    Returns a MagicMock with __aenter__/__aexit__ as AsyncMock so it works
+    as an async context manager. send_message returns message_id=10001;
+    send_document returns message_id=10002.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+    bot = MagicMock()
+    bot.__aenter__ = AsyncMock(return_value=bot)
+    bot.__aexit__ = AsyncMock(return_value=None)
+    bot.send_message = AsyncMock(return_value=MagicMock(message_id=10001))
+    bot.send_document = AsyncMock(return_value=MagicMock(message_id=10002))
+    bot.session = MagicMock()
+    bot.session.close = AsyncMock(return_value=None)
+    return bot
+
+
+@pytest.fixture
+def mock_tg_env(monkeypatch):
+    """Set TG_* env vars for delivery tests.
+
+    Per RESEARCH caveat #4: tests use monkeypatch.setenv, NOT .env file
+    loading. Yields a dict of the planted values for easy assertions.
+    """
+    monkeypatch.setenv("TG_BOT_TOKEN", "test-token-12345")
+    monkeypatch.setenv("TG_BUSINESS_CHAT_ID", "-100000001")
+    monkeypatch.setenv("TG_OPS_CHAT_ID", "-100000002")
+    yield {
+        "bot_token": "test-token-12345",
+        "business_chat_id": "-100000001",
+        "ops_chat_id": "-100000002",
+    }
