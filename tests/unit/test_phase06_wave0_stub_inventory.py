@@ -1,10 +1,19 @@
 """Wave 0 / Plan 06-01 — Task 3 RED-gate test.
 
-Asserts the 10 skip-marked stub test files exist with the expected docstring
-+ pytest.mark.skip placeholder. Permanent canary: subsequent waves replace
-each stub with real tests; the canary fails when a stub is forgotten.
+Asserts the remaining skip-marked stub test files still exist with the
+expected ``pytest.mark.skip`` placeholder + docstring naming the plan
+that will replace them. Permanent canary: subsequent waves replace each
+stub with real tests; the canary fails when a stub is forgotten.
 
-Stub inventory + target plan per Task 3 of 06-01-PLAN.md:
+Wave-1 (Plan 06-02) replaced 4 of the original 10 stubs with real tests
+(``test_delivery_config.py``, ``test_message_builder.py``,
+``test_delivery_stats.py``, ``tests/unit/test_stats_namespace_five_way.py``).
+The remaining 6 still belong to Plans 06-03 / 06-04 / 06-05 and continue
+to require this canary until they are turned GREEN. The total-count
+assertion below tracks the originally planned 10 stubs minus those
+already populated.
+
+Stub inventory + target plan per Task 3 of 06-01-PLAN.md (minus Wave-1 closures):
 """
 
 from __future__ import annotations
@@ -14,35 +23,45 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# (relative-path, target-plan-marker-in-docstring) pairs.
+# Remaining (relative-path, target-plan-marker-in-docstring) pairs.
+# Wave-1 closures (no longer stubs):
+#   - tests/test_delivery_config.py            → Plan 06-02 GREEN
+#   - tests/test_message_builder.py            → Plan 06-02 GREEN
+#   - tests/test_delivery_stats.py             → Plan 06-02 GREEN
+#   - tests/unit/test_stats_namespace_five_way.py → Plan 06-02 GREEN
 STUB_FILES = [
-    ("tests/test_delivery_config.py", "Plan 06-02"),
     ("tests/test_telegram_client.py", "Plan 06-03"),
     ("tests/test_gate.py", "Plan 06-03"),
-    ("tests/test_message_builder.py", "Plan 06-02"),
-    ("tests/test_delivery_stats.py", "Plan 06-02"),
     ("tests/test_delivery_source_lock.py", "Plan 06-05"),
     ("tests/integration/test_delivery_run.py", "Plan 06-04"),
     ("tests/integration/test_cli_deliver.py", "Plan 06-04"),
     ("tests/integration/test_weekly_run_with_delivery.py", "Plan 06-05"),
-    ("tests/unit/test_stats_namespace_five_way.py", "Plan 06-05"),
+]
+
+# Wave-1 stub closures — these files must NOT contain pytest.mark.skip
+# any more; the canary below pins that.
+WAVE1_CLOSURES = [
+    "tests/test_delivery_config.py",
+    "tests/test_message_builder.py",
+    "tests/test_delivery_stats.py",
+    "tests/unit/test_stats_namespace_five_way.py",
 ]
 
 
-def test_all_ten_stub_files_exist():
+def test_all_remaining_stub_files_exist():
     for rel, _ in STUB_FILES:
         path = REPO_ROOT / rel
         assert path.exists(), f"missing stub: {rel}"
 
 
-def test_all_ten_stub_files_contain_skip_marker():
+def test_all_remaining_stub_files_contain_skip_marker():
     for rel, _ in STUB_FILES:
         path = REPO_ROOT / rel
         content = path.read_text(encoding="utf-8")
         assert "pytest.mark.skip" in content, f"{rel} missing pytest.mark.skip marker"
 
 
-def test_all_ten_stub_files_cite_target_plan_in_docstring():
+def test_all_remaining_stub_files_cite_target_plan_in_docstring():
     for rel, target_plan in STUB_FILES:
         path = REPO_ROOT / rel
         content = path.read_text(encoding="utf-8")
@@ -53,5 +72,17 @@ def test_all_ten_stub_files_cite_target_plan_in_docstring():
         )
 
 
-def test_stub_count_is_exactly_ten():
-    assert len(STUB_FILES) == 10
+def test_remaining_stub_count_after_wave1():
+    """Wave-0 planned 10 stubs; Wave-1 closed 4 → 6 remain (Plans 06-03/04/05)."""
+    assert len(STUB_FILES) == 6
+
+
+def test_wave1_closures_no_longer_have_skip_marker():
+    """Regression: files closed by Plan 06-02 must have no ``pytest.mark.skip``."""
+    for rel in WAVE1_CLOSURES:
+        path = REPO_ROOT / rel
+        content = path.read_text(encoding="utf-8")
+        assert "pytest.mark.skip" not in content, (
+            f"{rel} should be GREEN after Plan 06-02 but still contains "
+            f"a pytest.mark.skip marker"
+        )

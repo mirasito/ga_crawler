@@ -1,6 +1,8 @@
-# Phase 6 ops-alert golden file. Plan 06-01 (Wave 0) creates placeholders;
-# Plan 06-02 (Wave 1) test_message_builder.py replaces the placeholder
-# lines with the real output of build_ops_alert(...) for each scenario.
+# Phase 6 ops-alert golden file. Plan 06-01 (Wave 0) seeded 5 section
+# headers with stub bodies; Plan 06-02 (Wave 1) replaced them with real
+# build_ops_alert(...) output produced by the module on 2026-05-12 from
+# the fixed inputs documented in
+# tests/test_message_builder.py::GOLDEN_SCENARIOS.
 #
 # 5 scenarios per D-610 + RESEARCH §Pattern 4 + Pitfall A:
 #   1. upstream_status_failed  (matcher gate-trip — runs.status='failed')
@@ -8,18 +10,83 @@
 #   3. empty_summary_text      (reporter D-507 skip — summary_text='')
 #   4. no_xlsx_in_stats        (matcher skipped → no reporter — xlsx_path='')
 #   5. delivery_exception      (Pitfall A — TelegramBadRequest/Forbidden/etc.)
+#
+# Fixed inputs (W1-locked — drift here breaks the golden-file canary):
+#   run_id           = 42
+#   started_at_utc   = datetime(2026, 5, 11, 17, 0, tzinfo=timezone.utc)
+#                      → "2026-05-11 22:00 +0500" Asia/Almaty (UTC+5)
+#   viled_count      = 120
+#   goldapple_count  = 540
+#   size_limit_mb    = 45
+#
+# Almaty formatting uses strftime("%Y-%m-%d %H:%M %z") — numeric %z (W1
+# fix); uppercase %Z would render a platform-dependent named zone.
 
 === upstream_status_failed ===
-<PLACEHOLDER — to be filled in by tests/test_message_builder.py Plan 06-02>
+🚨 <b>Weekly run #42</b> — upstream pipeline failed
+
+<i>Run started:</i> 2026-05-11 22:00 +0500
+<i>Run status:</i> <code>failed</code>
+<i>Gate failure:</i> <code>run_status</code>
+
+<i>Snapshot stats:</i>
+  viled: 120 • goldapple: 540
+  matches: 0 (0.0%)
+
+<i>Manual recovery:</i> <code>python -m ga_crawler deliver-run --run-id 42</code>
 
 === xlsx_oversize ===
-<PLACEHOLDER — to be filled in by tests/test_message_builder.py Plan 06-02>
+🚨 <b>Weekly run #42</b> — xlsx too large for Telegram
+
+<i>Run started:</i> 2026-05-11 22:00 +0500
+<i>Run status:</i> <code>success</code>
+<i>Gate failure:</i> <code>size_guard</code>
+
+<i>Snapshot stats:</i>
+  viled: 120 • goldapple: 540
+  matches: 30 (25.0%)
+  xlsx size: 48.7 MB (limit: 45 MB)
+
+<i>Manual recovery:</i> <code>python -m ga_crawler deliver-run --run-id 42</code>
 
 === empty_summary_text ===
-<PLACEHOLDER — to be filled in by tests/test_message_builder.py Plan 06-02>
+🚨 <b>Weekly run #42</b> — missing report summary
+
+<i>Run started:</i> 2026-05-11 22:00 +0500
+<i>Run status:</i> <code>success</code>
+<i>Gate failure:</i> <code>summary_text</code>
+
+<i>Snapshot stats:</i>
+  viled: 120 • goldapple: 540
+  matches: 0 (0.0%)
+
+<i>Manual recovery:</i> <code>python -m ga_crawler deliver-run --run-id 42</code>
 
 === no_xlsx_in_stats ===
-<PLACEHOLDER — to be filled in by tests/test_message_builder.py Plan 06-02>
+🚨 <b>Weekly run #42</b> — xlsx file missing
+
+<i>Run started:</i> 2026-05-11 22:00 +0500
+<i>Run status:</i> <code>success</code>
+<i>Gate failure:</i> <code>xlsx_path</code>
+
+<i>Snapshot stats:</i>
+  viled: 120 • goldapple: 540
+  matches: 0 (0.0%)
+
+<i>Manual recovery:</i> <code>python -m ga_crawler deliver-run --run-id 42</code>
 
 === delivery_exception ===
-<PLACEHOLDER — to be filled in by tests/test_message_builder.py Plan 06-02>
+🚨 <b>Weekly run #42</b> — delivery layer crashed
+
+<i>Run started:</i> 2026-05-11 22:00 +0500
+<i>Run status:</i> <code>success</code>
+<i>Gate failure:</i> <code></code>
+
+<i>Snapshot stats:</i>
+  viled: 120 • goldapple: 540
+  matches: 0 (0.0%)
+
+<i>Error:</i> <pre>TelegramBadRequest: chat not found
+  at line 42</pre>
+
+<i>Manual recovery:</i> <code>python -m ga_crawler deliver-run --run-id 42</code>
