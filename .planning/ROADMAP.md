@@ -19,7 +19,7 @@
 - [x] **Phase 4: Matcher + Match-Rate KPI** — Strict-key matches between viled and goldapple are persisted per `run_id`, match-rate is logged as a tracked KPI, and a sanity-gate blocks delivery on low match counts.
 - [x] **Phase 5: Reporter (Excel + summary)** — A multi-sheet Russian-headed Excel file and text summary are produced from the database alone, archived to disk, independent of any delivery channel.
 - [x] **Phase 6: Telegram Delivery + Ops/Business Split** — Successful runs deliver Excel + summary to the business chat; failed/incomplete runs deliver alerts only to the ops chat; pre-send sanity-gate enforces the boundary.
-- [ ] **Phase 7: Scheduler + Observability Hardening** — Weekly cron in Asia/Almaty fires reliably, dead-man's-switch monitoring catches missed runs, and a deliberate-failure test confirms ops alerts route correctly.
+- [x] **Phase 7: Scheduler + Observability Hardening** — Weekly cron in Asia/Almaty fires reliably, dead-man's-switch monitoring catches missed runs, and a deliberate-failure test confirms ops alerts route correctly.
 
 ## Phase Details
 
@@ -160,7 +160,12 @@
   3. Structured JSON logs (structlog) are written to disk with rotation; a single `tail`/`grep` session shows run progress, retries, and errors with `run_id` bound as context.
   4. A `README.md` documents from-scratch VPS setup (uv install, Playwright deps, cron entry, ENV vars, healthcheck URL) and includes a deliberate-failure test procedure that confirms the ops alert fires and the business chat stays clean.
   5. End-to-end: a deliberately broken parser run shows the ops chat receives an alert, the business chat receives nothing, Healthchecks records a failure, and the `runs` row is `failed` with the error captured.
-**Plans**: TBD
+**Plans**: 5 plans across 4 waves (Wave 1 source-lock canaries → Wave 2 deploy templates + bash wrappers parallel → Wave 3 README → Wave 4 doc cascade close-out)
+- [x] 07-01-PLAN.md — Wave 1: 7 RED-gate source-lock + shape canary stubs (SCHED-01..05; tests/test_phase07_*.py top-level)
+- [x] 07-02-PLAN.md — Wave 2: deploy/etc-cron-d-ga_crawler (D-708) + deploy/etc-logrotate-d-ga_crawler (D-705) + .env.example HC_PING_URL= line (closes 3 Wave-0 canaries; SCHED-01 + SCHED-02 + SCHED-04 at template level)
+- [x] 07-03-PLAN.md — Wave 2: bin/weekly-run.sh (D-709 contract — HC pings + flock + log redirect + exit code passthrough) + bin/test-failure-alert.sh (D-706 5-step orchestrator; reuses existing CLI surface; NO new production Python — closes 2 Wave-0 canaries; SCHED-03 + SCHED-04 at source level)
+- [x] 07-04-PLAN.md — Wave 3: README.md 10-section RU-primary operator runbook (D-707 verbatim ordering; closes last Wave-0 canary; SCHED-05; documents SC#1 + SC#5 operator manual smoke procedures)
+- [x] 07-05-PLAN.md — Wave 4: doc cascade close-out — REQUIREMENTS.md SCHED-01..05 closed with per-plan citations + Traceability table 5/5 Done + Coverage 47/48; STATE.md 4 new D-7xx Accumulated Key Decisions rows + Plan Execution Metrics + Current Position COMPLETE; ROADMAP.md Phase 7 plan list filled + Progress 5/5 Complete; INFRA-V2-04 surfaced per D-710
 **UI hint**: no
 
 ## Phase Dependencies
@@ -193,7 +198,7 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 | 4. Matcher + Match-Rate KPI | 6/6 | Complete (all 6 plans shipped Wave 1..5; matches table per D-401, match-rate KPI frozen with week-1 baseline per D-405, sanity-gate P + auto-suggest D-406..-409, idempotency D-410, skip-protocol D-411, standalone matcher-run CLI D-412) | 2026-05-11 |
 | 5. Reporter (Excel + summary) | 6/6 | Complete (all 6 plans shipped Wave 0..5; reports/YYYY-WNN.xlsx archived per D-510 atomic write + D-512 ISO-week derivation; D-514 7-key report.* stats namespace + 4-way disjoint invariant; D-507 status-gate REUSES D-411 read_run_status; D-405 KPI verbatim citation; D-515 size-guard flag-only with Phase 6 DELIVER-03 cascade invariant; 138 net new tests Wave 0..4; doc cascade Wave 5 closes REPORT-01..06 + amends REPORT-01 per D-502 + propagates D-514/D-515/D-405 to STATE.md for Phase 6 inheritance) | 2026-05-12 |
 | 6. Telegram Delivery + Ops/Business Split | 6/6 | Complete (all 6 plans shipped Wave 0..5; DELIVER-01..05 closed; aiogram 3.27 SDK + tenacity wait_chain(5,15,45) + D-606 6-value enum + D-607 8-key namespace + D-605 delivery decoupled from runs.status for Phase 7 Healthchecks inheritance; D-608 `deliver-run --run-id N` standalone recovery; ~118 net new tests Wave 0..5; ARCHITECTURE.md "reporter independent of delivery" extended inverted "delivery independent of run-status correctness") | 2026-05-12 |
-| 7. Scheduler + Observability Hardening | 0/0 | Not started | - |
+| 7. Scheduler + Observability Hardening | 5/5 | Complete (all 5 plans shipped Wave 1..4; SCHED-01..05 closed; D-701/D-708/D-709/D-710 cascade persisted to STATE.md; Phase 7 ships ZERO production Python — operator-facing artifacts only: deploy/ templates + bin/*.sh wrappers + README.md; runtime verification (SC#1 cron tick lands at Almaty time + SC#5 deliberate-failure end-to-end) deferred to operator manual smoke per 07-VALIDATION.md «Manual-Only Verifications»; ARCHITECTURE.md «delivery independent of run-correctness» extended Phase 7 «monitoring independent of business logic» — HC pings live in bash wrapper, not Python) | 2026-05-12 |
 
 ## Coverage Validation
 
@@ -230,3 +235,4 @@ Strict linear dependency. The `snapshots` table is the integration backbone — 
 *Phase 5 plan list filled: 2026-05-11 (6 plans across 6 waves — Wave 0 foundation → Wave 5 doc cascade; reporter independent of delivery per ARCHITECTURE.md; D-514 source-of-truth for Telegram caption; D-515 size-guard flag-only with Phase 6 cascade)*
 *Phase 5 close-out: 2026-05-12 (all 6 plans shipped; REPORT-01..06 closed in REQUIREMENTS.md with closure annotations; REPORT-01 amended per D-502 SKU-level gap reinterpretation within brand-overlap CRAWL-02 scope; D-514/D-515/D-405 cascade rows persisted to STATE.md Accumulated Key Decisions for Phase 6 planner inheritance; Plan Execution Metrics extended with 6 rows 05-01..05-06; project total 37/48 v1 requirements satisfied; Phase 6 Telegram Delivery unblocked)*
 *Phase 6 plan list filled + close-out: 2026-05-12 — all 6 plans shipped Wave 0..5; DELIVER-01..05 closed in REQUIREMENTS.md with per-plan citations; D-605/D-606/D-607 cascade persisted to STATE.md Accumulated Key Decisions for Phase 7 planner inheritance; project total 42/48 v1 requirements satisfied; Phase 7 Scheduler + Observability Hardening unblocked.*
+*Phase 7 plan list filled + close-out: 2026-05-12 — all 5 plans shipped Wave 1..4; SCHED-01..05 closed in REQUIREMENTS.md with per-plan citations; D-701/D-708/D-709/D-710 cascade persisted to STATE.md for v2/Phase-8 inheritance; INFRA-V2-04 (Docker image deferred) added to v2 Infrastructure backlog per D-710; project total 47/48 v1 requirements satisfied (RECON-01 spike memo remains in Phase 1 ops backlog). v1 milestone effectively COMPLETE — operator-led VPS deploy on Hetzner CX22 EU is the only remaining unblock for first production weekly cron tick.*

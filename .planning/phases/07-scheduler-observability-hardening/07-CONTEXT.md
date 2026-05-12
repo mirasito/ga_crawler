@@ -303,19 +303,19 @@ Phase 7 — **operations layer** над уже-готовым pipeline'ом Phas
 
 The following changes propagate to other artifacts at next opportunity:
 
-- **`.env.example`**: add `HC_PING_URL=` placeholder (Phase 7 NEW; existing 3 TG_* vars from Phase 6 stay) — surface at Plan 07-XX Wave 0.
-- **`pyproject.toml`**: NO changes (no new deps, no new namespace) — Phase 7 = shell + configs + docs only.
-- **`.planning/REQUIREMENTS.md` SCHED-01..05**: annotate с per-plan citation (D-701..D-710 decision IDs) at Phase 7 close-out — mirror Plan 05-06 / Plan 06-06 doc cascade pattern.
+- **`.env.example`**: add `HC_PING_URL=` placeholder (Phase 7 NEW; existing 3 TG_* vars from Phase 6 stay) — surface at Plan 07-XX Wave 0. **[DONE Plan 07-02 Task 3]** — `.env.example` MODIFIED (+6 lines: blank + 3 comment + blank + HC_PING_URL=); 14 lines total, 452 bytes; canary `test_phase07_env_example_shape.py::test_env_example_has_hc_ping_url_line` GREEN.
+- **`pyproject.toml`**: NO changes (no new deps, no new namespace) — Phase 7 = shell + configs + docs only. **[DONE — verified by tests/test_phase07_structural_canaries.py::test_pyproject_no_new_namespace_phase7 + zero diff in pyproject between Phase 6 close-out and Phase 7 close-out]**.
+- **`.planning/REQUIREMENTS.md` SCHED-01..05**: annotate с per-plan citation (D-701..D-710 decision IDs) at Phase 7 close-out — mirror Plan 05-06 / Plan 06-06 doc cascade pattern. **[DONE Plan 07-05 Task 1]** — 5 `- [x] **SCHED-0N**` rows with per-plan citations (07-02 / 07-03 / 07-04) + decision IDs (D-701..D-710); Traceability table rows updated Pending → Done; Coverage block 42/48 → 47/48; Phase 7 footer line appended.
 - **`.planning/STATE.md`**: add to "Accumulated Key Decisions":
-  - «D-701 Phase 7 — HC pings live в bash wrapper, не Python (hard-crash coverage). CLI exit codes уже семантически правильные через Phase 6 D-606 enum→exit-code mapping. Структурный canary: `git diff src/ga_crawler/cli.py` empty Phase 6→Phase 7.»
-  - «D-708 Phase 7 — `/etc/cron.d/ga_crawler` (root-edited, user column) preferred над user-crontab для ops visibility + git-trackability. Repo template at `deploy/etc-cron-d-ga_crawler`.»
-  - «D-709 Phase 7 — flock(1) advisory lock в `/var/lock/ga_crawler-weekly.lock` предотвращает double-run от cron+manual overlap. Exit code 5 reserved.»
-  - «D-710 Phase 7 — Docker defer to v2 (INFRA-V2-04). Camoufox Firefox 135-pinned не совместим с `mcr.microsoft.com/playwright/python:v1.57.0-noble` (Chromium-based); custom image — separate effort.»
-  - surface at Phase 7 close-out (Plan 07-XX final wave doc cascade).
-- **`.planning/REQUIREMENTS.md` v2 Infrastructure**: add `INFRA-V2-04: Docker image для reproducible redeploys` — surface at Phase 7 close-out per D-710.
-- **`README.md`** (new file at repo root, primary deliverable Phase 7 SCHED-05): 10-section structure per D-707; written в final Phase 7 wave.
-- **`deploy/etc-cron-d-ga_crawler`** (new file in repo): cron config-as-code per D-708 — surface at Plan 07-XX Wave N (planner places).
-- **`deploy/etc-logrotate-d-ga_crawler`** (new file in repo): logrotate config-as-code per D-704/D-705 — surface at Plan 07-XX Wave N.
-- **`bin/weekly-run.sh`** (new file): D-709 contract — surface at Plan 07-XX Wave N.
-- **`bin/test-failure-alert.sh`** (new file): D-706 orchestrator — surface at Plan 07-XX Wave N.
-- **`.gitignore`**: verify `/var/log/` not relevant (logs выкладываются на VPS, не in-repo); если кто-то будет local-symlink-ить `var/log/` для dev — добавить exclude. Plan 07-XX Wave 0 audit.
+  - «D-701 Phase 7 — HC pings live в bash wrapper, не Python (hard-crash coverage). CLI exit codes уже семантически правильные через Phase 6 D-606 enum→exit-code mapping. Структурный canary: `git diff src/ga_crawler/cli.py` empty Phase 6→Phase 7.» **[DONE Plan 07-05 Task 2]**
+  - «D-708 Phase 7 — `/etc/cron.d/ga_crawler` (root-edited, user column) preferred над user-crontab для ops visibility + git-trackability. Repo template at `deploy/etc-cron-d-ga_crawler`.» **[DONE Plan 07-05 Task 2]**
+  - «D-709 Phase 7 — flock(1) advisory lock в `/var/lock/ga_crawler-weekly.lock` предотвращает double-run от cron+manual overlap. Exit code 5 reserved.» **[DONE Plan 07-05 Task 2]**
+  - «D-710 Phase 7 — Docker defer to v2 (INFRA-V2-04). Camoufox Firefox 135-pinned не совместим с `mcr.microsoft.com/playwright/python:v1.57.0-noble` (Chromium-based); custom image — separate effort.» **[DONE Plan 07-05 Task 2]**
+  - surface at Phase 7 close-out (Plan 07-XX final wave doc cascade). **[DONE Plan 07-05 Task 2]** — 4 D-7xx rows appended to §Accumulated Key Decisions; Plan Execution Metrics extended with 5 rows 07-01..07-05; Current Position rewritten to Phase 7 COMPLETE.
+- **`.planning/REQUIREMENTS.md` v2 Infrastructure**: add `INFRA-V2-04: Docker image для reproducible redeploys` — surface at Phase 7 close-out per D-710. **[DONE Plan 07-05 Task 1]** — INFRA-V2-04 added to v2 Infrastructure backlog with rationale (Camoufox Firefox 135-pinned vs Chromium-based Playwright image; custom base image required).
+- **`README.md`** (new file at repo root, primary deliverable Phase 7 SCHED-05): 10-section structure per D-707; written в final Phase 7 wave. **[DONE Plan 07-04]** — 232 lines, 10 H2 sections in D-707 verbatim order; canary `tests/test_phase07_readme_structure.py::test_readme_h2_order_matches_d707` GREEN.
+- **`deploy/etc-cron-d-ga_crawler`** (new file in repo): cron config-as-code per D-708 — surface at Plan 07-XX Wave N (planner places). **[DONE Plan 07-02 Task 1]** — 24 lines, 1065 bytes; CRON_TZ=Asia/Almaty + MAILTO="" + weekly-run row + daily backup row; Pitfall #1 filename (no dot, no extension).
+- **`deploy/etc-logrotate-d-ga_crawler`** (new file in repo): logrotate config-as-code per D-704/D-705 — surface at Plan 07-XX Wave N. **[DONE Plan 07-02 Task 2]** — 28 lines, 1067 bytes; 7 directives (weekly + rotate 13 + compress + delaycompress + missingok + notifempty + create 0644 ga_crawler ga_crawler).
+- **`bin/weekly-run.sh`** (new file): D-709 contract — surface at Plan 07-XX Wave N. **[DONE Plan 07-03 Task 1]** — 77 lines, mode 100755; 7 responsibilities in strict order per D-709 verbatim; shebang reconciled to #!/usr/bin/env bash per project convention.
+- **`bin/test-failure-alert.sh`** (new file): D-706 orchestrator — surface at Plan 07-XX Wave N. **[DONE Plan 07-03 Task 2]** — 57 lines, mode 100755; verbatim 5-step recipe per D-706; reuses existing CLI surface only (zero new Python LOC).
+- **`.gitignore`**: verify `/var/log/` not relevant (logs выкладываются на VPS, не in-repo); если кто-то будет local-symlink-ить `var/log/` для dev — добавить exclude. Plan 07-XX Wave 0 audit. **[DONE Plan 07-01 audit]** — `.gitignore` audit confirmed no `/var/log/` symlink usage in dev workflows; no edit needed. Logs land on VPS only; never enter repo.
