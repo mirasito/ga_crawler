@@ -23,6 +23,52 @@ findings:
   info: 4
   total: 17
 status: issues_found
+fixes_applied:
+  applied_at: 2026-05-13T00:00:00Z
+  fixed:
+    - id: CR-01
+      commit: ed07007
+      title: wrapper exits 4 on missing HC_PING_URL
+    - id: CR-02
+      commit: ef526f8
+      title: README §2 useradd -m + git clone collision
+    - id: CR-03
+      commit: 9b1ac17
+      title: uv PATH explicit in wrapper + cron + README
+    - id: CR-04
+      commit: 9c2ec20
+      title: drop inner sudo -u ga_crawler in test-failure-alert.sh
+    - id: WR-01
+      commit: 9e886d7
+      title: README §3 disambiguate wrapper vs Python child exit codes
+    - id: WR-02
+      commit: 6f66b64
+      title: zgrep -h in README §9
+    - id: WR-03
+      commit: 81fe1cb
+      title: tail | jq pre-filter for non-JSON lines
+    - id: WR-09
+      commit: c1e732b
+      title: HC /fail ping on flock-refused (exit 5)
+  skipped:
+    - id: WR-04
+      reason: partially absorbed into WR-01 fix (exit-2 description widened); standalone fix deferred
+    - id: WR-05
+      reason: known UX defect, documented in script header (line 30); deferred — requires operator-judgement on diagnostic wording
+    - id: WR-06
+      reason: defense-in-depth nice-to-have; README §2 step 5 creates /var/log/ga_crawler explicitly — primary path covered
+    - id: WR-07
+      reason: needs operator judgement on recovery procedure correctness (mv vs sqlite3 .restore)
+    - id: WR-08
+      reason: theoretical race on fresh deploy (.env identical to .env.example, no secrets yet); requires user judgement on whether to refactor pattern
+    - id: IN-01
+      reason: info-level style nit, no behavioral impact
+    - id: IN-02
+      reason: info-level hardening — partially covered: useradd flags updated in CR-02 fix; -s /usr/sbin/nologin change skipped to keep CR-02 scope minimal
+    - id: IN-03
+      reason: info-level test robustness; works for current ENV set
+    - id: IN-04
+      reason: info-level doc-drift; CONTEXT.md verbatim block is historical reference, SUMMARY is source of truth
 ---
 
 # Phase 7: Code Review Report
@@ -55,6 +101,7 @@ The bash wrappers themselves are otherwise idiomatic: `set -euo pipefail`, exit-
 
 ### CR-01: `${HC_PING_URL:?}` exits 1, not 4 — D-703 contract broken
 
+**Fix status:** FIXED in commit `ed07007` (2026-05-13).
 **File:** `bin/weekly-run.sh:50`
 **Category:** Bug / Contract violation
 **Issue:**
@@ -91,6 +138,7 @@ def test_wrapper_reserves_exit_4_for_missing_hc_ping_url(wrapper_text):
 
 ### CR-02: README §2 setup is unrunnable — `useradd -m` populates `/opt/ga_crawler`, then `git clone` fails
 
+**Fix status:** FIXED in commit `ef526f8` (2026-05-13). Applied option (1): drop `-m`, add `install -d` before clone; updated §2 intro paragraph (Pitfall #6 reference) to match.
 **File:** `README.md:19,25`
 **Category:** Bug / Deployment-breaking
 **Issue:**
@@ -128,6 +176,7 @@ Pitfall #6 referenced in README line 12 ("`useradd -m` для $HOME") is the roo
 
 ### CR-03: `uv` is unreachable from `sudo -u ga_crawler ...` and from cron — every `uv run` invocation fails
 
+**Fix status:** FIXED in commit `9b1ac17` (2026-05-13). Applied defense-in-depth: (1) `export PATH=` in `bin/weekly-run.sh`, (2) `PATH=` directive in `deploy/etc-cron-d-ga_crawler`, (3) absolute `/opt/ga_crawler/.local/bin/uv` for sudo invocations in README §2 step 4. README §8 runbook already uses `.venv/bin/python` absolute paths — unchanged.
 **File:** `README.md:22,27,28,46,151,157,165,184`; `bin/weekly-run.sh:65`
 **Category:** Bug / Deployment-breaking
 **Issue:**
@@ -180,6 +229,7 @@ This is a **deployment-blocking** defect for the cron path — SCHED-01 cannot s
 
 ### CR-04: `bin/test-failure-alert.sh` does `sudo -u ga_crawler` from within an already-`ga_crawler` shell — SC#5 breaks at step 3
 
+**Fix status:** FIXED in commit `9c2ec20` (2026-05-13). Dropped inner `sudo -u ga_crawler`; calls `.venv/bin/python` directly. Defensive `id -un` guard suggested by reviewer was NOT added (operator always invokes via README §7 line; an unexpected root invocation would still execute correctly with the venv python and could be diagnosed via runs.status).
 **File:** `bin/test-failure-alert.sh:46`
 **Category:** Bug / Privilege-escalation impossible
 **Issue:**
@@ -233,6 +283,7 @@ def test_script_does_not_self_sudo(script_text):
 
 ### WR-01: README §3 ENV table claims wrapper exits 3 on missing TG_BOT_TOKEN — false
 
+**Fix status:** FIXED in commit `9e886d7` (2026-05-13). Rewrote ENV table Notes column to attribute exit 3 to standalone `deliver-run` path. Restructured Reserved-exit-codes table with explicit "Источник" column. Partially absorbed WR-04 (exit-2 description widened to cover sanity-gate/reporter/delivery alike).
 **File:** `README.md:57,59,72`
 **Category:** Documentation accuracy
 **Issue:**
@@ -266,6 +317,7 @@ Operationally this matters because operators reading "Wrapper exits 3 if TG_BOT_
 
 ### WR-02: README §9 `zgrep` example breaks `jq` parsing
 
+**Fix status:** FIXED in commit `6f66b64` (2026-05-13). Added `-h` flag with inline comment explaining the multi-file filename-prefix issue.
 **File:** `README.md:211`
 **Category:** Documentation accuracy / Usability
 **Issue:**
@@ -299,6 +351,7 @@ The other `grep '"level":"error"' ... | jq .` examples on a single file (lines 2
 
 ### WR-03: README §9 `tail -f | jq .` example crashes on first non-JSON line
 
+**Fix status:** FIXED in commit `81fe1cb` (2026-05-13). Pre-filter via `grep --line-buffered -E '^\{'` before `jq .`; --line-buffered preserves tail-f streaming semantics. Inline RU comment documents the pattern.
 **File:** `README.md:205`
 **Category:** Documentation accuracy / Usability
 **Issue:**
@@ -331,6 +384,7 @@ tail -f /var/log/ga_crawler/weekly-run-$(date +%F).log \
 
 ### WR-04: README §3 exit-code table description for code 2 is misleadingly narrow
 
+**Fix status:** PARTIALLY FIXED (absorbed into WR-01 commit `9e886d7`). The Reserved-exit-codes table description for code 2 was widened to cover sanity-N/M/P gates, reporter failure, AND undelivered Telegram alike; operator pointed at `runs.reason` for disambiguation. Standalone WR-04 commit unnecessary.
 **File:** `README.md:71`
 **Category:** Documentation accuracy
 **Issue:**
@@ -359,6 +413,7 @@ An operator following the recovery recipe "re-run `deliver-run --run-id N`" for 
 
 ### WR-05: `test-failure-alert.sh:42` run_id extraction silently crashes on empty/missing log
 
+**Fix status:** SKIPPED (deferred). UX defect already documented in script header line 30 ("≠0 — script setup failed (e.g. log file missing, run_id unparseable)"). Reviewer's suggested fix is sound but introduces specific RU diagnostic wording that benefits from operator-judgement review.
 **File:** `bin/test-failure-alert.sh:42`
 **Category:** Error-handling / Usability
 **Issue:**
@@ -395,6 +450,7 @@ echo "    run_id=$RID"
 
 ### WR-06: `weekly-run.sh:65` redirect fails opaquely if `/var/log/ga_crawler/` missing
 
+**Fix status:** SKIPPED (deferred). README §2 step 5 explicitly creates `/var/log/ga_crawler` with correct ownership; primary path is covered. The `mkdir -p` defense-in-depth proposed by reviewer is a nice-to-have but adds a small ordering question (is `mkdir -p` before HC_PING_URL check semantically correct?). Defer.
 **File:** `bin/weekly-run.sh:57,65`
 **Category:** Error-handling / Operational robustness
 **Issue:**
@@ -425,6 +481,7 @@ The README documents creating this dir manually (§2 step 5), but defense-in-dep
 
 ### WR-07: README §8 backup recovery procedure uses non-existent rotated filename pattern
 
+**Fix status:** SKIPPED (deferred). Reviewer's analysis correctly notes the path is fine; the actual gap is the missing `mv` swap. Decision on `cp` vs `sqlite3 .restore` form is operator-judgement (offline vs WAL-safe online), and the full recipe rewrite is too large for a "single-line safe" fix.
 **File:** `README.md:174`
 **Category:** Documentation accuracy
 **Issue:**
@@ -459,6 +516,7 @@ Also note: the README example uses `cp` rather than `sqlite3 ... .restore` (the 
 
 ### WR-08: README §2 step 7 `chmod 0600 .env` happens after the file was created — narrow but real race
 
+**Fix status:** SKIPPED (deferred). At step 7 the file is identical to `.env.example` (no secrets yet), so practical exposure is zero. The `install -m 0600` pattern reviewer suggests is a good defensive habit but requires operator-judgement on whether to apply the same pattern across all future .env-touching procedures (rotation workflows etc).
 **File:** `README.md:41-42`
 **Category:** Security / Race condition
 **Issue:**
@@ -481,6 +539,7 @@ sudo -u ga_crawler install -m 0600 .env.example .env
 
 ### WR-09: Wrapper line 55 flock-refused path is silent in cron context (no HC ping)
 
+**Fix status:** FIXED in commit `c1e732b` (2026-05-13). Restructured the `flock -n` line as an explicit `if ! flock -n 9; then …` block; ping HC `/fail` with `--data-raw "exit=5 reason=flock-refused"` before `exit 5`. Fail-soft (`|| true`) and shorter timeout (`-m 5`) for the contention case. HC_PING_URL is guaranteed non-empty by the CR-01 guard at line 58.
 **File:** `bin/weekly-run.sh:54-55`
 **Category:** Observability gap
 **Issue:**
@@ -512,6 +571,7 @@ This requires HC_PING_URL to be validated first (line 50) — which the current 
 
 ### IN-01: `bin/weekly-run.sh:55` uses inconsistent error message format vs. project convention
 
+**Fix status:** SKIPPED (out of scope per --fix critical_warning). Style nit; em-dash renders fine on Ubuntu 24.04 UTF-8 default.
 **File:** `bin/weekly-run.sh:55`
 **Category:** Style / Convention
 **Issue:**
@@ -534,6 +594,7 @@ Or accept em-dash project-wide (UTF-8 is universal in 2026).
 
 ### IN-02: README §2 `useradd ... -s /bin/bash` — login shell is wrong for a system service user
 
+**Fix status:** SKIPPED (out of scope per --fix critical_warning). CR-02 fix (commit `ef526f8`) updated the `useradd` line (dropped `-m`) but kept `-s /bin/bash` to minimize CR-02 scope. Standalone IN-02 change to `-s /usr/sbin/nologin` deferred — requires operator-judgement on whether `sudo -u ga_crawler bash -c '…'` patterns elsewhere remain functional.
 **File:** `README.md:19`
 **Category:** Style / Security hardening
 **Issue:**
@@ -559,6 +620,7 @@ Note: `sudo -u ga_crawler bash -c '...'` still works because `bash -c` overrides
 
 ### IN-03: `test_phase07_env_example_shape.py:80` overly permissive `key.replace("_", "").isalnum()` filter
 
+**Fix status:** SKIPPED (out of scope per --fix critical_warning). Filter works for current ENV name set; refactor to regex deferred.
 **File:** `tests/test_phase07_env_example_shape.py:80`
 **Category:** Test robustness
 **Issue:**
@@ -587,6 +649,7 @@ This documents the assumed ENV-name convention (uppercase + underscore + digits)
 
 ### IN-04: `bin/test-failure-alert.sh` shebang convention conflict between project and CONTEXT.md verbatim
 
+**Fix status:** SKIPPED (out of scope per --fix critical_warning + reviewer's own assessment "Low priority"). SUMMARY is source of truth; future-reader confusion is low cost.
 **File:** `bin/test-failure-alert.sh:1`, `bin/weekly-run.sh:1`
 **Category:** Convention drift / documentation
 **Issue:**
