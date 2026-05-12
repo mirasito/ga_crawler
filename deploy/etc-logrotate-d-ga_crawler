@@ -1,0 +1,28 @@
+# /etc/logrotate.d/ga_crawler — Phase 7 SCHED-04.
+# Source: 07-CONTEXT.md D-705; logrotate(8); 07-RESEARCH.md Example 2 + Pitfall #5.
+#
+# Deploy via README §2:
+#   sudo cp deploy/etc-logrotate-d-ga_crawler /etc/logrotate.d/ga_crawler
+#   sudo chown root:root /etc/logrotate.d/ga_crawler
+#   sudo chmod 0644 /etc/logrotate.d/ga_crawler
+#
+# Pitfall #5: system user `ga_crawler` MUST exist BEFORE first logrotate run
+# (create 0644 ga_crawler ga_crawler fails silently otherwise).
+# README §2 setup order: useradd -r -m -d /opt/ga_crawler ga_crawler  --BEFORE--  this cp.
+#
+# Retention: 13 archives × weekly = ~3 months history. Hetzner CX22 40GB SSD:
+# ~5MB/run × 13 = ~65MB total, negligible.
+#
+# T-07-05 mitigation (V12 Files & Resources): no world-writable logs.
+# T-07-01 inheritance: structlog JSONRenderer writes to stdout; bash wrapper
+# (Plan 07-03) redirects stdout+stderr to the file pattern below.
+
+/var/log/ga_crawler/*.log {
+    weekly
+    rotate 13
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0644 ga_crawler ga_crawler
+}

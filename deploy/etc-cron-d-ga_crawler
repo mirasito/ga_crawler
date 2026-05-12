@@ -1,0 +1,24 @@
+# /etc/cron.d/ga_crawler — Phase 7 SCHED-01 / SCHED-02.
+# Source: 07-CONTEXT.md D-708; crontab(5); 07-RESEARCH.md Example 1 + Pitfall #1 + Pitfall #2.
+#
+# Deploy via README §4:
+#   sudo cp deploy/etc-cron-d-ga_crawler /etc/cron.d/ga_crawler
+#   sudo chown root:root /etc/cron.d/ga_crawler
+#   sudo chmod 0644 /etc/cron.d/ga_crawler
+#   sudo systemctl reload cron
+#
+# Pitfall #1: filename MUST NOT contain a dot — Vixie cron silently ignores
+# /etc/cron.d/* with non-[A-Za-z0-9_-] characters.
+# Pitfall #2: MAILTO="" (empty string) explicitly disables cron email leak
+# (T-07-01 Information Disclosure mitigation).
+#
+# Schedule (Asia/Almaty, UTC+5):
+#   Sunday 23:00 Almaty (Sunday 18:00 UTC) — weekly viled+goldapple crawl + delivery
+#   Daily   01:00 Almaty (Daily 20:00 UTC prev) — sqlite3 .backup with 4-rotate retention
+#
+# Report lands in business chat Monday morning Almaty (~02:00–03:00 after a 3–4h run).
+
+CRON_TZ=Asia/Almaty
+MAILTO=""
+0 23 * * 0 ga_crawler /opt/ga_crawler/bin/weekly-run.sh
+0 1  * * * ga_crawler /opt/ga_crawler/bin/backup.sh
