@@ -3,6 +3,32 @@ revision = 3
 requires-python = ">=3.12"
 
 [[package]]
+name = "aiofiles"
+version = "25.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/c3/534eac40372d8ee36ef40df62ec129bee4fdb5ad9706e58a29be53b2c970/aiofiles-25.1.0.tar.gz", hash = "sha256:a8d728f0a29de45dc521f18f07297428d56992a742f0cd2701ba86e44d23d5b2", size = 46354, upload-time = "2025-10-09T20:51:04.358Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/8a/340a1555ae33d7354dbca4faa54948d76d89a27ceef032c8c3bc661d003e/aiofiles-25.1.0-py3-none-any.whl", hash = "sha256:abe311e527c862958650f9438e859c1fa7568a141b22abcd015e120e86a85695", size = 14668, upload-time = "2025-10-09T20:51:03.174Z" },
+]
+
+[[package]]
+name = "aiogram"
+version = "3.28.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiofiles" },
+    { name = "aiohttp" },
+    { name = "certifi" },
+    { name = "magic-filter" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/db/3c/72e62c25a7fffedd7dd869e193797b0ed5207041ca90de16bf56fd99e41a/aiogram-3.28.2.tar.gz", hash = "sha256:140913a569516811c4ce576a292491024c8d8a739c47150d64a05aa4adc35310", size = 1855159, upload-time = "2026-05-10T14:20:40.384Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c9/7b/8bc61691b1fc9d1653e12697436b2742dd1408f14c479d15f46d1ab34be1/aiogram-3.28.2-py3-none-any.whl", hash = "sha256:8a90cdf75a64ba629468f73b6e999662943fff39db213bb406afe114a3e8c0f2", size = 751693, upload-time = "2026-05-10T14:20:38.265Z" },
+]
+
+[[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -502,6 +528,7 @@ name = "ga-crawler"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "aiogram" },
     { name = "camoufox", extra = ["geoip"] },
     { name = "curl-cffi" },
     { name = "pandas" },
@@ -528,6 +555,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiogram", specifier = ">=3.27,<4.0" },
     { name = "camoufox", extras = ["geoip"], specifier = "==0.4.11" },
     { name = "curl-cffi", specifier = ">=0.15,<0.16" },
     { name = "pandas", specifier = ">=2.2,<2.3" },
@@ -755,6 +783,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/ca/77123e4d77df3cb1e968ade7b1f808f5d3a5c1c96b18a33895397de292c1/lxml-6.1.0-cp314-cp314t-win32.whl", hash = "sha256:00750d63ef0031a05331b9223463b1c7c02b9004cef2346a5b2877f0f9494dd2", size = 3897377, upload-time = "2026-04-18T04:32:07.656Z" },
     { url = "https://files.pythonhosted.org/packages/64/ce/3554833989d074267c063209bae8b09815e5656456a2d332b947806b05ff/lxml-6.1.0-cp314-cp314t-win_amd64.whl", hash = "sha256:80410c3a7e3c617af04de17caa9f9f20adaa817093293d69eae7d7d0522836f5", size = 4392701, upload-time = "2026-04-18T04:32:12.113Z" },
     { url = "https://files.pythonhosted.org/packages/2b/a0/9b916c68c0e57752c07f8f64b30138d9d4059dbeb27b90274dedbea128ff/lxml-6.1.0-cp314-cp314t-win_arm64.whl", hash = "sha256:26dd9f57ee3bd41e7d35b4c98a2ffd89ed11591649f421f0ec19f67d50ec67ac", size = 3817120, upload-time = "2026-04-18T04:32:15.803Z" },
+]
+
+[[package]]
+name = "magic-filter"
+version = "1.0.12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e6/08/da7c2cc7398cc0376e8da599d6330a437c01d3eace2f2365f300e0f3f758/magic_filter-1.0.12.tar.gz", hash = "sha256:4751d0b579a5045d1dc250625c4c508c18c3def5ea6afaf3957cb4530d03f7f9", size = 11071, upload-time = "2023-10-01T12:33:19.006Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cc/75/f620449f0056eff0ec7c1b1e088f71068eb4e47a46eb54f6c065c6ad7675/magic_filter-1.0.12-py3-none-any.whl", hash = "sha256:e5929e544f310c2b1f154318db8c5cdf544dd658efa998172acd2e4ba0f6c6a6", size = 11335, upload-time = "2023-10-01T12:33:17.711Z" },
 ]
 
 [[package]]

@@ -12,6 +12,7 @@ dependencies = [
     # PR if pass. Smoke probe asserts camoufox_version_expected == "135.0.1.beta24"
     # (see [tool.ga_crawler.crawl.goldapple] below).
     # Backup if upstream stalls: switch to coryking/camoufox fork (see SKILL maintenance note).
+    "aiogram>=3.27,<4.0",
     "camoufox[geoip]==0.4.11",
     "curl-cffi>=0.15,<0.16",
     "pandas>=2.2,<2.3",
@@ -106,3 +107,14 @@ output_dir = "reports"                        # D-510 relative to repo_root
 size_limit_mb = 45                            # D-515 REPORT-06 threshold (50 MB Telegram - 5 MB safety)
 top_n_deltas = 3                              # D-504 REPORT-04 summary top-N
 timezone = "Asia/Almaty"                      # D-512 ISO-week derivation tz
+
+[tool.ga_crawler.deliver]
+# Phase 6 operational constants. Type-locked; operator edits via git PR.
+# Source anchors: 06-CONTEXT.md (D-603, D-609, D-610, D-614);
+# RESEARCH caveat #2 (tenacity uses wait_chain, NOT wait_exponential).
+retry_max_attempts = 3                  # D-603 tenacity stop_after_attempt
+retry_backoff_min_seconds = 5           # D-603 wait_chain(5, 15, 45) — first wait
+retry_backoff_max_seconds = 45          # D-603 wait_chain(5, 15, 45) — last wait
+ops_message_truncate_chars = 3500       # D-610 traceback truncation (safe under 4096 TG limit)
+business_caption_max_chars = 1024       # Telegram document caption hard-limit
+parse_mode = "HTML"                     # D-609 — escape only <>&
