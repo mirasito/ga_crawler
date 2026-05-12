@@ -66,11 +66,11 @@
 
 ### Deliver
 
-- [ ] **DELIVER-01**: Telegram-бот отправляет business-чат: текстовая сводка + xlsx-вложение через `send_document`
-- [ ] **DELIVER-02**: Отдельный ops-чат получает уведомления о падениях, sanity-gate failures, отсутствующих ENV-переменных
-- [ ] **DELIVER-03**: Pre-send sanity-gate — если `runs.status != 'success'`, в business-чат **ничего не отправляется**, в ops-чат идёт алерт
-- [ ] **DELIVER-04**: Retry с учётом Telegram rate-limit (`retry-after` header); если Telegram недоступен — отчёт остаётся на диске и помечается как недоставленный
-- [ ] **DELIVER-05**: Конфигурация двух чатов через ENV (`TG_BOT_TOKEN`, `TG_BUSINESS_CHAT_ID`, `TG_OPS_CHAT_ID`)
+- [x] **DELIVER-01**: Telegram-бот отправляет business-чат: текстовая сводка + xlsx-вложение через `send_document` — Plan 06-04 ships `runners/delivery_run.py::_send_async` business branch invoking `send_document_with_policy` (always) + `send_message_with_policy` first when summary > 1024 chars (Claude's Discretion caption-split fallback "См. сводку выше"); D-514 source-of-truth summary read verbatim from `report.summary_text`; integration tests `test_gate_pass_non_split_path_5a` + `test_gate_pass_split_path_5b` + `test_caption_split_when_long` cover both branches. **(Wave 4 Plan 06-05 wires this into the unattended weekly cron; standalone `deliver-run --run-id N` CLI is operational now.)**
+- [x] **DELIVER-02**: Отдельный ops-чат получает уведомления о падениях, sanity-gate failures, отсутствующих ENV-переменных — Plan 06-04 ships ops_only branch in `_send_async` sending `build_ops_alert(...)` HTML via `send_message_with_policy(bot, ops_chat_id, ...)`; D-611 asymmetric ENV routing maps `business_chat_id` missing → ops_only degrade with `missing_env_TG_BUSINESS_CHAT_ID` reason; integration test `test_gate_fail_routes_to_ops_only` pins regression (status='failed' → ops alert + msg_id=10001).
+- [x] **DELIVER-03**: Pre-send sanity-gate — если `runs.status != 'success'`, в business-чат **ничего не отправляется**, в ops-чат идёт алерт — Plan 06-03 ships `delivery/gate.py::evaluate_gate` 4-check first-fail-wins composition (check #1 `runs.status=='success'` REUSES `matcher.strict_key.read_run_status` D-411 helper; checks #2-#4 cover xlsx_path / size_guard_passed / summary_text); Plan 06-04 orchestrator hooks the gate at Step 2 — `decision.route` drives business vs ops_only split; D-515 size-guard cascade enforced via check #3.
+- [x] **DELIVER-04**: Retry с учётом Telegram rate-limit (`retry-after` header); если Telegram недоступен — отчёт остаётся на диске и помечается как недоставленный — Plan 06-03 ships `_send_with_retry_after_loop` handling `TelegramRetryAfter` OUTSIDE tenacity (RESEARCH §11, `asyncio.sleep(retry_after)` + max_retry_after_iterations=3); tenacity `wait_chain(5,15,45)` for transient `TelegramNetworkError`/`TelegramServerError`; Plan 06-04 D-605 invariant test `test_telegram_network_error_does_not_fail_run` verifies xlsx STILL on disk after 3 retry exhaustion + `runs.status` untouched + `deliver.delivery_status='undelivered_telegram_unreachable'` persisted.
+- [x] **DELIVER-05**: Конфигурация двух чатов через ENV (`TG_BOT_TOKEN`, `TG_BUSINESS_CHAT_ID`, `TG_OPS_CHAT_ID`) — Plan 06-02 ships `DeliverEnvConfig.from_env()` pure-`os.getenv` reads with empty-string→None normalization; Plan 06-04 `cli.py::_cmd_deliver` calls `load_dotenv(override=False)` ONCE (RESEARCH caveat #4 — ONLY place in project; structural canary `test_load_dotenv_only_in_cli`); D-611 asymmetric ENV semantics (TG_BOT_TOKEN required → exit 3 on missing; chat_ids degradable per route).
 
 ### Schedule & Ops
 
@@ -171,11 +171,11 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 | REPORT-04 | Phase 5 | Done (Plan 05-02 summary_builder.py — reads runs.stats.match.* flat keys per Pitfall 6 + D-405 KPI verbatim + top-3 SQL ABS LIMIT + zero-match fallback) |
 | REPORT-05 | Phase 5 | Done (Plan 05-03 archive.py — D-512 ISO-week + Pitfall 4 year-boundary + D-510 atomic write *.xlsx.tmp + os.replace; Plan 05-04 path-traversal containment; Plan 05-05 standalone report-run CLI per D-509) |
 | REPORT-06 | Phase 5 | Done (Plan 05-03 check_size_guard flag-only D-515 + Plan 05-04 orchestrator sets report.size_guard_passed flag + log warning; xlsx persists on disk; Phase 6 DELIVER-03 cascade invariant) |
-| DELIVER-01 | Phase 6 | Pending |
-| DELIVER-02 | Phase 6 | Pending |
-| DELIVER-03 | Phase 6 | Pending |
-| DELIVER-04 | Phase 6 | Pending |
-| DELIVER-05 | Phase 6 | Pending |
+| DELIVER-01 | Phase 6 | Done (Plan 06-04 _send_async business branch + caption-split fork; Wave 4 Plan 06-05 wires into cron) |
+| DELIVER-02 | Phase 6 | Done (Plan 06-04 ops_only branch + Plan 06-02 build_ops_alert template + D-611 asymmetric routing) |
+| DELIVER-03 | Phase 6 | Done (Plan 06-03 evaluate_gate 4-check first-fail-wins + Plan 06-04 orchestrator gate dispatch at Step 2) |
+| DELIVER-04 | Phase 6 | Done (Plan 06-03 _send_with_retry_after_loop OUTSIDE tenacity + wait_chain(5,15,45) + Plan 06-04 D-605 invariant) |
+| DELIVER-05 | Phase 6 | Done (Plan 06-02 DeliverEnvConfig.from_env + Plan 06-04 load_dotenv ONLY in cli.py per RESEARCH caveat #4) |
 | SCHED-01 | Phase 7 | Pending |
 | SCHED-02 | Phase 7 | Pending |
 | SCHED-03 | Phase 7 | Pending |
