@@ -43,7 +43,10 @@ RID=$(tail -200 "$LOG_FILE" | grep -o '"run_id":[0-9]*' | tail -1 | grep -o '[0-
 echo "    run_id=$RID"
 
 echo "==> Step 3: Invoke deliver-run for ops alert (no HC ping — separate invocation)"
-sudo -u ga_crawler /opt/ga_crawler/.venv/bin/python -m ga_crawler deliver-run --run-id "$RID"
+# Скрипт уже запущен от ga_crawler (README §7: sudo -u ga_crawler …test-failure-alert.sh);
+# inner sudo -u ga_crawler был бы (а) семантически redundant и (б) невозможен — system
+# user (useradd -r) не имеет sudoers entry и sudo aborted бы скрипт здесь.
+/opt/ga_crawler/.venv/bin/python -m ga_crawler deliver-run --run-id "$RID"
 
 echo "==> Step 4: Verification checklist (operator runs visually)"
 cat <<EOF
