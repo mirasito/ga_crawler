@@ -213,7 +213,9 @@ sudo -u ga_crawler sqlite3 /opt/ga_crawler/prices.db \
 
 ```bash
 # Tail последнего run, все events:
-tail -f /var/log/ga_crawler/weekly-run-$(date +%F).log | jq .
+# grep '^{' отфильтровывает non-JSON строки (uv install msgs, Camoufox/Firefox stderr,
+# Python tracebacks) — jq strict-mode упал бы на первой такой строке и закрыл stream.
+tail -f /var/log/ga_crawler/weekly-run-$(date +%F).log | grep --line-buffered -E '^\{' | jq .
 
 # Все errors последнего run:
 grep '"level":"error"' /var/log/ga_crawler/weekly-run-$(date +%F).log | jq .
