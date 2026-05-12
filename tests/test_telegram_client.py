@@ -142,7 +142,7 @@ def fast_sleep(monkeypatch):
 async def test_open_bot_with_html_parse_mode():
     from aiogram.enums import ParseMode
 
-    bot = await open_bot("test-token-12345", parse_mode="HTML")
+    bot = await open_bot("123456789:test-token-stub-ABCDEFG", parse_mode="HTML")
     try:
         assert bot.default is not None
         assert bot.default.parse_mode == ParseMode.HTML
@@ -155,7 +155,7 @@ async def test_open_bot_with_html_parse_mode():
 async def test_open_bot_with_markdown_v2_parse_mode():
     from aiogram.enums import ParseMode
 
-    bot = await open_bot("test-token-12345", parse_mode="MarkdownV2")
+    bot = await open_bot("123456789:test-token-stub-ABCDEFG", parse_mode="MarkdownV2")
     try:
         assert bot.default.parse_mode == ParseMode.MARKDOWN_V2
     finally:
@@ -165,7 +165,7 @@ async def test_open_bot_with_markdown_v2_parse_mode():
 @pytest.mark.asyncio
 async def test_open_bot_raises_on_invalid_parse_mode():
     with pytest.raises(ValueError):
-        await open_bot("test-token-12345", parse_mode="FOO_BAD_VALUE")
+        await open_bot("123456789:test-token-stub-ABCDEFG", parse_mode="FOO_BAD_VALUE")
 
 
 # ---- send_message_with_policy --------------------------------------------

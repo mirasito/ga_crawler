@@ -35,7 +35,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 #   - tests/test_gate.py                       → Plan 06-03 GREEN (Task 1)
 #   - tests/test_telegram_client.py            → Plan 06-03 GREEN (Task 2)
 STUB_FILES = [
-    ("tests/test_telegram_client.py", "Plan 06-03"),
     ("tests/test_delivery_source_lock.py", "Plan 06-05"),
     ("tests/integration/test_delivery_run.py", "Plan 06-04"),
     ("tests/integration/test_cli_deliver.py", "Plan 06-04"),
@@ -51,10 +50,9 @@ WAVE1_CLOSURES = [
     "tests/unit/test_stats_namespace_five_way.py",
 ]
 
-# Wave-2 closures are added incrementally: Task 1 adds test_gate.py;
-# Task 2 (next commit) appends test_telegram_client.py.
 WAVE2_CLOSURES = [
     "tests/test_gate.py",
+    "tests/test_telegram_client.py",
 ]
 
 
@@ -82,10 +80,10 @@ def test_all_remaining_stub_files_cite_target_plan_in_docstring():
         )
 
 
-def test_remaining_stub_count_after_wave2_task1():
-    """Wave-0 planned 10 stubs; Wave-1 closed 4 + Wave-2 Task 1 closed 1 →
-    5 remain (Plan 06-03 Task 2 closes one more)."""
-    assert len(STUB_FILES) == 5
+def test_remaining_stub_count_after_wave2():
+    """Wave-0 planned 10 stubs; Wave-1 closed 4 + Wave-2 closed 2 → 4 remain
+    (Plans 06-04 / 06-05)."""
+    assert len(STUB_FILES) == 4
 
 
 def test_wave1_closures_no_longer_have_skip_marker():
