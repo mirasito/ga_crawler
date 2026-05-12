@@ -118,6 +118,28 @@ def _truncate(value: str, max_chars: int) -> str:
     return value[:max_chars]
 
 
+def _coerce_started_at(value) -> datetime:
+    """Coerce a value read from ``runs.started_at`` into an aware UTC datetime.
+
+    Python 3.12 deprecated the default sqlite3 datetime adapter so the value
+    comes back as an ISO 8601 string (e.g. ``"2026-05-10 14:00:00+00:00"``).
+    ``datetime.fromisoformat`` parses both the new ``"+00:00"`` and the older
+    ``"Z"`` suffixes; naive datetimes are treated as UTC per DATA-05.
+    """
+    if value is None:
+        return datetime.now(timezone.utc)
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str):
+        text_val = value.replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(text_val)
+        except ValueError:
+            return datetime.now(timezone.utc)
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc)
+
+
 def _resolve_xlsx_safely(xlsx_path: str, repo_root: Path) -> Path:
     """Pitfall C: defense-in-depth path containment check.
 
@@ -271,9 +293,7 @@ def run_delivery_phase(
             _sql("SELECT started_at FROM runs WHERE run_id=:rid"),
             {"rid": run_id},
         ).first()
-    started_at_utc = (
-        _row[0] if _row and _row[0] is not None else datetime.now(timezone.utc)
-    )
+    started_at_utc = _coerce_started_at(_row[0] if _row else None)
 
     # ---- Step 4: Build messages (no I/O yet) ----
     ops_alert_html: Optional[str]

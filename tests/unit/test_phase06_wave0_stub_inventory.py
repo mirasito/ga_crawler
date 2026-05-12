@@ -34,14 +34,16 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # Wave-2 closures (no longer stubs):
 #   - tests/test_gate.py                       → Plan 06-03 GREEN (Task 1)
 #   - tests/test_telegram_client.py            → Plan 06-03 GREEN (Task 2)
+# Wave-3 closures (no longer stubs):
+#   - tests/integration/test_delivery_run.py   → Plan 06-04 GREEN (Task 1)
+#   - tests/integration/test_cli_deliver.py    → Plan 06-04 GREEN (Task 2)
 STUB_FILES = [
     ("tests/test_delivery_source_lock.py", "Plan 06-05"),
-    ("tests/integration/test_delivery_run.py", "Plan 06-04"),
     ("tests/integration/test_cli_deliver.py", "Plan 06-04"),
     ("tests/integration/test_weekly_run_with_delivery.py", "Plan 06-05"),
 ]
 
-# Wave-1 + Wave-2 stub closures — these files must NOT contain
+# Wave-1 + Wave-2 + Wave-3 stub closures — these files must NOT contain
 # pytest.mark.skip any more; the canary below pins that.
 WAVE1_CLOSURES = [
     "tests/test_delivery_config.py",
@@ -53,6 +55,12 @@ WAVE1_CLOSURES = [
 WAVE2_CLOSURES = [
     "tests/test_gate.py",
     "tests/test_telegram_client.py",
+]
+
+WAVE3_CLOSURES = [
+    "tests/integration/test_delivery_run.py",
+    # tests/integration/test_cli_deliver.py joins this list when Task 2 closes
+    # the CLI stub in the next commit.
 ]
 
 
@@ -80,10 +88,11 @@ def test_all_remaining_stub_files_cite_target_plan_in_docstring():
         )
 
 
-def test_remaining_stub_count_after_wave2():
-    """Wave-0 planned 10 stubs; Wave-1 closed 4 + Wave-2 closed 2 → 4 remain
-    (Plans 06-04 / 06-05)."""
-    assert len(STUB_FILES) == 4
+def test_remaining_stub_count_after_wave3():
+    """Wave-0 planned 10 stubs; Wave-1 closed 4 + Wave-2 closed 2 + Wave-3
+    closed 1 (test_delivery_run.py; CLI deliver closes in next commit) → 3
+    remain in this snapshot (will drop to 2 after Task 2)."""
+    assert len(STUB_FILES) == 3
 
 
 def test_wave1_closures_no_longer_have_skip_marker():
@@ -104,5 +113,16 @@ def test_wave2_closures_no_longer_have_skip_marker():
         content = path.read_text(encoding="utf-8")
         assert "pytest.mark.skip" not in content, (
             f"{rel} should be GREEN after Plan 06-03 but still contains "
+            f"a pytest.mark.skip marker"
+        )
+
+
+def test_wave3_closures_no_longer_have_skip_marker():
+    """Regression: files closed by Plan 06-04 must have no ``pytest.mark.skip``."""
+    for rel in WAVE3_CLOSURES:
+        path = REPO_ROOT / rel
+        content = path.read_text(encoding="utf-8")
+        assert "pytest.mark.skip" not in content, (
+            f"{rel} should be GREEN after Plan 06-04 but still contains "
             f"a pytest.mark.skip marker"
         )
