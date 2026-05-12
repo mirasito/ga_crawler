@@ -9,19 +9,27 @@
 
 ## VPS setup from-scratch
 
-Целевая платформа: **Ubuntu 24.04 LTS** на Hetzner CX22 (Falkenstein/Helsinki, EU; 2 vCPU / 4 GB / 40 GB SSD). Шаги выполняются **строго в указанном порядке** — пользователь `ga_crawler` обязан существовать до первого запуска logrotate (Pitfall #5) и до Camoufox cache (Pitfall #6, `useradd -m` для $HOME).
+Целевая платформа: **Ubuntu 24.04 LTS** на Hetzner CX22 (Falkenstein/Helsinki, EU; 2 vCPU / 4 GB / 40 GB SSD). Шаги выполняются **строго в указанном порядке** — пользователь `ga_crawler` обязан существовать до первого запуска logrotate (Pitfall #5) и до Camoufox cache (Pitfall #6, `$HOME` создаётся через `install -d`, см. шаг 2).
 
 ```bash
 # 1. OS deps (cron + logrotate входят в base, но фиксируем явно).
 sudo apt update && sudo apt install -y curl sqlite3 logrotate cron git
 
-# 2. System user (Pitfall #5 + Pitfall #6 — ОБЯЗАТЕЛЬНО до logrotate cp ниже).
-sudo useradd -r -m -d /opt/ga_crawler -s /bin/bash ga_crawler
+# 2. System user (Pitfall #5 — ОБЯЗАТЕЛЬНО до logrotate cp ниже).
+#    БЕЗ -m: иначе useradd создаёт /opt/ga_crawler и копирует туда /etc/skel
+#    (.bashrc/.profile/.bash_logout), после чего git clone падает с
+#    "destination path already exists and is not an empty directory".
+#    $HOME создаём отдельно через install -d с правильным owner/mode (Pitfall #6 —
+#    Camoufox cache требует $HOME существующим и принадлежащим ga_crawler).
+sudo useradd -r -d /opt/ga_crawler -s /bin/bash ga_crawler
+sudo install -d -o ga_crawler -g ga_crawler -m 0755 /opt/ga_crawler
 
 # 3. uv (Astral) под пользователем ga_crawler.
 sudo -u ga_crawler bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
 
 # 4. Клонирование репо + sync deps + Playwright/Firefox binary.
+#    /opt/ga_crawler уже создан (шаг 2) и пуст — git clone в пустой существующий dir
+#    разрешён.
 sudo -u ga_crawler git clone <repo-url> /opt/ga_crawler
 cd /opt/ga_crawler
 sudo -u ga_crawler uv sync
