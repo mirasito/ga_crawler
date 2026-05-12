@@ -50,9 +50,25 @@ def test_wrapper_has_strict_mode(wrapper_text):
 # --- HC_PING_URL fail-loud + pings (SCHED-03 / D-701 + D-703 + T-07-04) ---
 
 def test_wrapper_fails_loud_when_hc_ping_url_missing(wrapper_text):
-    """D-703 fail-loud: substring '${HC_PING_URL:?' guards bash parameter expansion."""
-    assert "${HC_PING_URL:?" in wrapper_text, (
-        "wrapper missing '${HC_PING_URL:?' fail-loud sentinel — violates D-703"
+    """D-703 fail-loud: explicit guard checks HC_PING_URL and exits 4.
+
+    Initially used ${HC_PING_URL:?} bash parameter expansion, but :? exits 1 (not 4)
+    under set -e — conflating HC_PING_URL-missing with generic error. CR-01 fix
+    replaced it with an explicit if-block that exits 4 per D-703 contract.
+    """
+    assert '[[ -z "${HC_PING_URL:-}" ]]' in wrapper_text, (
+        "wrapper missing explicit HC_PING_URL guard — violates D-703 fail-loud (CR-01)"
+    )
+
+
+def test_wrapper_reserves_exit_4_for_missing_hc_ping_url(wrapper_text):
+    """D-703: missing HC_PING_URL must exit 4 (not 1 from bash :? expansion).
+
+    Parallels test_wrapper_reserves_exit_5_for_flock. Source-locks the exit code
+    that operators see in cron logs when HC_PING_URL is absent from .env.
+    """
+    assert "exit 4" in wrapper_text, (
+        "wrapper missing 'exit 4' on HC_PING_URL fail-loud — violates D-703 (CR-01)"
     )
 
 

@@ -47,7 +47,12 @@ source .env
 set +a
 
 # 2. D-703 fail-loud: HC_PING_URL is required; refuse to run if absent.
-: "${HC_PING_URL:?HC_PING_URL missing — refusing to run per D-703}"
+#    Explicit guard (not ${VAR:?}) — :? expansion under set -e exits 1, conflating
+#    HC_PING_URL-missing with generic bash error. D-703 reserves exit 4.
+if [[ -z "${HC_PING_URL:-}" ]]; then
+  echo "HC_PING_URL missing — refusing to run per D-703" >&2
+  exit 4
+fi
 
 # 3. Single-writer flock guard (defense vs double-run from cron+manual overlap).
 #    /var/lock is tmpfs (symlink to /run/lock on Ubuntu 24.04) — auto-cleanup at reboot.
