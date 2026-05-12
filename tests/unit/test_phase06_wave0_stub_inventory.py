@@ -39,7 +39,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 #   - tests/integration/test_cli_deliver.py    → Plan 06-04 GREEN (Task 2)
 STUB_FILES = [
     ("tests/test_delivery_source_lock.py", "Plan 06-05"),
-    ("tests/integration/test_cli_deliver.py", "Plan 06-04"),
     ("tests/integration/test_weekly_run_with_delivery.py", "Plan 06-05"),
 ]
 
@@ -59,8 +58,7 @@ WAVE2_CLOSURES = [
 
 WAVE3_CLOSURES = [
     "tests/integration/test_delivery_run.py",
-    # tests/integration/test_cli_deliver.py joins this list when Task 2 closes
-    # the CLI stub in the next commit.
+    "tests/integration/test_cli_deliver.py",
 ]
 
 
@@ -90,9 +88,8 @@ def test_all_remaining_stub_files_cite_target_plan_in_docstring():
 
 def test_remaining_stub_count_after_wave3():
     """Wave-0 planned 10 stubs; Wave-1 closed 4 + Wave-2 closed 2 + Wave-3
-    closed 1 (test_delivery_run.py; CLI deliver closes in next commit) → 3
-    remain in this snapshot (will drop to 2 after Task 2)."""
-    assert len(STUB_FILES) == 3
+    closed 2 → 2 remain (both belong to Plan 06-05)."""
+    assert len(STUB_FILES) == 2
 
 
 def test_wave1_closures_no_longer_have_skip_marker():

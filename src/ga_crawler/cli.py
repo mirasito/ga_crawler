@@ -21,6 +21,15 @@ Four subcommands (Plan 05-05 adds the fourth):
       reports/YYYY-WNN.xlsx without backup (DB is source-of-truth per DATA-03).
       Use case: reporter bug found, fix code, regenerate xlsx without 4h re-crawl.
 
+  python -m ga_crawler deliver-run --run-id N [--force] [--dry-run] [--db-path PATH] [--pyproject PATH] [--repo-root PATH]
+      D-608 standalone Telegram delivery recovery tool. Sends business
+      caption + xlsx (or ops alert) to Telegram per run_id. Idempotent —
+      re-running on `delivered_business` is a no-op (`--force` overrides).
+      On Telegram unreachable, the xlsx stays on disk and
+      `runs.stats.deliver.delivery_status='undelivered_telegram_unreachable'`.
+      Exit codes: 0 delivered/skipped-idempotent, 2 undelivered (retryable),
+      3 missing TG_BOT_TOKEN (config error).
+
 D-212 cutover (Plan 02-05):
   - DELETED: 4 Stub classes (StubBrandAlias, StubNormalizer, StubSnapshotWriter,
     StubRunWriter). Phase 3 tests now use mocks from tests/conftest.py.
@@ -34,6 +43,13 @@ Plan 04-05 additions:
 
 Plan 05-05 additions:
   - ADDED: `report-run` subcommand + `_cmd_report` handler (D-509).
+
+Plan 06-04 additions:
+  - ADDED: `deliver-run` subcommand + `_cmd_deliver` handler (D-608).
+  - `_cmd_deliver` is the ONLY place in the project that calls
+    `dotenv.load_dotenv()` — keeps test runs from picking up a real
+    on-disk `.env` (RESEARCH caveat #4). Structural canary
+    `test_load_dotenv_only_in_cli` enforces this invariant.
 """
 
 from __future__ import annotations
@@ -222,6 +238,93 @@ def _cmd_report(args) -> int:
     return 0 if result.status == "success" else 2
 
 
+def _cmd_deliver(args) -> int:
+    """ADDED Plan 06-04 (D-608): standalone deliver-run for recovery.
+
+    Idempotency dispatch (D-606 enum):
+      pending                           -> run full delivery
+      delivered_business                -> no-op (--force overrides)
+      delivered_ops_only                -> re-attempt (rare; fixed-via-recovery)
+      undelivered_telegram_unreachable  -> re-attempt full
+      skipped_no_credentials            -> re-validate ENV
+      skipped_already_delivered         -> no-op (idempotency response)
+
+    Exit codes (D-608):
+      0 -> delivered_business OR delivered_ops_only OR skipped_already_delivered
+      2 -> undelivered_telegram_unreachable (retryable)
+      3 -> skipped_no_credentials (config error -- TG_BOT_TOKEN missing)
+    """
+    from dotenv import load_dotenv
+
+    from ga_crawler.delivery.config import DeliverConfig, DeliverEnvConfig
+    from ga_crawler.runners.delivery_run import run_delivery_phase
+    from ga_crawler.storage.sqlite import (
+        SqliteRunWriter,
+        init_db,
+        make_engine,
+    )
+
+    # RESEARCH caveat #4: load_dotenv() lives ONLY here, never in
+    # DeliverEnvConfig.from_env() -- keeps the unit-test path clean
+    # (tests bypass via monkeypatch.setenv) and lets the operator opt
+    # into .env loading at the CLI boundary.
+    load_dotenv(override=False)
+
+    init_db(args.db_path)
+    engine = make_engine(args.db_path)
+    run_writer = SqliteRunWriter(engine)
+    repo_root = Path(args.repo_root).resolve()
+
+    cfg = DeliverConfig.from_pyproject(args.pyproject)
+    env = DeliverEnvConfig.from_env()
+
+    result = run_delivery_phase(
+        run_id=args.run_id,
+        engine=engine,
+        run_writer=run_writer,
+        repo_root=repo_root,
+        config=cfg,
+        env=env,
+        force=args.force,
+        dry_run=args.dry_run,
+    )
+
+    payload = json.dumps(
+        {
+            "delivery_status": result.delivery_status,
+            "route": result.route,
+            "run_id": args.run_id,
+            "business_caption_message_id": result.business_caption_message_id,
+            "business_document_message_id": result.business_document_message_id,
+            "ops_message_id": result.ops_message_id,
+            "attempt_count": result.attempt_count,
+            "last_error": result.last_error,
+            "delivered_at": result.delivered_at,
+            "stats_delta_keys": sorted(result.stats_delta.keys()),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    # Plan 05-05 Unicode-stdout pattern -- emoji + Cyrillic safe on Windows.
+    sys.stdout.buffer.write(payload.encode("utf-8"))
+    sys.stdout.buffer.write(b"\n")
+    sys.stdout.buffer.flush()
+
+    # D-608 exit code mapping.
+    if result.delivery_status in (
+        "delivered_business",
+        "delivered_ops_only",
+        "skipped_already_delivered",
+    ):
+        return 0
+    if result.delivery_status == "skipped_no_credentials":
+        return 3
+    if result.delivery_status == "pending" and args.dry_run:
+        # --dry-run preview success: orchestrator returns pending without I/O.
+        return 0
+    return 2  # undelivered_*
+
+
 def _configure_logging() -> None:
     structlog.configure(
         processors=[
@@ -366,6 +469,45 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="Repo root for resolving output_dir + path containment check",
     )
 
+    # ADDED Plan 06-04 (D-608) — deliver-run standalone recovery tool.
+    deliver = sub.add_parser(
+        "deliver-run",
+        help="Send Telegram delivery against an existing run_id "
+             "(idempotent per D-606 enum, D-608)",
+    )
+    deliver.add_argument(
+        "--run-id",
+        type=int,
+        required=True,
+        help="runs.run_id of an existing run to deliver report for",
+    )
+    deliver.add_argument(
+        "--db-path",
+        default="prices.db",
+        help="SQLite database file path",
+    )
+    deliver.add_argument(
+        "--pyproject",
+        default="pyproject.toml",
+        help="Path to pyproject.toml for [tool.ga_crawler.deliver] config",
+    )
+    deliver.add_argument(
+        "--repo-root",
+        default=".",
+        help="Repo root for resolving xlsx_path + Pitfall C containment check",
+    )
+    deliver.add_argument(
+        "--force",
+        action="store_true",
+        help="Override idempotency for delivered_business state (D-608)",
+    )
+    deliver.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Build gate decision + messages, print JSON preview to stdout, "
+             "skip Telegram API + skip patch_stats (D-608 read-only mode)",
+    )
+
     args = parser.parse_args(argv)
     if args.cmd == "goldapple-smoke":
         return asyncio.run(_cmd_smoke(args))
@@ -375,6 +517,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         return _cmd_matcher(args)
     if args.cmd == "report-run":
         return _cmd_report(args)
+    if args.cmd == "deliver-run":
+        return _cmd_deliver(args)
     parser.print_help()
     return 2
 
