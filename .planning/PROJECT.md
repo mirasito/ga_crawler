@@ -14,21 +14,21 @@
 
 <!-- Shipped and confirmed valuable. -->
 
-(None yet — ship to validate)
+- [x] Полный парсинг beauty+парфюмерия каталога viled.kz (men/catalog/1310 + women/catalog/1310) — Validated in Phase 2 (PARSE-01..06, CRAWL-01,03,04,06)
+- [x] Парсинг goldapple.kz, ограниченный брендами, которые есть на viled.kz — Validated in Phase 3 (CRAWL-02 brand-intersect bucket)
+- [x] Нормализация и сопоставление товаров по ключу `brand + название + объём` — Validated in Phase 2 (NORM-01..06) + Phase 4 (MATCH-01..04, D-401 denormalized matches schema)
+- [x] База данных с историей всех еженедельных срезов (для трендов и дельт) — Validated in Phase 2 (DATA-01..06, SQLite + v_current_snapshots view)
+- [x] Сводный отчёт: размер ассортимента у обоих, пересечения, дельты цен по совпавшим SKU — Validated in Phase 5 (REPORT-01..06, xlsxwriter + match-rate KPI)
+- [x] Доставка отчёта в Telegram (текстовая сводка + Excel/CSV вложением) — Validated in Phase 6 (DELIVER-01..05, aiogram 3.27 + business/ops chat split)
+- [x] Еженедельный автозапуск по расписанию (cron, ночь воскресенья → отчёт в понедельник) — Validated in Phase 7 (SCHED-01..05, cron + bin/weekly-run.sh + Healthchecks.io dead-man's-switch)
+- [x] Устойчивость к anti-bot-защите (proxy/headless-стратегия для goldapple.kz) — Validated in Phase 1 (Camoufox direct, no proxy needed per spike MEMO)
+- [x] Логи запуска и ошибок (видно, когда парсер упал, что не спарсилось) — Validated across Phases 2-7 (structlog JSON + Phase 7 datestamped log files + logrotate)
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] Полный парсинг beauty+парфюмерия каталога viled.kz (men/catalog/1310 + women/catalog/1310) — название, бренд, объём/вес, цена, цена до скидки, ссылка, наличие
-- [ ] Парсинг goldapple.kz, ограниченный брендами, которые есть на viled.kz
-- [ ] Нормализация и сопоставление товаров по ключу `brand + название + объём`
-- [ ] База данных с историей всех еженедельных срезов (для трендов и дельт)
-- [ ] Сводный отчёт: размер ассортимента у обоих, пересечения, дельты цен по совпавшим SKU
-- [ ] Доставка отчёта в Telegram (текстовая сводка + Excel/CSV вложением)
-- [ ] Еженедельный автозапуск по расписанию (cron, ночь воскресенья → отчёт в понедельник)
-- [ ] Устойчивость к anti-bot-защите (proxy/headless-стратегия для goldapple.kz)
-- [ ] Логи запуска и ошибок (видно, когда парсер упал, что не спарсилось)
+(None — v1 milestone code-ship complete 2026-05-13; operator deploy on Hetzner CX22 next)
 
 ### Out of Scope
 
@@ -97,5 +97,9 @@ This document evolves at phase transitions and milestone boundaries.
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
+## Current State
+
+**v1 milestone code-ship COMPLETE 2026-05-13** — Phase 7 (Scheduler + Observability Hardening) closed all 5 SCHED requirements. 47/48 v1 requirements satisfied (only Phase 1 RECON-01 conditional plans remain operator-deferred per Camoufox-direct lock). Code review surfaced 4 Critical + 4 Warning issues — all auto-fixed (commits ed07007..c1e732b). 803/803 tests pass, zero regressions. Next: operator-led VPS deploy on Hetzner CX22 EU per README §2, then `/gsd-complete-milestone v1` for milestone audit and archival.
+
 ---
-*Last updated: 2026-05-05 after initialization*
+*Last updated: 2026-05-13 after Phase 7 completion*
