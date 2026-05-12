@@ -63,24 +63,26 @@ sudo -u ga_crawler /opt/ga_crawler/bin/weekly-run.sh --viled-only --sanity-gate-
 
 | ENV | Required | Источник | Notes |
 |-----|----------|----------|-------|
-| `TG_BOT_TOKEN` | YES | `@BotFather` → `/newbot` | Wrapper exits **3** если отсутствует |
+| `TG_BOT_TOKEN` | YES | `@BotFather` → `/newbot` | Отсутствие при `deliver-run --run-id N` (standalone) → exit **3**. В weekly-run пути НЕ валидируется wrapper'ом — Python child degrade'ит delivery (exit 0 или 2). |
 | `TG_BUSINESS_CHAT_ID` | YES | `@userinfobot` в business chat | Отсутствие → degrade в ops-only с reason `missing_env_TG_BUSINESS_CHAT_ID` (D-611) |
-| `TG_OPS_CHAT_ID` | YES | `@userinfobot` в ops chat | Отсутствие на ops route → exit **3** |
+| `TG_OPS_CHAT_ID` | YES | `@userinfobot` в ops chat | Отсутствие при ops-only route в `deliver-run` → exit **3**. В weekly-run пути не валидируется wrapper'ом. |
 | `HC_PING_URL` | YES | https://healthchecks.io (см. §5) | Wrapper exits **4** если отсутствует (D-703 fail-loud) |
 
 Опциональные CLI-флаги (override sanity gates per run): `--sanity-gate-n N`, `--sanity-gate-m M`, `--sanity-gate-p P`.
 
 Указатель: `cp .env.example .env && chmod 0600 .env`.
 
-### Reserved exit codes (`bin/weekly-run.sh` + Python CLI)
+### Reserved exit codes
 
-| Exit | Значение |
-|------|----------|
-| `0` | Production success — delivered ИЛИ skipped-idempotent |
-| `2` | Undelivered (Telegram unreachable; retryable; xlsx остаётся на диске для повторной доставки через §8) |
-| `3` | Missing `TG_BOT_TOKEN` / `TG_OPS_CHAT_ID` (config error) |
-| `4` | Missing `HC_PING_URL` (Phase 7 D-703 fail-loud — «без мониторинга мы не запускаемся») |
-| `5` | Другой инстанс `weekly-run.sh` держит flock на `/var/lock/ga_crawler-weekly.lock` (Phase 7 D-709 / Pitfall #3) |
+Wrapper `bin/weekly-run.sh` сам валидирует только `HC_PING_URL` (exit 4) и flock (exit 5); все остальные коды — passthrough от Python child'a (`weekly-run` ИЛИ standalone `deliver-run`).
+
+| Exit | Источник | Значение |
+|------|----------|----------|
+| `0` | weekly-run / deliver-run | Production success — delivered ИЛИ skipped-idempotent |
+| `2` | weekly-run | Run не достиг success — sanity-N/M/P gate trip, reporter failure, ИЛИ undelivered Telegram. Disambiguate через `sqlite3 prices.db 'SELECT reason FROM runs WHERE run_id=N'`. |
+| `3` | **only** deliver-run (standalone) | Missing `TG_BOT_TOKEN` / `TG_OPS_CHAT_ID` на ops-only route (`skipped_no_credentials`). НЕ возникает в weekly-run cron-пути. |
+| `4` | wrapper | Missing `HC_PING_URL` (Phase 7 D-703 fail-loud — «без мониторинга мы не запускаемся») |
+| `5` | wrapper | Другой инстанс `weekly-run.sh` держит flock на `/var/lock/ga_crawler-weekly.lock` (Phase 7 D-709 / Pitfall #3) |
 
 Pitfall #4: значения ENV должны быть **single-line, без `#` в значении, без quotes** — bash `source` и `python-dotenv` парсят чуть по-разному; формат `KEY=value` без украшений безопасен для обоих.
 
