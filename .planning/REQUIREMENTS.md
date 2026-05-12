@@ -74,11 +74,11 @@
 
 ### Schedule & Ops
 
-- [ ] **SCHED-01**: Системный cron на VPS запускает `python -m ga_crawler` раз в неделю в ночь воскресенья (Asia/Almaty); отчёт приходит утром в понедельник
-- [ ] **SCHED-02**: Cron-запись использует `CRON_TZ=Asia/Almaty` (нет drift из-за UTC server)
-- [ ] **SCHED-03**: Healthchecks.io dead-man's-switch получает start/success/fail-пинги; пропуск запуска → алерт в ops
-- [ ] **SCHED-04**: Структурированные JSON-логи (structlog) на диск с ротацией; видно через `tail` / `grep`
-- [ ] **SCHED-05**: Документация по setup: `README.md` с инструкцией установки на чистый VPS (uv, Playwright deps, cron, ENV) и deliberate-failure тест (показать, что ops-алерт работает)
+- [x] **SCHED-01**: Системный cron на VPS запускает `python -m ga_crawler` раз в неделю в ночь воскресенья (Asia/Almaty); отчёт приходит утром в понедельник — Plan 07-02 ships `deploy/etc-cron-d-ga_crawler` config-as-code template (D-708 verbatim) with row `0 23 * * 0 ga_crawler /opt/ga_crawler/bin/weekly-run.sh`; Plan 07-04 README.md §2 + §4 documents the deploy procedure (`sudo cp deploy/etc-cron-d-ga_crawler /etc/cron.d/ga_crawler` + `sudo systemctl reload cron`). Sunday 23:00 Almaty = Sunday 18:00 UTC; expected report arrival Monday 02:00-03:00 Almaty (after 3-4h run + delivery). Runtime verification deferred to operator manual smoke per 07-VALIDATION.md «Manual-Only Verifications» — `bin/weekly-run.sh --viled-only --sanity-gate-n 1` (README §2 step 8).
+- [x] **SCHED-02**: Cron-запись использует `CRON_TZ=Asia/Almaty` (нет drift из-за UTC server) — Plan 07-02 ships `deploy/etc-cron-d-ga_crawler` with `CRON_TZ=Asia/Almaty` as the first non-comment line (Vixie cron supports `CRON_TZ` scope-limited to `/etc/cron.d/*` file per crontab(5)). `MAILTO=""` also present (Pitfall #2 mitigation — T-07-01 Information Disclosure prevention). Canary `tests/test_phase07_cron_template_shape.py::test_cron_contains_cron_tz_almaty` source-locks the invariant.
+- [x] **SCHED-03**: Healthchecks.io dead-man's-switch получает start/success/fail-пинги; пропуск запуска → алерт в ops — Plan 07-03 ships `bin/weekly-run.sh` (D-709 contract): `curl -fsS -m 10 --retry 3 "${HC_PING_URL}/start"` before exec, then bare `"${HC_PING_URL}"` on EXIT=0 OR `"${HC_PING_URL}/fail"` with `--data-raw "exit=$EXIT"` on EXIT≠0; all 3 pings `|| true` fail-soft (HC outage MUST NOT block production exec). D-703 fail-loud: wrapper exits 4 if `HC_PING_URL` missing (`: "${HC_PING_URL:?...}"`). Plan 07-04 README §5 documents HC.io account + check + grace period 2h + Telegram integration via `@my_hc_bot`. Hard-crash coverage rationale: bash wrapper owns pings instead of Python (OOM-killer / segfault / `kill -9` blind spots if Python in-process pinged per D-701).
+- [x] **SCHED-04**: Структурированные JSON-логи (structlog) на диск с ротацией; видно через `tail` / `grep` — Plan 07-03 wrapper redirects `uv run python -m ga_crawler weekly-run "$@" >> "$LOG_FILE" 2>&1` where `LOG_FILE=/var/log/ga_crawler/weekly-run-$(date +%F).log` (datestamped). Plan 07-02 `deploy/etc-logrotate-d-ga_crawler` ships 7 directives (weekly + rotate 13 + compress + delaycompress + missingok + notifempty + create 0644 ga_crawler ga_crawler) — 3 months retention (~65MB total on Hetzner CX22 40GB SSD). Plan 07-04 README §9 documents grep/jq examples (`tail -f`, `grep '"level":"error"'`, `zgrep '"run_id":42' *.log.gz`); structlog `run_id` binding pre-existing from Phase 4..6 makes JSON events grep-friendly without Phase 7 code changes (D-704 — `_configure_logging()` source unchanged).
+- [x] **SCHED-05**: Документация по setup: `README.md` с инструкцией установки на чистый VPS (uv, Playwright deps, cron, ENV) и deliberate-failure тест (показать, что ops-алерт работает) — Plan 07-04 ships `README.md` at repo root with exactly 10 H2 sections in D-707 order (canary `tests/test_phase07_readme_structure.py::test_readme_h2_order_matches_d707` source-locks heading list). RU-primary prose; EN code blocks. Sections cover: §2 from-scratch Hetzner CX22 + Ubuntu 24.04 setup with Pitfall #5/#6 user-first ordering (useradd -r -m -d BEFORE logrotate cp BEFORE Camoufox install); §3 ENV vars + reserved exit codes 3/4/5; §4 cron entry verbatim; §5 Healthchecks.io setup; §6 Telegram bot setup; §7 `bin/test-failure-alert.sh` deliberate-failure procedure (D-706 reuses `--viled-only --sanity-gate-n 999999` + `deliver-run --run-id` — NO new production Python paths); §8 operations runbook (deliver-run / report-run / matcher-run / backup recovery); §9 logs + rotation; §10 dev setup. Plan 07-03 ships `bin/test-failure-alert.sh` orchestrator (D-706 5-step + idempotent — failed run stays in DB as evidence per step 5; canary `tests/test_phase07_test_failure_alert_shape.py` source-locks invariants).
 
 ## v2 Requirements
 
@@ -102,6 +102,7 @@ Deferred to future release. Tracked but not in current roadmap.
 - **INFRA-V2-01**: Migration to Postgres (если SQLite станет узким местом или появится дашборд)
 - **INFRA-V2-02**: Docker-обёртка для деплоя (если нужно унификация окружения между разработкой и VPS)
 - **INFRA-V2-03**: Веб-дашборд для исторических трендов (Streamlit / read-only Metabase)
+- **INFRA-V2-04**: Docker image для reproducible redeploys — Camoufox Firefox 135-pinned не совместим с `mcr.microsoft.com/playwright/python:v1.57.0-noble` (Chromium-based); требуется custom base image (build pipeline + Camoufox install + uv + bind-mount volumes). Native install на Ubuntu 24.04 proven через Phase 7 D-708 / D-710; tracked в Phase 8+ backlog.
 
 ### Channels
 
@@ -176,16 +177,16 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 | DELIVER-03 | Phase 6 | Done (Plan 06-03 evaluate_gate D-604 4-check first-fail-wins + REUSES matcher.strict_key.read_run_status D-411 helper + D-515 size_guard cascade from Phase 5) |
 | DELIVER-04 | Phase 6 | Done (Plan 06-03 tenacity wait_chain(5,15,45) per RESEARCH caveat #2 + Pitfall A fail-fast classes excluded + TelegramRetryAfter outside-tenacity loop + Plan 06-04 D-606 delivery_status='undelivered_telegram_unreachable' + Plan 06-05 D-605 E2E invariant) |
 | DELIVER-05 | Phase 6 | Done (Plan 06-01 .env.example D-612 + Plan 06-02 DeliverEnvConfig.from_env + Plan 06-04 D-611 asymmetric handling: token=fail-loud, chat_ids=degradable; load_dotenv ONLY in cli.py::_cmd_deliver per RESEARCH caveat #4) |
-| SCHED-01 | Phase 7 | Pending |
-| SCHED-02 | Phase 7 | Pending |
-| SCHED-03 | Phase 7 | Pending |
-| SCHED-04 | Phase 7 | Pending |
-| SCHED-05 | Phase 7 | Pending |
+| SCHED-01 | Phase 7 | Done (Plan 07-02 deploy/etc-cron-d-ga_crawler D-708 + Plan 07-04 README §2/§4 deploy procedure; Sunday 23:00 Almaty cron row) |
+| SCHED-02 | Phase 7 | Done (Plan 07-02 D-708 — CRON_TZ=Asia/Almaty first non-comment line; canary test_cron_contains_cron_tz_almaty source-locks invariant) |
+| SCHED-03 | Phase 7 | Done (Plan 07-03 bin/weekly-run.sh D-709 — /start before exec + bare URL on EXIT=0 + /fail with --data-raw on EXIT≠0; D-703 fail-loud exit 4 if HC_PING_URL missing; Plan 07-04 README §5) |
+| SCHED-04 | Phase 7 | Done (Plan 07-03 wrapper redirects stdout/stderr to /var/log/ga_crawler/weekly-run-YYYY-MM-DD.log + Plan 07-02 deploy/etc-logrotate-d-ga_crawler D-705 — weekly + rotate 13 + compress; D-704 _configure_logging() source unchanged) |
+| SCHED-05 | Phase 7 | Done (Plan 07-04 README.md 10 H2 sections per D-707 RU-primary + Plan 07-03 bin/test-failure-alert.sh D-706 5-step orchestrator; canary test_readme_h2_order_matches_d707) |
 
 **Coverage:**
 - v1 requirements: 48 total (RECON 4 + CRAWL 6 + PARSE 6 + NORM 6 + MATCH 4 + DATA 6 + REPORT 6 + DELIVER 5 + SCHED 5)
 - Mapped to phases: 48
-- Closed: 42/48 (Phase 1-6 complete; Phase 7 SCHED-01..05 + Phase 1 RECON-01 conditional plans pending)
+- Closed: 47/48 (Phase 1-7 complete; only Phase 1 RECON-01 conditional plans pending — operator-deferred per Phase 1 ops backlog)
 - Unmapped: 0
 - Note: previous "47 total" count was an off-by-one in the initial summary; the enumerated IDs above sum to 48.
 
@@ -195,3 +196,4 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 *Phase 4 update: 2026-05-11 — MATCH-01..04 closed; MATCH-02 schema amended to denormalized 13-column shape per 04-CONTEXT.md D-401 + Action Items.*
 *Phase 5 update: 2026-05-12 — REPORT-01..06 closed; REPORT-01 amended per 05-CONTEXT.md D-502 (Assortment gaps reinterpreted as SKU-level within brand-overlap CRAWL-02 scope since brand-level gap=∅ by construction). Plans 05-01..05-06 shipped Wave 0..5 (foundation → builders → archive → orchestrator → main_run + CLI composition → doc cascade); 6 v1 requirements satisfied bringing total to 37/48. D-514/D-515/D-405 cascade items propagated to STATE.md Accumulated Key Decisions for Phase 6 planner.*
 *Phase 6 update: 2026-05-12 — DELIVER-01..05 closed; Plans 06-01..06-06 shipped Wave 0..5 (Wave 0 setup → Wave 1 foundations → Wave 2 gate+client → Wave 3 orchestrator+CLI → Wave 4 composition+E2E → Wave 5 doc cascade). Phase 6 closure unblocks Phase 7 (Scheduler + Observability Hardening) — SCHED-01..05 inheritance points: D-605 delivery_status decoupling, D-606 6-value enum for Healthchecks SCHED-03 routing, D-607 8-key deliver.* namespace, D-608 `deliver-run --run-id N` standalone recovery tool, D-611 asymmetric ENV handling. New dep: aiogram>=3.27,<4.0.*
+*Phase 7 update: 2026-05-12 — SCHED-01..05 closed; Plans 07-01..07-05 shipped Wave 1..4 (Wave 1 source-lock canaries → Wave 2 deploy templates + bash wrappers parallel → Wave 3 README operator runbook → Wave 4 doc cascade close-out). Phase 7 closes v1: 47/48 v1 requirements satisfied (only Phase 1 RECON-01 conditional plans remain — operator-deferred per spike MEMO). Phase 7 ships ZERO production Python — operator-facing artifacts only (deploy/etc-cron-d-ga_crawler + deploy/etc-logrotate-d-ga_crawler + .env.example HC_PING_URL line + bin/weekly-run.sh + bin/test-failure-alert.sh + README.md 10 H2 sections). v2 backlog gains INFRA-V2-04 per D-710 (Docker image deferred — Camoufox Firefox 135 incompatible with mcr.microsoft.com/playwright/python:v1.57.0-noble Chromium-based). D-701/D-708/D-709/D-710 cascade persisted to STATE.md Accumulated Key Decisions.*
