@@ -134,7 +134,7 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RECON-01 | Phase 1 | Pending |
+| RECON-01 | Phase 1 | Closed — operator-deferred per spike MEMO 2026-05-06 (mirdbek@gmail.com). Camoufox-direct lock proved 99/100 success rate from KZ-laptop without proxy; conditional plans 01-03 (IPRoyal trial), 01-09 (multi-geo proxy), 01-10 (Tier 3 escalation) all SKIPPED. RECON-01 is functionally satisfied by the scope-narrowing decision. |
 | RECON-02 | Phase 1 | Done (plan 01-07, 2026-05-05) |
 | RECON-03 | Phase 1 | Done — page-volume in plan 01-05 (2026-05-05); JSON-endpoint hunt in plan 01-06 (2026-05-06, finding: NO Tier-0 endpoint, vendor identified as GroupIB/F.A.C.C.T., D-14 verification deferred to 01-08) |
 | RECON-04 | Phase 1 | Done (plan 01-04, 2026-05-05) |
@@ -186,7 +186,7 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 **Coverage:**
 - v1 requirements: 48 total (RECON 4 + CRAWL 6 + PARSE 6 + NORM 6 + MATCH 4 + DATA 6 + REPORT 6 + DELIVER 5 + SCHED 5)
 - Mapped to phases: 48
-- Closed: 47/48 (Phase 1-7 complete; only Phase 1 RECON-01 conditional plans pending — operator-deferred per Phase 1 ops backlog)
+- Closed: 48/48 (Phase 1-7 complete; RECON-01 reclassified Closed via spike MEMO 2026-05-06 operator decision — Camoufox-direct 99/100 retired conditional plans 01-03/09/10)
 - Unmapped: 0
 - Note: previous "47 total" count was an off-by-one in the initial summary; the enumerated IDs above sum to 48.
 
@@ -197,3 +197,4 @@ Per-requirement phase mapping (filled by `gsd-roadmapper` 2026-05-05).
 *Phase 5 update: 2026-05-12 — REPORT-01..06 closed; REPORT-01 amended per 05-CONTEXT.md D-502 (Assortment gaps reinterpreted as SKU-level within brand-overlap CRAWL-02 scope since brand-level gap=∅ by construction). Plans 05-01..05-06 shipped Wave 0..5 (foundation → builders → archive → orchestrator → main_run + CLI composition → doc cascade); 6 v1 requirements satisfied bringing total to 37/48. D-514/D-515/D-405 cascade items propagated to STATE.md Accumulated Key Decisions for Phase 6 planner.*
 *Phase 6 update: 2026-05-12 — DELIVER-01..05 closed; Plans 06-01..06-06 shipped Wave 0..5 (Wave 0 setup → Wave 1 foundations → Wave 2 gate+client → Wave 3 orchestrator+CLI → Wave 4 composition+E2E → Wave 5 doc cascade). Phase 6 closure unblocks Phase 7 (Scheduler + Observability Hardening) — SCHED-01..05 inheritance points: D-605 delivery_status decoupling, D-606 6-value enum for Healthchecks SCHED-03 routing, D-607 8-key deliver.* namespace, D-608 `deliver-run --run-id N` standalone recovery tool, D-611 asymmetric ENV handling. New dep: aiogram>=3.27,<4.0.*
 *Phase 7 update: 2026-05-12 — SCHED-01..05 closed; Plans 07-01..07-05 shipped Wave 1..4 (Wave 1 source-lock canaries → Wave 2 deploy templates + bash wrappers parallel → Wave 3 README operator runbook → Wave 4 doc cascade close-out). Phase 7 closes v1: 47/48 v1 requirements satisfied (only Phase 1 RECON-01 conditional plans remain — operator-deferred per spike MEMO). Phase 7 ships ZERO production Python — operator-facing artifacts only (deploy/etc-cron-d-ga_crawler + deploy/etc-logrotate-d-ga_crawler + .env.example HC_PING_URL line + bin/weekly-run.sh + bin/test-failure-alert.sh + README.md 10 H2 sections). v2 backlog gains INFRA-V2-04 per D-710 (Docker image deferred — Camoufox Firefox 135 incompatible with mcr.microsoft.com/playwright/python:v1.57.0-noble Chromium-based). D-701/D-708/D-709/D-710 cascade persisted to STATE.md Accumulated Key Decisions.*
+*Milestone-audit cleanup 2026-05-13 — RECON-01 traceability row flipped Pending → Closed (operator-deferred per spike MEMO 2026-05-06). v1 final coverage 48/48; v1-MILESTONE-AUDIT.md verdict tech_debt only for missing audit-framework artifacts (SECURITY for phases 2/4/6, VALIDATION for phase 4 — paperwork on already-shipped tested code, deferred to v2 cleanup backlog).*
