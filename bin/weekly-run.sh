@@ -62,8 +62,14 @@ fi
 
 # 3. Single-writer flock guard (defense vs double-run from cron+manual overlap).
 #    /var/lock is tmpfs (symlink to /run/lock on Ubuntu 24.04) — auto-cleanup at reboot.
+#    HC /fail ping ДО exit 5 — иначе под cron MAILTO="" stderr discard'нут, и operator
+#    видит только 2h dead-man's switch trigger, не понимая lock-contention vs cron-not-running.
 exec 9>/var/lock/ga_crawler-weekly.lock
-flock -n 9 || { echo "Another weekly-run holds the lock — refusing" >&2; exit 5; }
+if ! flock -n 9; then
+  echo "Another weekly-run holds the lock — refusing" >&2
+  curl -fsS -m 5 --data-raw "exit=5 reason=flock-refused" "${HC_PING_URL}/fail" > /dev/null || true
+  exit 5
+fi
 
 LOG_FILE="/var/log/ga_crawler/weekly-run-$(date +%F).log"
 
