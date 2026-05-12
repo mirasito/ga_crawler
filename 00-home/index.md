@@ -9,7 +9,8 @@ date: 2026-05-13
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — Phase 7 done, v1 milestone close + operator deploy next]]** — что делать прямо сейчас (Phase 7 EXECUTED 2026-05-13 через `/gsd-execute-phase 7` 4-wave subagent flow + `/gsd-code-review 7` auto-fix loop 4 Critical + 4 Warning; verifier 5/5 SCHED + 4 operator-manual UAT items by design; **v1 milestone code-ship COMPLETE 2026-05-13, 47/48 requirements**; next: operator deploy on Hetzner CX22 ∥ `/gsd-complete-milestone v1`)
+- **[[Текущие приоритеты — v1.0 milestone shipped, operator deploy next]]** — что делать прямо сейчас (**v1.0 MILESTONE SHIPPED 2026-05-13** — 7/7 phases / 48/48 requirements / 803 tests / git tag `v1.0` / audit verdict `tech_debt` paperwork-only; security 7/7 + nyquist 11/11 closed; operator track: Hetzner CX22 deploy per `README.md §2` → `/gsd-verify-work 7` resume post-deploy → `/gsd-new-milestone` для v1.1)
+- Phase 7 close trail: ~~[[Текущие приоритеты — Phase 7 done, v1 milestone close + operator deploy next]]~~ — superseded 2026-05-13 (milestone audit + archive + tag завершены в той же сессии; ROADMAP реорганизован milestone-grouped form; REQUIREMENTS архивирован; MILESTONES + RETROSPECTIVE созданы)
 - Phase 7 plan trail: ~~[[Текущие приоритеты — Phase 7 planned, execute next]]~~ — superseded 2026-05-13 (Phase 7 executed end-to-end + code review fixes shipped; v1 code-ship complete)
 - Phase 6 done trail: ~~[[Текущие приоритеты — Phase 6 done, Phase 7 next]]~~ — superseded 2026-05-12 (Phase 7 planned end-to-end в одной сессии; 5 plans готовы к execute)
 - Phase 6 contexted trail: ~~[[Текущие приоритеты — Phase 6 contexted, plan next]]~~ — superseded 2026-05-12 (Phase 6 planned + executed end-to-end в одной сессии)
