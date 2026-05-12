@@ -99,7 +99,11 @@ This document evolves at phase transitions and milestone boundaries.
 
 ## Current State
 
-**v1 milestone code-ship COMPLETE 2026-05-13** — Phase 7 (Scheduler + Observability Hardening) closed all 5 SCHED requirements. 47/48 v1 requirements satisfied (only Phase 1 RECON-01 conditional plans remain operator-deferred per Camoufox-direct lock). Code review surfaced 4 Critical + 4 Warning issues — all auto-fixed (commits ed07007..c1e732b). 803/803 tests pass, zero regressions. Next: operator-led VPS deploy on Hetzner CX22 EU per README §2, then `/gsd-complete-milestone v1` for milestone audit and archival.
+**v1.0 MILESTONE SHIPPED 2026-05-13** — All 7 phases complete; 48/48 v1 requirements closed (RECON-01 reclassified Closed via spike MEMO 2026-05-06 — Camoufox-direct lock retired conditional plans 01-03/09/10). Phase 7 audit closed (7/7 threats, 11/11 Nyquist rows green). Code review issues auto-fixed (commits ed07007..c1e732b). 803/803 tests pass.
+
+Milestone audit verdict: **tech_debt** — paperwork only (SECURITY for phases 2/4/6, VALIDATION for phase 4; deferred to v1.1 cleanup backlog), no code blockers. Full record: `.planning/MILESTONES.md` § v1.0; archives in `.planning/milestones/v1.0-*.md`; git tag `v1.0`.
+
+**Operator track (outside CI by design):** Hetzner CX22 EU deploy per README §2 → first Sunday production cron tick → `/gsd-verify-work 7` resume converts 4 blocked UAT items to pass. Next milestone cycle starts with `/gsd-new-milestone`.
 
 ---
-*Last updated: 2026-05-13 after Phase 7 completion*
+*Last updated: 2026-05-13 after v1.0 milestone archival.*

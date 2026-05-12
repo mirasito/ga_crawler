@@ -1,9 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-status: Phase 7 COMPLETE 2026-05-12 — SCHED-01..05 closed; 47/48 v1 requirements satisfied; project v1 done (only Phase 1 RECON-01 conditional pending, operator-deferred)
-last_updated: "2026-05-12T18:30:00.000Z"
+milestone_name: v1.0 Initial Code-Ship
+status: v1.0 MILESTONE SHIPPED 2026-05-13 — 7/7 phases complete; 48/48 v1 reqs closed (RECON-01 reclassified per spike MEMO); milestone audit verdict tech_debt (paperwork only, no code blockers); archived to milestones/v1.0-*.md; live REQUIREMENTS.md removed for fresh v1.1 cycle; tag v1.0 created. Operator track: Hetzner CX22 deploy + post-deploy UAT resume.
+last_updated: "2026-05-13T01:50:00.000Z"
+shipped_at: "2026-05-13"
+next_milestone: pending (/gsd-new-milestone)
 progress:
   total_phases: 7
   completed_phases: 7
@@ -11,6 +13,25 @@ progress:
   completed_plans: 50
   percent: 100
 ---
+
+## Deferred Items
+
+Acknowledged and deferred at v1.0 milestone close on 2026-05-13:
+
+| Category | Item | Status |
+|----------|------|--------|
+| operator-uat | 07-HUMAN-UAT.md SC#1 cron timing verification | blocked — prior-phase (Hetzner CX22 deploy prerequisite) |
+| operator-uat | 07-HUMAN-UAT.md SC#5 deliberate-failure end-to-end | blocked — third-party (Telegram + HC.io live services) |
+| operator-uat | 07-HUMAN-UAT.md smoke gate (--viled-only --sanity-gate-n 1) | blocked — prior-phase (VPS provisioning) |
+| operator-uat | 07-HUMAN-UAT.md HC.io Telegram integration | blocked — third-party (HC.io UI + Telegram bot setup) |
+| audit-framework | SECURITY.md missing for phases 02, 04, 06 | deferred — no expected vulnerabilities; defer to v1.1 cleanup or run `/gsd-secure-phase` retroactively |
+| audit-framework | VALIDATION.md missing for phase 04 | deferred — 465+ tests already cover matcher; run `/gsd-validate-phase 4` retroactively if desired |
+| v2-backlog | INFRA-V2-04 Docker image (D-710) | deferred — Camoufox Firefox 135 ↔ Playwright image incompatibility; custom base image required for v2 |
+| v2-backlog | CRAWL-01 viled catalog full pagination | deferred — SSR ignores ?page=N; v1 ships page-1-only (120 SKUs above sanity_gate_n=100 floor) |
+| v2-backlog | Camoufox+EU smoke from Hetzner | deferred — operator concern at first production cron; revive D-08 IPRoyal trial if regresses from EU IP |
+| v2-backlog | KZ-legal/ToS review (30 min with lawyer) | deferred — Phase 7 ops backlog |
+
+
 
 # State: GA Crawler
 
