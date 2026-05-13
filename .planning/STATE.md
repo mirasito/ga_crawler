@@ -1,16 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: Parser bug fixes + operator deploy unblock
-status: planning
-last_updated: "2026-05-13T14:00:00.000Z"
-last_activity: 2026-05-13
+milestone_name: milestone
+status: Ready for `/gsd-plan-phase 8` (Parser Bug Fixes)
+last_updated: "2026-05-13T15:19:25.679Z"
+last_activity: 2026-05-13 — v1.1 roadmap created by gsd-roadmapper
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 ## Deferred Items
@@ -39,17 +38,18 @@ Acknowledged and deferred at v1.0 milestone close on 2026-05-13:
 
 **Core value:** Команда viled.kz один раз в неделю получает детализированный, сопоставленный по позициям отчёт о ценах конкурента (goldapple.kz) и может корректировать собственное ценообразование, видеть ассортиментные разрывы и отслеживать чужие промо-акции.
 
-**Current focus:** Phase 6 — Telegram Delivery + Ops/Business Split
+**Current focus:** Phase 8 — Parser Bug Fixes (context gathered, ready to plan)
 
 ## Current Position
 
 Milestone: v1.1 (Active) — Parser bug fixes + operator deploy unblock
-Phase: Not started (roadmap approved 2026-05-13 — 4 phases mapped, 24/24 reqs)
+Phase: 8 — Parser Bug Fixes (context gathered 2026-05-13; 4 implementation decisions locked)
 Plan: —
 Status: Ready for `/gsd-plan-phase 8` (Parser Bug Fixes)
-Last activity: 2026-05-13 — v1.1 roadmap created by gsd-roadmapper
+Last activity: 2026-05-13 — Phase 8 CONTEXT.md captured by gsd-discuss-phase (W0 spike scope + selectolax 0.4 scope + 3-wave plan structure + null-rate gate scope)
 
 v1.1 phase totals (planned, 4 phases — 24 reqs):
+
 - Phase 8  Parser Bug Fixes               (PARSE-FIX-01..05    = 5 reqs)
 - Phase 9  Live-HTML Harness              (TEST-HARNESS-01..06 = 6 reqs)
 - Phase 10 Audit Paperwork Carryover      (AUDIT-DEBT-01..05   = 5 reqs)
@@ -57,6 +57,7 @@ v1.1 phase totals (planned, 4 phases — 24 reqs):
 
 Coverage: 24/24 v1.1 requirements mapped 1:1 (no orphans, no duplicates)
 Locked decisions:
+
 - Deploy target = Yandex Cloud kz1 (NOT Hetzner)
 - B4/B5 (TEST-HARNESS-04/05) = P2 cheap-bundle inside Phase 9 (try same milestone, else defer to v1.2)
 - Forward-only — no backfill of runs 1-13
