@@ -90,6 +90,31 @@ def jsonld_blocks_anti_fixture() -> list:
     return json.loads((FIXTURES_DIR / "_debug-jsonld-blocks.json").read_text(encoding="utf-8"))
 
 
+# ---- Phase 8 v1.1 live fixtures (Plan 08-01 W0 spike) ----
+
+@pytest.fixture(scope="session")
+def goldapple_pdp_html_live_stereotype() -> str:
+    """STEREOTYPE / SAĜO live PDP captured 2026-05-13 (Bug #1+#2 evidence).
+
+    h1 .brand = "Stereotype", h1 .name = "SAĜO" — Title-case + UPPERCASE.
+    Volume block [75] ОБЪЁМ / МЛ present.
+    Source: Plan 08-01 W0 spike (.planning/spikes/v1.1-brand-name-shapes/
+    pdp-16-niche-stereotype-sago.html), Camoufox 0.4.11 fetch.
+    """
+    return (FIXTURES_DIR / "_live-2026-05-13-stereotype.html").read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="session")
+def goldapple_pdp_html_live_armani() -> str:
+    """Armani Code live PDP captured 2026-05-13 (Bug #2 evidence).
+
+    h1 .brand = "Armani", h1 .name = "armani code" — brand string is a
+    substring of name (data redundancy from upstream goldapple catalog).
+    Source: Plan 08-01 W0 spike (pdp-07-mass-armani-code.html).
+    """
+    return (FIXTURES_DIR / "_live-2026-05-13-armani-code.html").read_text(encoding="utf-8")
+
+
 # ---- Phase 2 contract mocks ----
 
 @pytest.fixture
@@ -187,6 +212,18 @@ def viled_pdp_discounted_html() -> str:
 def viled_pdp_multipack_html() -> str:
     """Multipack viled PDP HTML (item/398309). Drives NORM-04 multipack-flag tests."""
     return (VILED_FIXTURES_DIR / "viled-pdp-multipack.html").read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="session")
+def viled_pdp_html_live_contre_jour() -> str:
+    """Frederic Malle / Contre-Jour live PDP captured 2026-05-13 (Bug #3 evidence).
+
+    viled.kz/item/408872. Drives PARSE-FIX-03 legitimate-None case per D-814:
+    `Размер` attribute may be absent → volume_norm stays NULL after fallback.
+    Source: Plan 08-01 W0 spike (.planning/spikes/v1.1-brand-name-shapes/
+    viled-contre-jour-408872.html), curl_cffi fetch.
+    """
+    return (VILED_FIXTURES_DIR / "_live-2026-05-13-contre-jour.html").read_text(encoding="utf-8")
 
 
 @pytest.fixture(scope="session")

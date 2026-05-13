@@ -1,0 +1,43 @@
+file                                                       shape              brand                  name                                vol_word vol_ml
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+pdp-01-lux-creed-royal-water.html                          mixed-case         Creed                  Royal Water                         Y        Y
+pdp-02-lux-creed-carmina.html                              stereotype-style   Creed                  CARMINA                             N        N
+pdp-03-lux-creed-queen-of-silk.html                        stereotype-style   Creed                  QUEEN OF SILK                       Y        Y
+pdp-04-lux-creed-aventus-for-her.html                      stereotype-style   Creed                  AVENTUS FOR HER                     Y        Y
+pdp-05-lux-creed-aventus.html                              stereotype-style   Creed                  AVENTUS                             Y        Y
+pdp-06-lux-creed-millesime-imperial.html                   stereotype-style   Creed                  MILLESIME IMPERIAL                  N        N
+pdp-07-mass-armani-code.html                               armani-style       Armani                 armani code                         Y        Y
+pdp-08-mass-armani-prive-orangerie-venise.html             mixed-case         Armani                 Prive ORANGERIE VENISE              Y        Y
+pdp-09-mass-givenchy-pour-homme-blue-label.html            stereotype-style   Givenchy               POUR HOMME BLUE LABEL               Y        Y
+pdp-10-mass-givenchy-gentleman-reserve-privee-eau-de-parfum.html armani-style       Givenchy               GIVENCHY GENTLEMAN RESERVE PRIVEE   Y        Y
+pdp-11-mass-givenchy-pour-homme.html                       stereotype-style   Givenchy               POUR HOMME                          Y        Y
+pdp-12-mass-givenchy-irresistible-nectar.html              mixed-case         Givenchy               Irresistible Nectar                 Y        Y
+pdp-13-niche-stereotype-flow.html                          stereotype-style   Stereotype             FLOW                                Y        Y
+pdp-14-niche-stereotype-brace.html                         stereotype-style   Stereotype             BRACE                               Y        Y
+pdp-15-niche-stereotype-unframe.html                       stereotype-style   Stereotype             UNFRAME                             Y        Y
+pdp-16-niche-stereotype-sago.html                          stereotype-style   Stereotype             SAĜO                                Y        Y
+pdp-17-niche-sago.html                                     mixed-case         Stereotype             Sago                                Y        Y
+pdp-18-niche-byredo-alto-astral.html                       mixed-case         Byredo                 Alto Astral                         Y        Y
+pdp-19-ru-black-pearl.html                                 stereotype-style   SAVON DE ROYAL         BLACK PEARL                         Y        Y
+pdp-20-ru-black-pearl-eye-cream.html                       stereotype-style   3W CLINIC              Black Pearl Eye Cream               Y        Y
+pdp-21-ru-black-pearl-gold-hydrogel-eye-patch.html         stereotype-style   PETITFEE               Black Pearl &amp; Gold Hydrogel Ey  N        N
+pdp-22-ru-natura-siberica-total-renewal.html               mixed-case         Natura Siberica        Lab biome Total renewal             Y        Y
+pdp-23-ru-natura-siberica-refresh-scalp.html               mixed-case         Natura Siberica        Lab biome Refresh scalp             N        N
+pdp-24-ru-sibirskie-travy.html                             mixed-case         Levrana                Сибирские травы                     Y        Y
+pdp-25-multi-maison-margiela-set-replica-jazz-club.html    stereotype-style   MAISON MARGIELA        jazz club                           N        N
+pdp-26-multi-maison-margiela-replica-ideal-one.html        stereotype-style   MAISON MARGIELA        Replica Ideal One                   Y        Y
+pdp-27-multi-calvin-klein-silky-coconut.html               mixed-case         Calvin Klein           Silky Coconut                       Y        Y
+pdp-28-multi-calvin-klein-nude-vanilla.html                mixed-case         Calvin Klein           Nude Vanilla                        Y        Y
+pdp-29-multi-calvin-klein-sheer-peach.html                 mixed-case         Calvin Klein           Sheer Peach                         Y        Y
+pdp-30-multi-calvin-klein-cotton-musk.html                 givenchy-baseline  Calvin Klein           cotton musk                         Y        Y
+
+Shape histogram:
+  stereotype-style       16
+  mixed-case             11
+  armani-style           2
+  givenchy-baseline      1
+
+h1 .brand extraction:  30/30
+h1 .name extraction:   30/30
+Volume word coverage:  25/30
+Volume /МЛ block:      25/30
