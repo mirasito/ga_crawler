@@ -72,6 +72,8 @@ date: 2026-05-13
 - [[2026-05-12 — Phase 6 planned + executed end-to-end, Telegram delivery shipped]]
 - [[2026-05-12 — Phase 7 planned end-to-end, 5 plans across 4 waves ready для execute]]
 - [[2026-05-13 — Phase 7 executed end-to-end + code review fixes, v1 milestone code-ship complete]]
+- [[2026-05-13 — v1.0 milestone audit + archive complete, operator track unblocked]]
+- [[2026-05-13 — operator boundaries re-confirmed, deploy остаётся за человеком]]
 
 ## Inbox
 
