@@ -57,14 +57,14 @@
 Plans:
 
 **Wave 0** *(sequential, blocking — requires operator interaction)*
-- [ ] 08-01-PLAN.md — W0 30-PDP shape-sampling spike + 3 live fixtures + skill wrap-up
+- [x] 08-01-PLAN.md — W0 30-PDP shape-sampling spike + 3 live fixtures + skill wrap-up
 
 **Wave 1** *(blocked on Wave 0 completion; 08-02 ∥ 08-04 parallel — disjoint files)*
-- [ ] 08-02-PLAN.md — PARSE-FIX-01 goldapple volume via selectolax 0.4 Lexbor
-- [ ] 08-04-PLAN.md — PARSE-FIX-03 viled volume via attributes[0].attributes[]
+- [x] 08-02-PLAN.md — PARSE-FIX-01 goldapple volume via selectolax 0.4 Lexbor
+- [x] 08-04-PLAN.md — PARSE-FIX-03 viled volume via attributes[0].attributes[]
 
 **Wave 2** *(blocked on Wave 1 / 08-02 completion — shared file `goldapple_microdata.py`)*
-- [ ] 08-03-PLAN.md — PARSE-FIX-02 goldapple brand+name via product-level microdata
+- [x] 08-03-PLAN.md — PARSE-FIX-02 goldapple brand+name via product-level microdata
 
 **Wave 3** *(blocked on Waves 1+2 completion — gate reads stats produced by 08-02/03/04)*
 - [ ] 08-05-PLAN.md — PARSE-FIX-04 null-rate gate + PARSE-FIX-05 SMOKE rotation + doc cascade
