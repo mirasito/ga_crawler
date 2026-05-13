@@ -28,16 +28,22 @@
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] Goldapple parser: извлекать volume из structured-блока PDP (78/78 SKU run #13 пропустили) — v1.1 PARSE-FIX
-- [ ] Goldapple parser: разделять brand и name из title (склейка `Armaniarmani code` → `Armani` + `armani code`) — v1.1 PARSE-FIX
-- [ ] Viled parser: extract volume как отдельное поле вместо дублирования всего name в volume_raw — v1.1 PARSE-FIX
-- [ ] Live HTML fixture harness в тестах — поймать drift который unit-тесты на frozen fixtures не ловят — v1.1 TEST-FIX
-- [ ] Audit paperwork debt: SECURITY.md для phases 2/4/6 + VALIDATION.md для phase 4 — v1.1 carryover из v1.0
-- [ ] Operator deploy: VPS (Hetzner CX22 EU или Yandex Cloud KZ) + первый live Sunday cron tick + UAT closure — v1.1 DEPLOY
+- [x] Goldapple parser: извлекать volume из structured-блока PDP (78/78 SKU run #13 пропустили) — v1.1 PARSE-FIX-01 (Phase 8, Plan 08-02)
+- [x] Goldapple parser: разделять brand и name из title (склейка `Armaniarmani code` → `Armani` + `armani code`) — v1.1 PARSE-FIX-02 (Phase 8, Plan 08-03; W0 pivot — h1 `.brand`/`.name` spans, NOT microdata)
+- [x] Viled parser: extract volume как отдельное поле вместо дублирования всего name в volume_raw — v1.1 PARSE-FIX-03 (Phase 8, Plan 08-04)
+- [ ] Live HTML fixture harness в тестах — поймать drift который unit-тесты на frozen fixtures не ловят — v1.1 TEST-FIX (Phase 9 pending)
+- [ ] Audit paperwork debt: SECURITY.md для phases 2/4/6 + VALIDATION.md для phase 4 — v1.1 carryover из v1.0 (Phase 10 pending)
+- [ ] Operator deploy: Yandex Cloud kz1 + первый live Sunday cron tick + UAT closure — v1.1 DEPLOY (Phase 11 pending)
 
 ## Current Milestone: v1.1 Parser bug fixes + operator deploy unblock
 
 **Goal:** Починить три парсер-бага найденных в live-run #13 (2026-05-13), добавить live-HTML harness чтобы такого drift больше не пропускали, закрыть paperwork-debt из v1.0 audit и развернуть на production VPS чтобы первое воскресенье вернуло корректный отчёт.
+
+**Phase Status:**
+- [x] Phase 8: Parser Bug Fixes — Complete 2026-05-13 (5/5 PARSE-FIX reqs closed: goldapple volume + brand/name; viled volume; null-rate gate; SMOKE rotation)
+- [ ] Phase 9: Live-HTML Harness — Pending (syrupy 4.7 + Pydantic write-boundary; locks Phase 8 fix retroactively)
+- [ ] Phase 10: Audit Paperwork Carryover — Pending (SECURITY.md phases 2/4/6 + VALIDATION.md phase 4 + verdict-flip)
+- [ ] Phase 11: Operator Deploy на Yandex Cloud kz1 — Pending (first production cron tick)
 
 **Target features:**
 - Goldapple parser: volume extraction + brand/name separation
@@ -125,7 +131,7 @@ This document evolves at phase transitions and milestone boundaries.
 
 Milestone audit verdict: **tech_debt** — paperwork only (SECURITY for phases 2/4/6, VALIDATION for phase 4; deferred to v1.1 cleanup backlog), no code blockers. Full record: `.planning/MILESTONES.md` § v1.0; archives in `.planning/milestones/v1.0-*.md`; git tag `v1.0`.
 
-**Operator track (outside CI by design):** Hetzner CX22 EU deploy per README §2 → first Sunday production cron tick → `/gsd-verify-work 7` resume converts 4 blocked UAT items to pass. Next milestone cycle starts with `/gsd-new-milestone`.
+**Operator track (outside CI by design):** v1.1 deploy target = Yandex Cloud kz1 (Phase 11). Hetzner option retired. Phase 8 closed 2026-05-13 via Plan 08-05 — 5/5 PARSE-FIX reqs Complete; Phases 9-11 remain Pending. Next: `/gsd-execute-phase 9` after Phase 8 verification.
 
 ---
-*Last updated: 2026-05-13 after v1.1 milestone open — parser-bug findings from live-run #13 + operator deploy unblock.*
+*Last updated: 2026-05-13 — Phase 8 closed via Plan 08-05 doc cascade (5/5 PARSE-FIX reqs Complete). Previously: v1.1 milestone open — parser-bug findings from live-run #13 + operator deploy unblock.*
