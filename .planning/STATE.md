@@ -1,18 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: v1.1 Parser bug fixes + operator deploy unblock
-status: executing — Phase 8 closed 2026-05-13 (5/5 PARSE-FIX reqs Complete via Plan 08-05 doc cascade); Phase 9 (Live-HTML Harness) is next; v1.0 milestone shipped 2026-05-13 and remains archived in milestones/v1.0-*.md.
-last_updated: "2026-05-13T22:00:00.000Z"
-last_activity: 2026-05-13 — Phase 8 closed (Plan 08-05 GREEN: parser_drift_null_rate_gate + 3 stats keys + SMOKE rotation + doc cascade)
-v1_shipped_at: "2026-05-13"
-next_phase: 9 (Live-HTML Harness — TEST-HARNESS-01..06)
+milestone_name: milestone
+status: Ready to plan
+last_updated: "2026-05-13T21:59:28.022Z"
+last_activity: 2026-05-13
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 5
   completed_plans: 5
-  percent: 25
+  percent: 100
 ---
 
 ## Deferred Items
@@ -47,15 +45,17 @@ Acknowledged and deferred at v1.0 milestone close on 2026-05-13:
 
 Milestone: v1.1 (Active) — Parser bug fixes + operator deploy unblock
 Phase 8 (Parser Bug Fixes): **COMPLETE 2026-05-13** — 5/5 plans shipped; PARSE-FIX-01..05 all closed via:
+
   - Plan 08-01 (W0 spike — 30-PDP shape sampling + 3 live fixtures + skill wrap-up)
   - Plan 08-02 (PARSE-FIX-01 goldapple volume via selectolax 0.4 Lexbor `:contains`)
   - Plan 08-03 (PARSE-FIX-02 goldapple brand+name via h1 `.brand`/`.name` CSS-class spans — W0 pivot; D-816 invariant softened to log-only canary)
   - Plan 08-04 (PARSE-FIX-03 viled volume via `attributes[0].attributes[].name=="Размер"`)
   - Plan 08-05 (PARSE-FIX-04 parser-drift null-rate sanity gate + PARSE-FIX-05 SMOKE rotation + doc cascade)
+
 Phase 9: **PENDING** — next executable phase. TEST-HARNESS-01..06: syrupy 4.7 + Pydantic write-boundary + brand-coverage canary + capture-fixtures CLI.
 Phase 10: PENDING (audit paperwork carryover; parallel-safe with Phase 9)
 Phase 11: PENDING (operator deploy on Yandex Cloud kz1 — depends on Phase 8 + Phase 9)
-Last activity: 2026-05-13 — Phase 8 closed (Plan 08-05 GREEN cherry-picked onto master)
+Last activity: 2026-05-13
 
 ### Quick Tasks Completed
 
