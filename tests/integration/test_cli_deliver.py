@@ -316,6 +316,56 @@ def test_unicode_stdout_safe_on_windows(tmp_path):
 
 
 # --------------------------------------------------------------------------- #
+# Test 7b: data-egress canary -- CLI run from outside project tree must NOT   #
+# discover the project's .env (quick-task 20260514-cli-dotenv-leak)           #
+# --------------------------------------------------------------------------- #
+
+
+def test_cli_does_not_load_project_dotenv_when_cwd_outside_tree(tmp_path):
+    """Regression for quick-task 20260514-cli-dotenv-leak.
+
+    Prior behavior: `cli.py` called `load_dotenv(override=False)` with no
+    explicit path. `python-dotenv` defaulted to walking UP from
+    ``cli.py``'s `__file__`, which always finds the project root's `.env`
+    regardless of where the subprocess is invoked from. Subprocess tests
+    that stripped `TG_*` from `env=` were therefore receiving real
+    `TG_BOT_TOKEN` + `TG_BUSINESS_CHAT_ID` from disk, and silently
+    delivering fake-xlsx fixtures to the operator's real Telegram chat.
+
+    Post-fix: `cli.py` resolves the dotenv path via
+    ``find_dotenv(usecwd=True)`` so the search starts at `os.getcwd()`.
+    Tests run from ``tmp_path`` (a tmp dir well outside the project
+    tree) MUST observe `TG_BOT_TOKEN` as missing and exit with code 3.
+
+    This canary is INDEPENDENT of ``test_deliver_run_missing_token_exits_3``
+    (which checks the wider exit-code-3 contract); this test pins the
+    specific dotenv-discovery behavior so a future refactor cannot
+    silently re-introduce the egress channel.
+    """
+    db_path, run_id = _plant_run(tmp_path)
+    pyp = _write_pyproject(tmp_path)
+
+    r = _run_cli(
+        "deliver-run",
+        "--run-id", str(run_id),
+        "--db-path", str(db_path),
+        "--pyproject", str(pyp),
+        "--repo-root", str(tmp_path),
+        cwd=str(tmp_path),
+        env=_env_without_tg(),
+    )
+    assert r.returncode == 3, (
+        f"CLI loaded credentials from project .env despite cwd={tmp_path}. "
+        f"stdout={r.stdout!r}\nstderr={r.stderr!r}"
+    )
+    payload = _extract_payload(r.stdout)
+    assert payload["delivery_status"] == "skipped_no_credentials"
+    # No Telegram I/O happened — message IDs must be sentinel-only.
+    assert payload.get("business_caption_message_id") in (None, -1)
+    assert payload.get("business_document_message_id") in (None, -1)
+
+
+# --------------------------------------------------------------------------- #
 # Test 8: structural canary -- load_dotenv ONLY in cli.py                     #
 # --------------------------------------------------------------------------- #
 

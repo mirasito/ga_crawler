@@ -254,7 +254,7 @@ def _cmd_deliver(args) -> int:
       2 -> undelivered_telegram_unreachable (retryable)
       3 -> skipped_no_credentials (config error -- TG_BOT_TOKEN missing)
     """
-    from dotenv import load_dotenv
+    from dotenv import find_dotenv, load_dotenv
 
     from ga_crawler.delivery.config import DeliverConfig, DeliverEnvConfig
     from ga_crawler.runners.delivery_run import run_delivery_phase
@@ -268,7 +268,19 @@ def _cmd_deliver(args) -> int:
     # DeliverEnvConfig.from_env() -- keeps the unit-test path clean
     # (tests bypass via monkeypatch.setenv) and lets the operator opt
     # into .env loading at the CLI boundary.
-    load_dotenv(override=False)
+    #
+    # quick-task 20260514-cli-dotenv-leak: `find_dotenv(usecwd=True)` is
+    # LOAD-BEARING. Default `find_dotenv()` walks up from this module's
+    # __file__, which always finds the project's .env regardless of where
+    # the CLI was invoked from. That made subprocess tests with stripped
+    # TG_* env vars silently re-read real credentials and deliver
+    # fake-xlsx fixtures to the operator's real Telegram chat. Anchoring
+    # the search at os.getcwd() keeps prod behavior (operator runs
+    # `cd /opt/ga_crawler && python -m ga_crawler ...`) while making
+    # tmp-cwd subprocess tests credential-free.
+    dotenv_path = find_dotenv(usecwd=True)
+    if dotenv_path:
+        load_dotenv(dotenv_path, override=False)
 
     init_db(args.db_path)
     engine = make_engine(args.db_path)
