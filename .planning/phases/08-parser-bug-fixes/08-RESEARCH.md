@@ -1197,22 +1197,22 @@ The W0 spike's value is the shape-table — NOT the raw HTML. If the operator ca
 
 **Mitigation:** All 6 assumptions are resolved at W0 spike (A1/A2/A3/A4) or at first integration test (A5/A6). None block Plan 08-01 W0 from starting.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should `_strip_brand_prefix` fallback ship in Plan 08-03?**
+1. **`_strip_brand_prefix` fallback ship in Plan 08-03?**
    - What we know: existing Givenchy fixture has clean `<meta itemprop="name">` for both brand AND product.
    - What's unclear: do STEREOTYPE/Armani PDPs also have product-level microdata, or do they fall back to `<h1>` text?
-   - Recommendation: Plan 08-03 implementer reads `shape-table.md` first; if microdata coverage ≥95% → omit fallback. Otherwise add `_strip_brand_prefix(name, brand)` helper that strips `^{brand}` case-insensitively, with a unit test for STEREOTYPE/Armani.
+   - **RESOLVED:** Decision deferred to Plan 08-03 execution-time, gated on W0 shape-table evidence. If `shape-table.md` shows microdata coverage ≥95% across the 30 PDPs → omit fallback (microdata-primary path only). If coverage <95% → add `_strip_brand_prefix(name, brand)` helper that strips `^{brand}` case-insensitively, with a unit test for STEREOTYPE/Armani. Plan 08-03 Task 2 enforces this branch logic explicitly (read MEMO.md → branch).
 
-2. **Should viled descriptive-attributes iteration cover all `pp.attributes[*]`, not just `[0]`?**
+2. **viled descriptive-attributes iteration cover all `pp.attributes[*]`, not just `[0]`?**
    - What we know: existing v1.0 code only reads `pp.attributes[0]` (single price variant per D-217 Pitfall 2 "beauty SKUs typically have ≤1 size variant").
    - What's unclear: multi-variant SKUs may put `Размер` in `[1]` or higher.
-   - Recommendation: Plan 08-04 stays single-variant for v1.1 (mirror existing behavior); flag for v1.2 if Phase 9 brand-coverage canary surfaces multi-variant misses.
+   - **RESOLVED:** Single-variant `[0]` only for v1.1 (mirrors existing v1.0 contract — Phase 4 matcher `volume_norm IS NOT NULL` filter already excludes nulls from join, so missing multi-variant volumes degrade gracefully). Multi-variant `[*]` deferred to v1.2 if Phase 9 brand-coverage canary surfaces misses. Plan 08-04 codifies single-variant path.
 
-3. **Where does `parser_drift_failure_reason` live in `runs.stats`?**
+3. **`parser_drift_failure_reason` location in `runs.stats`?**
    - What we know: D-816 says `failure_reason` is run-level.
    - What's unclear: `goldapple.parser_drift_failure_reason` (namespaced) vs top-level `failure_reason`.
-   - Recommendation: namespaced `goldapple.parser_drift_failure_reason` for atomic-merge safety (D-815 explicitly goldapple-only). Top-level `runs.status='failed'` already exists for higher-level signaling.
+   - **RESOLVED:** Namespaced `goldapple.parser_drift_failure_reason` per D-815 (gate is goldapple-only). Atomic-merge safety preserved through `GoldappleStatsBuilder`. Top-level `runs.status='failed'` signals at run-level; the namespaced reason key identifies the specific drift mode (volume vs brand). Plan 08-05 enforces this naming.
 
 ## Environment Availability
 

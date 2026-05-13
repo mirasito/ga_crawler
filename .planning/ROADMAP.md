@@ -53,7 +53,26 @@
   3. Invariant canary `assert brand.lower() not in name.lower()` holds across all goldapple snapshots from the dry-run (PARSE-FIX-02)
   4. Test suite remains green at ~818 tests (803 baseline + ~15 new parametrized tests against captured live fixtures)
   5. Null-rate sanity gate (PARSE-FIX-04) actively fails a synthetic regression run injected with >50% null volume, marking it `failed` with reason `parser_drift_null_volume_rate`
-**Plans**: TBD
+**Plans:** 5 plans across 4 waves
+Plans:
+
+**Wave 0** *(sequential, blocking — requires operator interaction)*
+- [ ] 08-01-PLAN.md — W0 30-PDP shape-sampling spike + 3 live fixtures + skill wrap-up
+
+**Wave 1** *(blocked on Wave 0 completion; 08-02 ∥ 08-04 parallel — disjoint files)*
+- [ ] 08-02-PLAN.md — PARSE-FIX-01 goldapple volume via selectolax 0.4 Lexbor
+- [ ] 08-04-PLAN.md — PARSE-FIX-03 viled volume via attributes[0].attributes[]
+
+**Wave 2** *(blocked on Wave 1 / 08-02 completion — shared file `goldapple_microdata.py`)*
+- [ ] 08-03-PLAN.md — PARSE-FIX-02 goldapple brand+name via product-level microdata
+
+**Wave 3** *(blocked on Waves 1+2 completion — gate reads stats produced by 08-02/03/04)*
+- [ ] 08-05-PLAN.md — PARSE-FIX-04 null-rate gate + PARSE-FIX-05 SMOKE rotation + doc cascade
+
+**Cross-cutting constraints (must_haves shared across 2+ plans):**
+- Strict TDD per fix: RED test against `_live-2026-05-13-*.html` fixture BEFORE production code; atomic RED+GREEN commits (CONTEXT.md D-811)
+- selectolax pin `>=0.4.7,<0.5`; Lexbor import STRICTLY LOCAL inside helpers; existing 60+ Modest-backed parser tests stay green (D-805/806/807)
+- All 5 plans must keep existing 803-test baseline green; aggregate suite target ~818-833 tests post-Phase 8
 **Pitfall mitigation**: Mandatory 30-PDP shape-sampling sub-spike BEFORE any code touches `parsers/goldapple_microdata.py` or `parsers/viled_nextdata.py` (output to `.planning/spikes/v1.1-brand-name-shapes/`) — prevents over-fitting to single STEREOTYPE PDP screenshot; selectolax 0.3→0.4 upgrade required for Lexbor `:contains` primitive.
 
 ### Phase 9: Live-HTML Harness
@@ -106,7 +125,7 @@
 | 5. Reporter (Excel + Summary) | v1.0 | 6/6 | Complete | 2026-05-12 |
 | 6. Telegram Delivery + Ops/Business Split | v1.0 | 6/6 | Complete | 2026-05-12 |
 | 7. Scheduler + Observability Hardening | v1.0 | 5/5 | Complete | 2026-05-12 |
-| 8. Parser Bug Fixes | v1.1 | 0/? | Not started | — |
+| 8. Parser Bug Fixes | v1.1 | 0/5 | Planned | — |
 | 9. Live-HTML Harness | v1.1 | 0/? | Not started | — |
 | 10. Audit Paperwork Carryover | v1.1 | 0/? | Not started | — |
 | 11. Operator Deploy на Yandex Cloud kz1 | v1.1 | 0/? | Not started | — |
@@ -115,4 +134,4 @@
 **v1.1 totals (planned):** 4 phases (8-11); 24 requirements mapped 1:1 (PARSE-FIX × 5 + TEST-HARNESS × 6 + AUDIT-DEBT × 5 + DEPLOY × 8); plan count + test-count delta filled per phase by `/gsd-plan-phase`.
 
 ---
-*Last updated: 2026-05-13 — v1.1 roadmap appended (Phases 8-11) by `gsd-roadmapper`.*
+*Last updated: 2026-05-13 — Phase 8 plans (5) finalized by `gsd-planner`. Previously: v1.1 roadmap appended by `gsd-roadmapper`.*

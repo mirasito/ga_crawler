@@ -1,10 +1,11 @@
 ---
 phase: 8
 slug: parser-bug-fixes
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-05-13
+approved: 2026-05-13
 ---
 
 # Phase 8 — Validation Strategy
@@ -48,10 +49,10 @@ created: 2026-05-13
 | 08-04-* | 04 | 1 | PARSE-FIX-03 | V5 | `_extract_volume_from_nextdata` returns "50 мл" for discounted-beauty | unit | `uv run pytest tests/parsers/test_viled_volume_from_nextdata.py -x` | ❌ W0 | ⬜ pending |
 | 08-04-* | 04 | 1 | PARSE-FIX-03 | — | parametrized 4 fixtures (clothing "S" / multipack / discounted / contre-jour None) | unit (parametrize) | same file | ❌ W0 | ⬜ pending |
 | 08-04-* | 04 | 1 | PARSE-FIX-03 | — | `raw_volume_text == "50 мл"` flips existing viled test assertion | unit (modify existing) | `uv run pytest tests/parsers/test_viled_nextdata.py -x` | ✅ exists (modify 1 line) | ⬜ pending |
-| 08-05-* | 05 | 2 | PARSE-FIX-04 | V7 | `parser_drift_null_rate_gate(0.6, 0.0)` → `passed=False, reason="parser_drift_null_volume_rate"` | unit | `uv run pytest tests/runner/test_parser_drift_gate.py -x` | ❌ W0 | ⬜ pending |
-| 08-05-* | 05 | 2 | PARSE-FIX-04 | — | parametrized 6 boundary cases (both-pass / volume-fail / brand-fail / both-fail / exactly-at-threshold / custom-threshold) | unit (parametrize) | same file | ❌ W0 | ⬜ pending |
-| 08-05-* | 05 | 2 | PARSE-FIX-04 | V7 | Synthetic regression: 60% NULL → `run.status="failed"`, `stats.parser_drift_failure_reason="parser_drift_null_volume_rate"` (Success Criteria #5) | integration | `uv run pytest tests/integration/test_phase8_synthetic_regression.py -x` | ❌ W0 | ⬜ pending |
-| 08-05-* | 05 | 2 | PARSE-FIX-05 | — | `SMOKE_URLS` len 3, contains STEREOTYPE-style + Armani-style + Givenchy baseline | unit (structural canary) | `uv run pytest tests/runner/test_smoke_urls_rotation.py -x` | ❌ W0 | ⬜ pending |
+| 08-05-* | 05 | 3 | PARSE-FIX-04 | V7 | `parser_drift_null_rate_gate(0.6, 0.0)` → `passed=False, reason="parser_drift_null_volume_rate"` | unit | `uv run pytest tests/runner/test_parser_drift_gate.py -x` | ❌ W0 | ⬜ pending |
+| 08-05-* | 05 | 3 | PARSE-FIX-04 | — | parametrized 6 boundary cases (both-pass / volume-fail / brand-fail / both-fail / exactly-at-threshold / custom-threshold) | unit (parametrize) | same file | ❌ W0 | ⬜ pending |
+| 08-05-* | 05 | 3 | PARSE-FIX-04 | V7 | Synthetic regression: 60% NULL → `run.status="failed"`, `stats.parser_drift_failure_reason="parser_drift_null_volume_rate"` (Success Criteria #5) | integration | `uv run pytest tests/integration/test_phase8_synthetic_regression.py -x` | ❌ W0 | ⬜ pending |
+| 08-05-* | 05 | 3 | PARSE-FIX-05 | — | `SMOKE_URLS` len 3, contains STEREOTYPE-style + Armani-style + Givenchy baseline | unit (structural canary) | `uv run pytest tests/runner/test_smoke_urls_rotation.py -x` | ❌ W0 | ⬜ pending |
 | (aggregate) | all | all | all | — | 803 existing tests stay green; ~818 total | regression | `uv run pytest -m "not live" -q` | n/a | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -101,11 +102,11 @@ For each parser fix, the test set must oversample the shape diversity revealed b
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 90s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (confirmed via plan-checker Dim 8a)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (confirmed via plan-checker)
+- [x] Wave 0 covers all MISSING references (Plan 08-01 creates 3 fixtures + conftest extension + skill)
+- [x] No watch-mode flags (all commands are one-shot pytest invocations)
+- [x] Feedback latency < 90s (quick run ≤15s, full suite ≤90s baseline)
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-05-13 by plan-phase orchestrator (gsd-plan-checker Dim 8 PASS, post-paperwork fix)

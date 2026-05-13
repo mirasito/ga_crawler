@@ -38,15 +38,15 @@ Acknowledged and deferred at v1.0 milestone close on 2026-05-13:
 
 **Core value:** Команда viled.kz один раз в неделю получает детализированный, сопоставленный по позициям отчёт о ценах конкурента (goldapple.kz) и может корректировать собственное ценообразование, видеть ассортиментные разрывы и отслеживать чужие промо-акции.
 
-**Current focus:** Phase 8 — Parser Bug Fixes (context gathered, ready to plan)
+**Current focus:** Phase 8 — Parser Bug Fixes (planned, ready to execute)
 
 ## Current Position
 
 Milestone: v1.1 (Active) — Parser bug fixes + operator deploy unblock
-Phase: 8 — Parser Bug Fixes (context gathered 2026-05-13; 4 implementation decisions locked)
-Plan: —
-Status: Ready for `/gsd-plan-phase 8` (Parser Bug Fixes)
-Last activity: 2026-05-13 — Phase 8 CONTEXT.md captured by gsd-discuss-phase (W0 spike scope + selectolax 0.4 scope + 3-wave plan structure + null-rate gate scope)
+Phase: 8 — Parser Bug Fixes (planned 2026-05-13; 5 plans across 4 waves)
+Plan: 5/5 written (08-01 W0 spike, 08-02 ∥ 08-04 W1 parallel, 08-03 W2 sequenced after 08-02, 08-05 W3 doc cascade)
+Status: Ready to execute (`/gsd-execute-phase 8`)
+Last activity: 2026-05-13 — Phase 8 PLAN.md × 5 written via gsd-plan-phase (RESEARCH.md + PATTERNS.md + VALIDATION.md generated; plan-checker BLOCKER B-1 + W-1..W-4 fixed inline; wave restructure: 08-02 & 08-03 sequenced because both touch goldapple_microdata.py)
 
 v1.1 phase totals (planned, 4 phases — 24 reqs):
 
