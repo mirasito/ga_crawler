@@ -28,7 +28,29 @@
 
 <!-- Current scope. Building toward these. -->
 
-(None — v1 milestone code-ship complete 2026-05-13; operator deploy on Hetzner CX22 next)
+- [ ] Goldapple parser: извлекать volume из structured-блока PDP (78/78 SKU run #13 пропустили) — v1.1 PARSE-FIX
+- [ ] Goldapple parser: разделять brand и name из title (склейка `Armaniarmani code` → `Armani` + `armani code`) — v1.1 PARSE-FIX
+- [ ] Viled parser: extract volume как отдельное поле вместо дублирования всего name в volume_raw — v1.1 PARSE-FIX
+- [ ] Live HTML fixture harness в тестах — поймать drift который unit-тесты на frozen fixtures не ловят — v1.1 TEST-FIX
+- [ ] Audit paperwork debt: SECURITY.md для phases 2/4/6 + VALIDATION.md для phase 4 — v1.1 carryover из v1.0
+- [ ] Operator deploy: VPS (Hetzner CX22 EU или Yandex Cloud KZ) + первый live Sunday cron tick + UAT closure — v1.1 DEPLOY
+
+## Current Milestone: v1.1 Parser bug fixes + operator deploy unblock
+
+**Goal:** Починить три парсер-бага найденных в live-run #13 (2026-05-13), добавить live-HTML harness чтобы такого drift больше не пропускали, закрыть paperwork-debt из v1.0 audit и развернуть на production VPS чтобы первое воскресенье вернуло корректный отчёт.
+
+**Target features:**
+- Goldapple parser: volume extraction + brand/name separation
+- Viled parser: volume_raw как отдельное поле
+- Live HTML fixture harness (test infrastructure)
+- SECURITY.md (phases 2/4/6) + VALIDATION.md (phase 4) audit paperwork
+- Operator deploy на VPS + first production cron tick + UAT closure
+
+**Key context:**
+- v1.0 shipped 2026-05-13 как `tech_debt` verdict — код clean, paperwork incomplete
+- 803 unit-теста все green, но HTML drift против фикстур обнаружен только в live runtime — gap test methodology, не code
+- Evidence: `.planning/research/v1.1-PARSER-BUG-FINDINGS.md` (3 bug reports + screenshot goldapple PDP `STEREOTYPE sago` + DB samples)
+- Carryover deferred to v2: viled SSR pagination, Docker image, KZ-legal review (per `STATE.md` Deferred Items)
 
 ### Out of Scope
 
@@ -106,4 +128,4 @@ Milestone audit verdict: **tech_debt** — paperwork only (SECURITY for phases 2
 **Operator track (outside CI by design):** Hetzner CX22 EU deploy per README §2 → first Sunday production cron tick → `/gsd-verify-work 7` resume converts 4 blocked UAT items to pass. Next milestone cycle starts with `/gsd-new-milestone`.
 
 ---
-*Last updated: 2026-05-13 after v1.0 milestone archival.*
+*Last updated: 2026-05-13 after v1.1 milestone open — parser-bug findings from live-run #13 + operator deploy unblock.*
