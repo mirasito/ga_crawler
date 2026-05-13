@@ -36,10 +36,10 @@
 
 ### 🟢 v1.1 (Active)
 
-- [ ] **Phase 8: Parser Bug Fixes** - Fix 3 live-run #13 parser bugs (goldapple volume + brand/name; viled volume_raw) via selectolax 0.4 Lexbor `:contains` + `<meta itemprop="name">` microdata + `attributes[].name=="Размер"` JSON
-- [ ] **Phase 9: Live-HTML Harness** - syrupy 4.7 HTML snapshot harness + Pydantic write-boundary validation; locks Phase 8 fix retroactively so drift never silently zeros the report again
-- [ ] **Phase 10: Audit Paperwork Carryover** - Retroactive SECURITY.md (phases 2/4/6) + VALIDATION.md (phase 4) + audit-verdict flip `tech_debt` → `clean`; parallel-safe with Phases 8-9
-- [ ] **Phase 11: Operator Deploy на Yandex Cloud kz1** - First production VPS deploy with `bin/setup-vps.sh`, `load_dotenv` fix, Asia/Almaty TZ, Camoufox×Yandex + egress smokes, first Sunday cron tick, `/gsd-verify-work 7` resume
+- [x] **Phase 8: Parser Bug Fixes** — Complete 2026-05-13. Fixed 3 live-run #13 parser bugs (goldapple volume + brand/name; viled volume_raw) via selectolax 0.4 Lexbor `:contains` + h1 `.brand`/`.name` CSS-class spans (W0 pivot — `<meta itemprop="name">` premise invalidated per 08-01 spike) + `attributes[0].attributes[].name=="Размер"` JSON; added null-rate sanity gate + SMOKE rotation. 5/5 PARSE-FIX reqs closed.
+- [ ] **Phase 9: Live-HTML Harness** — syrupy 4.7 HTML snapshot harness + Pydantic write-boundary validation; locks Phase 8 fix retroactively so drift never silently zeros the report again
+- [ ] **Phase 10: Audit Paperwork Carryover** — Retroactive SECURITY.md (phases 2/4/6) + VALIDATION.md (phase 4) + audit-verdict flip `tech_debt` → `clean`; parallel-safe with Phases 8-9
+- [ ] **Phase 11: Operator Deploy на Yandex Cloud kz1** — First production VPS deploy with `bin/setup-vps.sh`, `load_dotenv` fix, Asia/Almaty TZ, Camoufox×Yandex + egress smokes, first Sunday cron tick, `/gsd-verify-work 7` resume
 
 ## Phase Details
 
@@ -48,13 +48,13 @@
 **Depends on**: v1.0 (Phases 1-7) shipped
 **Requirements**: PARSE-FIX-01, PARSE-FIX-02, PARSE-FIX-03, PARSE-FIX-04, PARSE-FIX-05
 **Success Criteria** (what must be TRUE):
-  1. Live dry-run against goldapple + viled yields `goldapple_comparable_count > 0` (was 0 in run #13) and matched pairs land in `matches` table
-  2. `goldapple_volume_norm` non-null rate ≥ 90% on non-volumeless categories (PARSE-FIX-01 acceptance)
-  3. Invariant canary `assert brand.lower() not in name.lower()` holds across all goldapple snapshots from the dry-run (PARSE-FIX-02)
-  4. Test suite remains green at ~818 tests (803 baseline + ~15 new parametrized tests against captured live fixtures)
-  5. Null-rate sanity gate (PARSE-FIX-04) actively fails a synthetic regression run injected with >50% null volume, marking it `failed` with reason `parser_drift_null_volume_rate`
-**Plans:** 5 plans across 4 waves
-Plans:
+  1. Live dry-run against goldapple + viled yields `goldapple_comparable_count > 0` (was 0 in run #13) and matched pairs land in `matches` table (operator-track gating)
+  2. `goldapple_volume_norm` non-null rate ≥ 90% on non-volumeless categories (PARSE-FIX-01 acceptance — Plan 08-02)
+  3. Invariant canary `assert brand.lower() not in name.lower()` holds across all goldapple snapshots from the dry-run (PARSE-FIX-02 — softened to log-only per 08-01 W0 evidence; Plan 08-03)
+  4. Test suite remains green at ~818 tests (803 baseline + ~15-20 new parametrized tests against captured live fixtures)
+  5. Null-rate sanity gate (PARSE-FIX-04) actively fails a synthetic regression run injected with >50% null volume, marking it `failed` with reason `parser_drift_null_volume_rate` (Plan 08-05)
+
+**Plans:** 5 plans across 4 waves — all complete 2026-05-13
 
 **Wave 0** *(sequential, blocking — requires operator interaction)*
 - [x] 08-01-PLAN.md — W0 30-PDP shape-sampling spike + 3 live fixtures + skill wrap-up
@@ -64,10 +64,10 @@ Plans:
 - [x] 08-04-PLAN.md — PARSE-FIX-03 viled volume via attributes[0].attributes[]
 
 **Wave 2** *(blocked on Wave 1 / 08-02 completion — shared file `goldapple_microdata.py`)*
-- [x] 08-03-PLAN.md — PARSE-FIX-02 goldapple brand+name via product-level microdata
+- [x] 08-03-PLAN.md — PARSE-FIX-02 goldapple brand+name via h1 child-spans (W0 pivot — landed h1-spans strategy, NOT microdata-walk per shape-table evidence; D-816 invariant softened to log-only canary)
 
 **Wave 3** *(blocked on Waves 1+2 completion — gate reads stats produced by 08-02/03/04)*
-- [ ] 08-05-PLAN.md — PARSE-FIX-04 null-rate gate + PARSE-FIX-05 SMOKE rotation + doc cascade
+- [x] 08-05-PLAN.md — PARSE-FIX-04 null-rate gate + PARSE-FIX-05 SMOKE rotation + doc cascade
 
 **Cross-cutting constraints (must_haves shared across 2+ plans):**
 - Strict TDD per fix: RED test against `_live-2026-05-13-*.html` fixture BEFORE production code; atomic RED+GREEN commits (CONTEXT.md D-811)
@@ -125,13 +125,13 @@ Plans:
 | 5. Reporter (Excel + Summary) | v1.0 | 6/6 | Complete | 2026-05-12 |
 | 6. Telegram Delivery + Ops/Business Split | v1.0 | 6/6 | Complete | 2026-05-12 |
 | 7. Scheduler + Observability Hardening | v1.0 | 5/5 | Complete | 2026-05-12 |
-| 8. Parser Bug Fixes | v1.1 | 0/5 | Planned | — |
+| 8. Parser Bug Fixes | v1.1 | 5/5 | Complete | 2026-05-13 |
 | 9. Live-HTML Harness | v1.1 | 0/? | Not started | — |
 | 10. Audit Paperwork Carryover | v1.1 | 0/? | Not started | — |
 | 11. Operator Deploy на Yandex Cloud kz1 | v1.1 | 0/? | Not started | — |
 
 **v1.0 totals:** 7/7 phases complete; 47 plans executed + 3 SKIPPED; 48/48 v1 requirements closed; 803 passing tests.
-**v1.1 totals (planned):** 4 phases (8-11); 24 requirements mapped 1:1 (PARSE-FIX × 5 + TEST-HARNESS × 6 + AUDIT-DEBT × 5 + DEPLOY × 8); plan count + test-count delta filled per phase by `/gsd-plan-phase`.
+**v1.1 totals (in-progress):** 1/4 phases complete (Phase 8 closed 2026-05-13); 5/24 reqs closed (PARSE-FIX-01..05); ~830 passing tests after Phase 8 Plan 08-05 GREEN (+ ~12-15 from Plans 08-02/03/04/05 over the 803 v1.0 baseline).
 
 ---
-*Last updated: 2026-05-13 — Phase 8 plans (5) finalized by `gsd-planner`. Previously: v1.1 roadmap appended by `gsd-roadmapper`.*
+*Last updated: 2026-05-13 — Phase 8 closed via Plan 08-05 doc cascade (5/5 PARSE-FIX reqs Complete; Phase 9-11 remain Pending). Previously: v1.0 milestone archived by `/gsd-complete-milestone v1`.*
