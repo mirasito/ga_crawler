@@ -29,7 +29,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, Optional
 
+import structlog
 from selectolax.parser import HTMLParser, Node
+
+log = structlog.get_logger(__name__)
 
 # Re-declared from spike notebook.py L48-49 so parser is self-contained.
 # Wave 0 pyproject.toml [tool.ga_crawler.crawl.goldapple] also exposes these
@@ -374,21 +377,64 @@ def parse_pdp(html: str, url: str) -> Optional[GoldappleRawProduct]:
         # Fallback: extract numeric prefix from URL slug
         sku_id = url.rsplit("/", 1)[-1].split("-", 1)[0]
 
-    # Brand: <span itemprop="brand"><meta itemprop="name" content="Givenchy ">
+    # Brand + name: PARSE-FIX-02 / D-816 (Plan 08-03).
+    #
+    # W0 spike (.planning/spikes/v1.1-brand-name-shapes/MEMO.md) invalidated the
+    # original product-scope <meta itemprop="name"> walk: 0/30 captured PDPs
+    # carry product-level microdata; the `[itemprop="brand"]` matches that v1.0
+    # produced were against bottom-of-page "you may also like" cards, not the
+    # main product (cross-product contamination — see run #13 evidence).
+    #
+    # Empirical strategy per W0 (.claude/skills/spike-findings-v1.1-brand-name-shapes/
+    # SKILL.md): brand and name live in separate h1 child spans, both 30/30
+    # coverage:
+    #   h1[class*="_ga-pdp-title__heading_"] [class*="_ga-pdp-title__brand_"]
+    #   h1[class*="_ga-pdp-title__heading_"] [class*="_ga-pdp-title__name_"]
+    # The hash suffix is build-specific (e.g. _1yrfv_339) — substring-match only.
+    # Brand `content` attribute preserves authored whitespace (e.g. "Givenchy ");
+    # the normalizer strips it downstream.
     brand_raw = ""
-    brand_node = tree.css_first('[itemprop="brand"]')
-    if brand_node is not None:
-        brand_meta = brand_node.css_first('meta[itemprop="name"]')
-        if brand_meta is not None:
-            brand_raw = (brand_meta.attributes.get("content") or "").strip()
-
-    # Name: <h1>; fallback to <title> stripped of " — купить ..."
     name = ""
-    h1 = tree.css_first("h1")
+    h1 = tree.css_first('h1[class*="_ga-pdp-title__heading_"]')
     if h1 is not None:
-        name = h1.text(strip=True)
+        brand_span = h1.css_first('[class*="_ga-pdp-title__brand_"]')
+        if brand_span is not None:
+            brand_raw = (
+                brand_span.attributes.get("content")
+                or brand_span.text(strip=True)
+                or ""
+            ).strip()
+        name_span = h1.css_first('[class*="_ga-pdp-title__name_"]')
+        if name_span is not None:
+            name = name_span.text(strip=True)
+
+    # Fallback chain when the h1 child-span shape is absent (W0 spike showed
+    # 30/30 coverage, but defensive fallback preserves graceful degradation
+    # on unseen layouts):
+    #   1. plain <h1> deep text (v1.0 path — concatenates brand+name, last resort)
+    #   2. <title> stripped of " — купить ..."
+    if not name:
+        h1_any = tree.css_first("h1")
+        if h1_any is not None:
+            name = h1_any.text(strip=True)
     if not name and title:
         name = title.split(" — купить", 1)[0].strip()
+
+    # D-816 per-SKU brand-canary invariant (SOFTENED to log-only per W0 §4:
+    # 2/30 PDPs in the Armani-style bucket legitimately have brand-substring
+    # in name due to upstream data redundancy — `Armani`/`armani code`,
+    # `GIVENCHY`/`GIVENCHY GENTLEMAN RESERVE PRIVEE`). Hard-fail at parse time
+    # would block runs on upstream data quality; the aggregate parser-drift
+    # gate (PARSE-FIX-04, Plan 08-05) catches the "all SKUs broken" mode.
+    # _strip_brand_prefix fallback is NOT NEEDED per W0 §2: the .name span
+    # cleanly excludes the .brand span in 28/30 sampled PDPs.
+    if brand_raw and name and brand_raw.lower() in name.lower():
+        log.warning(
+            "goldapple_brand_in_name_canary_violation",
+            brand_raw=brand_raw,
+            name=name,
+            url=url,
+        )
 
     # Current price (top-level offer, no priceType, no Gold Card)
     price_meta = _extract_top_level_offer(tree)
