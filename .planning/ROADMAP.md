@@ -85,8 +85,19 @@
   3. Snapshot directory under `tests/fixtures/<retailer>/_live-YYYY-MM-DD-<slug>.html` carries sidecar JSON metadata `{date, url, status, html_size, title, camoufox_version}` AND passes PII canary (no `cf_clearance=`, no `bot\d+:` tokens, no UUID-shaped hc-ping paths) AND stays under 50 MB size budget
   4. Pydantic `RawProduct` validation at `SqliteSnapshotWriter` boundary raises on missing `volume_raw`/`brand` — defense-in-depth complement to PARSE-FIX-04 null-rate gate (TEST-HARNESS-06)
   5. P2 cheap-bundle (B4 brand-coverage quota canary + B5 `python -m ga_crawler capture-fixtures` CLI subcommand) shipped if it lands within phase budget; otherwise explicitly deferred to v1.2 (TEST-HARNESS-04/05 conditional)
-**Plans**: TBD
-**Pitfall mitigation**: snapshot-PII canary + size-budget canary (<50 MB) wired BEFORE first snapshot commit; missing-snapshot-fails-test soundness rule enforced via syrupy strict mode.
+**Plans:** 4 plans across 3 waves
+
+**Wave 0** *(sequential, must-have — substrate for both Wave 1 plans)*
+- [ ] 09-01-PLAN.md — TEST-HARNESS-01 + TEST-HARNESS-02 (syrupy 4.7 + HTMLSnapshotExtension + PII canary + fixture-loader integration + sidecar JSON + normalize_for_snapshot helper)
+
+**Wave 1** *(blocked on Wave 0; 09-02a ∥ 09-02b parallel — disjoint files)*
+- [ ] 09-02a-PLAN.md — TEST-HARNESS-03 live drift test (two-mode: cassette-replay default + --refresh-live via Camoufox/curl_cffi + syrupy diff after normalize) + missing-snapshot soundness negative test
+- [ ] 09-02b-PLAN.md — TEST-HARNESS-06 Pydantic write-boundary at SqliteSnapshotWriter.append (per-retailer strict/relaxed split per D-904) + schema_rejected_rate_gate (threshold 0.05) + SCHEMA_STATS_KEYS namespace
+
+**Wave 2** *(blocked on Wave 1 a+b completion; sequential; **conditional** per D-902 P2 GO/NO-GO 8h elapsed gate; **autonomous: false** — requires user confirmation at decision-gate task)*
+- [ ] 09-03-PLAN.md — P2 GO/NO-GO checkpoint → Variant A (ship TH-04 brand-coverage canary + TH-05 capture-fixtures CLI) OR Variant B (defer TH-04/05 to v1.2 doc cascade). BOTH variants ship README §8 «Live HTML harness» RU-primary operator runbook (TH-03 docs cascade D-905 — mandatory).
+
+**Pitfall mitigation**: snapshot-PII canary + size-budget canary (<50 MB) wired BEFORE first snapshot commit; missing-snapshot-fails-test soundness rule enforced via syrupy default fail-on-missing behavior (RESEARCH §3.2 — no --strict flag needed); HTML normalization helper (tests/_html_normalize.py) strips Camoufox non-determinism (csrf-token, cf_clearance echoes, CSS build-hash, __NEXT_DATA__.buildId) BEFORE syrupy diff to prevent false-positive drift (T-09-DRIFT landmine).
 
 ### Phase 10: Audit Paperwork Carryover
 **Goal**: Close v1.0 audit's `tech_debt` verdict by producing the four missing artifacts retroactively, flipping the milestone audit verdict to `clean` so the project ships without unresolved paperwork debt.
@@ -126,7 +137,7 @@
 | 6. Telegram Delivery + Ops/Business Split | v1.0 | 6/6 | Complete | 2026-05-12 |
 | 7. Scheduler + Observability Hardening | v1.0 | 5/5 | Complete | 2026-05-12 |
 | 8. Parser Bug Fixes | v1.1 | 5/5 | Complete | 2026-05-13 |
-| 9. Live-HTML Harness | v1.1 | 0/? | Not started | — |
+| 9. Live-HTML Harness | v1.1 | 0/4 | Planned | — |
 | 10. Audit Paperwork Carryover | v1.1 | 0/? | Not started | — |
 | 11. Operator Deploy на Yandex Cloud kz1 | v1.1 | 0/? | Not started | — |
 
