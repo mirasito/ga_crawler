@@ -11,9 +11,11 @@ from ga_crawler.runner.stats import (
 )
 
 
-def test_namespace_has_13_keys() -> None:
-    """RESEARCH §Q4 lines 1051-1066: 13 keys frozen at this contract boundary."""
-    assert len(GOLDAPPLE_STATS_KEYS) == 13
+def test_namespace_has_16_keys() -> None:
+    """RESEARCH §Q4 lines 1051-1066: 13 keys at v1.0; v1.1 Phase 8 PARSE-FIX-04
+    appends 3 keys (volume_null_rate, brand_null_rate, parser_drift_failure_reason)
+    per 08-CONTEXT.md D-815; 08-PATTERNS.md Pattern 2."""
+    assert len(GOLDAPPLE_STATS_KEYS) == 16
 
 
 def test_all_keys_have_goldapple_prefix() -> None:
@@ -35,6 +37,10 @@ def test_all_keys_have_goldapple_prefix() -> None:
     "goldapple.mean_fetch_seconds",
     "goldapple.camoufox_version",
     "goldapple.auto_suggest_m",
+    # ---- v1.1 Phase 8 PARSE-FIX-04 additions (D-815) ----
+    "goldapple.volume_null_rate",
+    "goldapple.brand_null_rate",
+    "goldapple.parser_drift_failure_reason",
 ])
 def test_each_required_key_present(expected_key: str) -> None:
     assert expected_key in GOLDAPPLE_STATS_KEYS
