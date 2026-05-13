@@ -43,6 +43,8 @@ from ga_crawler.matcher.config import MatchConfig
 from ga_crawler.normalizers.facade import Normalizer
 from ga_crawler.delivery.config import DeliverConfig, DeliverEnvConfig
 from ga_crawler.reporter.config import ReportConfig
+from ga_crawler.runner.gates import parser_drift_null_rate_gate
+from ga_crawler.runner.stats import GoldappleStatsBuilder
 from ga_crawler.runners.delivery_run import run_delivery_phase
 from ga_crawler.runners.matcher_run import run_matcher_phase
 from ga_crawler.runners.reporter_run import run_reporter_phase
@@ -268,6 +270,88 @@ def run_weekly(
                     delivery_status=delivery_status,
                     delivery_route=delivery_route,
                     stats_delta=dict(stats_delta_acc),
+                )
+
+            # ---- PARSE-FIX-04 parser-drift null-rate sanity gate (Plan 08-05 D-817) ----
+            # Sits AFTER goldapple persist + AFTER parse_quality_gate (inside
+            # goldapple_run) and BEFORE matcher invocation. Catches the run-#13
+            # silent failure mode where goldapple parser drifts back to >50%
+            # NULL volume_norm or brand — prevents matcher running over empty
+            # comparable set and producing a blank Excel.
+            #
+            # Pitfall 6 (RESEARCH.md): if goldapple crawl was empty
+            # (goldapple_count == 0), skip the gate — the SQL AVG over zero
+            # rows returns NULL and would false-positive on `> 0.5`. Existing
+            # final_threshold_gate (M-gate) handles the zero-crawl failure
+            # mode independently.
+            #
+            # Pitfall 4 (storage.sqlite): patch_stats DELETES keys on None
+            # value. failure_reason MUST be persisted as "" sentinel when
+            # the gate passes, NOT as None.
+            #
+            # Source: 08-CONTEXT.md D-815/D-817; 08-RESEARCH.md §"Orchestrator
+            # Wiring (pseudo-code)" lines 613-641 + §"Pitfall 6" lines 1126-1137.
+            if goldapple_count > 0:
+                with engine.begin() as conn:
+                    drift_row = conn.execute(
+                        text(
+                            "SELECT "
+                            "  AVG(CASE WHEN volume_norm IS NULL THEN 1.0 ELSE 0.0 END) AS v_null, "
+                            "  AVG(CASE WHEN brand IS NULL OR brand = '' THEN 1.0 ELSE 0.0 END) AS b_null "
+                            "FROM snapshots WHERE run_id = :rid AND retailer = 'goldapple'"
+                        ),
+                        {"rid": run_id},
+                    ).first()
+                volume_null_rate = float(drift_row.v_null or 0.0)
+                brand_null_rate = float(drift_row.b_null or 0.0)
+
+                drift = parser_drift_null_rate_gate(
+                    volume_null_rate=volume_null_rate,
+                    brand_null_rate=brand_null_rate,
+                    threshold=0.5,
+                )
+
+                drift_builder = GoldappleStatsBuilder()
+                drift_builder.set("volume_null_rate", drift.volume_null_rate)
+                drift_builder.set("brand_null_rate", drift.brand_null_rate)
+                drift_builder.set(
+                    "parser_drift_failure_reason",
+                    # Pitfall 4: "" sentinel on pass instead of None
+                    drift.failure_reason if drift.failure_reason is not None else "",
+                )
+                run_writer.patch_stats(run_id, drift_builder.delta)
+                stats_delta_acc.update(drift_builder.delta)
+
+                if not drift.passed:
+                    log.error(
+                        "phase8_parser_drift_gate_failed",
+                        run_id=run_id,
+                        volume_null_rate=drift.volume_null_rate,
+                        brand_null_rate=drift.brand_null_rate,
+                        reason=drift.failure_reason,
+                    )
+                    run_writer.fail(
+                        run_id,
+                        drift.failure_reason or "parser_drift_unknown",
+                    )
+                    norm06_path = Norm06Writer(repo_root).persist(
+                        run_id, viled_unmatched, goldapple_new_slugs
+                    )
+                    return MainRunResult(
+                        status="failed",
+                        run_id=run_id,
+                        viled_count=viled_count,
+                        goldapple_count=goldapple_count,
+                        reason=drift.failure_reason,
+                        norm06_path=norm06_path,
+                        delivery_status=delivery_status,
+                        delivery_route=delivery_route,
+                        stats_delta=dict(stats_delta_acc),
+                    )
+            else:
+                log.warning(
+                    "phase8_drift_gate_skipped_no_snapshots",
+                    run_id=run_id,
                 )
 
         # ---- Matcher phase (Plan 04-05; D-411 skip-if-failed handled inside) ----
