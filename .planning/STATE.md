@@ -46,7 +46,13 @@ Milestone: v1.1 (Active) — Parser bug fixes + operator deploy unblock
 Phase: 8 — Parser Bug Fixes (planned 2026-05-13; 5 plans across 4 waves)
 Plan: 5/5 written (08-01 W0 spike, 08-02 ∥ 08-04 W1 parallel, 08-03 W2 sequenced after 08-02, 08-05 W3 doc cascade)
 Status: Ready to execute (`/gsd-execute-phase 8`)
-Last activity: 2026-05-13 — Phase 8 PLAN.md × 5 written via gsd-plan-phase (RESEARCH.md + PATTERNS.md + VALIDATION.md generated; plan-checker BLOCKER B-1 + W-1..W-4 fixed inline; wave restructure: 08-02 & 08-03 sequenced because both touch goldapple_microdata.py)
+Last activity: 2026-05-14 — Phase 8 W1 GREEN complete (08-02 + 08-04, 822 passed) + quick-task `20260514-cli-dotenv-leak` hotfix (43dbfd7): cli.py `load_dotenv` was anchored at __file__ instead of cwd, silently re-loading project .env in subprocess tests and delivering 35-byte fake-xlsx fixtures to operator's real Telegram chat (chat_id=986299192, ≥11 confirmed deliveries). Fix: `find_dotenv(usecwd=True)`. Suite 822/2-failed → **825/0-failed**. **CORRECTION**: 08-01-SUMMARY.md line 36 "2 pre-existing test_cli_deliver failures" is FACTUALLY WRONG — they were active data egress, not pre-existing failures. 08-02-SUMMARY + 08-04-SUMMARY inherit the same mislabeling; treat all references as superseded by `.planning/quick/20260514-cli-dotenv-leak/SUMMARY.md`.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 20260514-cli-dotenv-leak | CLI dotenv data-egress hotfix (find_dotenv usecwd=True; 11+ fake-xlsx leaks closed) | 2026-05-14 | 43dbfd7 | [20260514-cli-dotenv-leak](./quick/20260514-cli-dotenv-leak/) |
 
 v1.1 phase totals (planned, 4 phases — 24 reqs):
 
