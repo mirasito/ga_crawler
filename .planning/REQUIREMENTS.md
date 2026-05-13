@@ -1,7 +1,7 @@
 # Requirements — Milestone v1.1
 
 > **Milestone:** v1.1 Parser bug fixes + operator deploy unblock
-> **Status:** Defining requirements
+> **Status:** Roadmap approved — 4 phases (8-11), 24 requirements mapped 1:1
 > **Started:** 2026-05-13
 
 ## Milestone Goal
@@ -10,7 +10,7 @@
 
 ## v1.1 Requirements
 
-### Bucket A — Parser Bug Fixes (must-have)
+### Bucket A — Parser Bug Fixes (must-have) → Phase 8
 
 - [ ] **PARSE-FIX-01**: Goldapple parser извлекает `volume_raw` из structured PDP-блока (`78 ОБЪЁМ / МЛ`) с selectolax 0.4 Lexbor `:contains` selector; ≥90% non-null rate на не-volumeless категориях
 - [ ] **PARSE-FIX-02**: Goldapple parser извлекает `brand` и `name` раздельно через `<meta itemprop="name">` микроразметку; invariant canary `brand.lower() not in name.lower()` проходит
@@ -18,7 +18,7 @@
 - [ ] **PARSE-FIX-04**: Sanity-gate null-rate fail: запуск с `goldapple_volume_norm` null rate >50% → run помечается `failed` с reason `parser_drift_null_volume_rate`
 - [ ] **PARSE-FIX-05**: Smoke-probe URL rotation: `runner/gates.py:36` SMOKE_URLS включает по 1 URL каждой найденной shape variant (STEREOTYPE-style + Armani-style + Givenchy-baseline)
 
-### Bucket B — Live-HTML Harness (must-have B1-B3, B6; should-have B4-B5)
+### Bucket B — Live-HTML Harness (must-have B1-B3, B6; should-have B4-B5) → Phase 9
 
 - [ ] **TEST-HARNESS-01**: syrupy 4.7 добавлен как dev-dependency; `HTMLSnapshotExtension(SingleFileSnapshotExtension)` с `file_extension="html"` и `WriteMode.TEXT`
 - [ ] **TEST-HARNESS-02**: Captured HTML живёт в `tests/fixtures/<retailer>/_live-YYYY-MM-DD-<slug>.html` с sidecar JSON `{date, url, status, html_size, title, camoufox_version}`
@@ -27,7 +27,7 @@
 - [ ] **TEST-HARNESS-05** (P2 cheap-bundle): `python -m ga_crawler capture-fixtures` CLI subcommand (6-й — обновляет Phase 7 source-locked canary)
 - [ ] **TEST-HARNESS-06**: Pydantic validation at `SqliteSnapshotWriter` boundary — defense-in-depth: `RawProduct` model с `volume_raw: NonEmptyStr | None`, `brand: NonEmptyStr | None`, raise on write если schema violated
 
-### Bucket C — Audit Paperwork Carryover (must-have)
+### Bucket C — Audit Paperwork Carryover (must-have) → Phase 10
 
 - [ ] **AUDIT-DEBT-01**: `SECURITY.md` для Phase 2 (viled crawl + storage) — retroactive threat model + 6/6 mitigation evidence
 - [ ] **AUDIT-DEBT-02**: `SECURITY.md` для Phase 4 (matcher) — retroactive threat model + mitigation evidence
@@ -35,7 +35,7 @@
 - [ ] **AUDIT-DEBT-04**: `VALIDATION.md` для Phase 4 (matcher) — Nyquist coverage matrix против 465+ matcher тестов
 - [ ] **AUDIT-DEBT-05**: Audit verdict flip — `milestones/v1.0-MILESTONE-AUDIT.md` обновлён `tech_debt` → `clean` после AUDIT-DEBT-01..04
 
-### Bucket D — Operator Deploy на Yandex Cloud kz1 (must-have)
+### Bucket D — Operator Deploy на Yandex Cloud kz1 (must-have) → Phase 11
 
 - [ ] **DEPLOY-01**: Yandex Cloud kz1 VPS provisioned (Ubuntu 24.04, 2 vCPU/4GB/30GB SSD, KZ-region IP, SSH ключ загружен)
 - [ ] **DEPLOY-02**: `bin/setup-vps.sh` — idempotent thin wrapper над README §2 шагами 1-7; structural canary test `tests/test_phase07_setup_vps_shape.py`
@@ -71,11 +71,44 @@
 
 ## Traceability
 
-> Filled by gsd-roadmapper after roadmap approval (REQ-ID → Phase mapping).
+| Phase | REQ-IDs | Count | Status |
+|-------|---------|-------|--------|
+| Phase 8 — Parser Bug Fixes | PARSE-FIX-01, PARSE-FIX-02, PARSE-FIX-03, PARSE-FIX-04, PARSE-FIX-05 | 5 | Pending |
+| Phase 9 — Live-HTML Harness | TEST-HARNESS-01, TEST-HARNESS-02, TEST-HARNESS-03, TEST-HARNESS-04, TEST-HARNESS-05, TEST-HARNESS-06 | 6 | Pending |
+| Phase 10 — Audit Paperwork Carryover | AUDIT-DEBT-01, AUDIT-DEBT-02, AUDIT-DEBT-03, AUDIT-DEBT-04, AUDIT-DEBT-05 | 5 | Pending |
+| Phase 11 — Operator Deploy на Yandex Cloud kz1 | DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05, DEPLOY-06, DEPLOY-07, DEPLOY-08 | 8 | Pending |
+| **Total** | — | **24/24** | All v1.1 reqs mapped 1:1 |
 
-| Phase | REQ-IDs |
-|-------|---------|
-| (TBD) | (TBD) |
+### Per-Requirement Mapping
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PARSE-FIX-01 | Phase 8 | Pending |
+| PARSE-FIX-02 | Phase 8 | Pending |
+| PARSE-FIX-03 | Phase 8 | Pending |
+| PARSE-FIX-04 | Phase 8 | Pending |
+| PARSE-FIX-05 | Phase 8 | Pending |
+| TEST-HARNESS-01 | Phase 9 | Pending |
+| TEST-HARNESS-02 | Phase 9 | Pending |
+| TEST-HARNESS-03 | Phase 9 | Pending |
+| TEST-HARNESS-04 | Phase 9 | Pending (P2 cheap-bundle — bundle if quick, else defer to v1.2) |
+| TEST-HARNESS-05 | Phase 9 | Pending (P2 cheap-bundle — bundle if quick, else defer to v1.2) |
+| TEST-HARNESS-06 | Phase 9 | Pending |
+| AUDIT-DEBT-01 | Phase 10 | Pending |
+| AUDIT-DEBT-02 | Phase 10 | Pending |
+| AUDIT-DEBT-03 | Phase 10 | Pending |
+| AUDIT-DEBT-04 | Phase 10 | Pending |
+| AUDIT-DEBT-05 | Phase 10 | Pending |
+| DEPLOY-01 | Phase 11 | Pending |
+| DEPLOY-02 | Phase 11 | Pending |
+| DEPLOY-03 | Phase 11 | Pending |
+| DEPLOY-04 | Phase 11 | Pending |
+| DEPLOY-05 | Phase 11 | Pending |
+| DEPLOY-06 | Phase 11 | Pending |
+| DEPLOY-07 | Phase 11 | Pending |
+| DEPLOY-08 | Phase 11 | Pending |
+
+**Coverage:** 24/24 v1.1 requirements mapped to exactly one phase. No orphans, no duplicates.
 
 ---
-*Last updated: 2026-05-13 — v1.1 requirements defined after research synthesis.*
+*Last updated: 2026-05-13 — Traceability filled by `gsd-roadmapper` after v1.1 roadmap approval (4 phases, 24 reqs 1:1).*

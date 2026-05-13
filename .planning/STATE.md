@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Parser bug fixes + operator deploy unblock
 status: planning
-last_updated: "2026-05-13T13:18:18.539Z"
+last_updated: "2026-05-13T14:00:00.000Z"
 last_activity: 2026-05-13
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -43,10 +43,25 @@ Acknowledged and deferred at v1.0 milestone close on 2026-05-13:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Milestone: v1.1 (Active) — Parser bug fixes + operator deploy unblock
+Phase: Not started (roadmap approved 2026-05-13 — 4 phases mapped, 24/24 reqs)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-13 — Milestone v1.1 started
+Status: Ready for `/gsd-plan-phase 8` (Parser Bug Fixes)
+Last activity: 2026-05-13 — v1.1 roadmap created by gsd-roadmapper
+
+v1.1 phase totals (planned, 4 phases — 24 reqs):
+- Phase 8  Parser Bug Fixes               (PARSE-FIX-01..05    = 5 reqs)
+- Phase 9  Live-HTML Harness              (TEST-HARNESS-01..06 = 6 reqs)
+- Phase 10 Audit Paperwork Carryover      (AUDIT-DEBT-01..05   = 5 reqs)
+- Phase 11 Operator Deploy на Yandex Cloud kz1 (DEPLOY-01..08  = 8 reqs)
+
+Coverage: 24/24 v1.1 requirements mapped 1:1 (no orphans, no duplicates)
+Locked decisions:
+- Deploy target = Yandex Cloud kz1 (NOT Hetzner)
+- B4/B5 (TEST-HARNESS-04/05) = P2 cheap-bundle inside Phase 9 (try same milestone, else defer to v1.2)
+- Forward-only — no backfill of runs 1-13
+- selectolax 0.3 -> 0.4 upgrade (Lexbor backend `:contains`)
+- syrupy 4.7 added as dev-only dependency
 
 ## Performance Metrics
 
