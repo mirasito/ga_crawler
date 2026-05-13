@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import statistics
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
@@ -27,16 +28,29 @@ from ga_crawler.parsers.goldapple_microdata import GATE_TITLE_MARKER, has_microd
 log = structlog.get_logger(__name__)
 
 
-# 3 known-good Givenchy URLs from spike (A12: avoid spike row 0 = 7681000002 stale).
-# Operator updates these via Phase 7 ops-playbook rotation procedure.
-# Source: 03-RESEARCH.md §"Code Examples" lines 908-913 + A12 mitigation.
-# Rotation 2026-05-11 (UAT Phase 3 Test 6): index 0
-#   `7680100018-very-irresistible-givenchy` went stale (SKU removed → 30x to
-#   home). Replaced with `19000488678-givenchy-irresistible` (current sitemap).
+# 3 known-good URLs covering the goldapple PDP shape variants — operator
+# updates via Phase 7 ops-playbook rotation procedure.
+#
+# Rotation 2026-05-13 (v1.1 Phase 8 D-818): 1 URL per shape variant to catch
+# the run-#13 parser-drift mode (single-shape Givenchy baseline masked
+# STEREOTYPE/Armani breakage). URLs sourced from W0 spike shape-table.md
+# (.planning/spikes/v1.1-brand-name-shapes/) and 08-01-SUMMARY.md "SMOKE_URLs
+# rotation slots finalized" table.
+#
+# History:
+#   2026-05-11 (UAT Phase 3 Test 6): index 0
+#     `7680100018-very-irresistible-givenchy` went stale (SKU removed → 30x to
+#     home). Replaced with `19000488678-givenchy-irresistible` (current sitemap).
+#   2026-05-13 (Phase 8 Plan 08-05 PARSE-FIX-05): 2 of 3 slots rotated to
+#     non-Givenchy shape variants per D-818; Givenchy-irresistible retained as
+#     known-good baseline.
+#
+# Source: 03-RESEARCH.md §"Code Examples" lines 908-913 + A12 mitigation;
+#         08-CONTEXT.md D-818; 08-01-SUMMARY.md (post-W0 URL selection).
 SMOKE_URLS: tuple[str, ...] = (
-    "https://goldapple.kz/19000488678-givenchy-irresistible",
-    "https://goldapple.kz/7681000001-givenchy-pour-homme-blue-label",
-    "https://goldapple.kz/19000032744-givenchy-gentleman-reserve-privee-eau-de-parfum",
+    "https://goldapple.kz/19000440474-stereotype-sago",           # STEREOTYPE-style (uppercase brand prefix in h1)
+    "https://goldapple.kz/19000195723-armani-code",               # Armani-style (lowercase brand-name concat)
+    "https://goldapple.kz/19000488678-givenchy-irresistible",     # Givenchy-baseline (retained per D-818)
 )
 
 
@@ -268,6 +282,66 @@ def parse_quality_gate(
     return null_rate_required_fields <= threshold
 
 
+# ---- D-815 PARSE-FIX-04 parser-drift null-rate gate (Phase 8 Plan 08-05) ----
+
+
+@dataclass(frozen=True)
+class ParserDriftGateResult:
+    """Result of the PARSE-FIX-04 null-rate sanity gate.
+
+    Fields:
+      passed: True if both volume and brand null rates are at-or-below threshold.
+      volume_null_rate: float in [0, 1].
+      brand_null_rate:  float in [0, 1].
+      failure_reason:   None if passed; otherwise one of:
+        - "parser_drift_null_volume_rate"
+        - "parser_drift_null_brand_rate"
+
+    Source: 08-CONTEXT.md D-815; 08-PATTERNS.md lines 262-277.
+    """
+    passed: bool
+    volume_null_rate: float
+    brand_null_rate: float
+    failure_reason: Optional[str]
+
+
+def parser_drift_null_rate_gate(
+    volume_null_rate: float,
+    brand_null_rate: float,
+    *,
+    threshold: float = 0.5,
+) -> ParserDriftGateResult:
+    """D-815: PARSE-FIX-04 sanity gate for goldapple parser drift.
+
+    Returns passed=False if EITHER volume_null_rate > threshold OR
+    brand_null_rate > threshold. Picks failure_reason via priority:
+    volume first (most-impactful for match-rate), brand second.
+
+    Threshold semantics: STRICT GREATER-THAN (`> 0.5` fails, exactly 0.5 passes).
+    Note this is the OPPOSITE convention from `parse_quality_gate` (which uses
+    `<=` inclusive); the strict-> form lets a synthetic regression
+    `null_rate==0.5` pass cleanly while `0.5001` correctly fails.
+
+    Source: 08-CONTEXT.md D-813/D-814/D-815/D-816/D-817;
+            08-PATTERNS.md lines 280-309;
+            08-RESEARCH.md §"PARSE-FIX-04 Null-Rate Gate".
+    """
+    v_fail = volume_null_rate > threshold
+    b_fail = brand_null_rate > threshold
+    if v_fail:
+        reason: Optional[str] = "parser_drift_null_volume_rate"
+    elif b_fail:
+        reason = "parser_drift_null_brand_rate"
+    else:
+        reason = None
+    return ParserDriftGateResult(
+        passed=(not v_fail and not b_fail),
+        volume_null_rate=volume_null_rate,
+        brand_null_rate=brand_null_rate,
+        failure_reason=reason,
+    )
+
+
 # ---- Backward-compat shims (Phase 3 callers + Phase 2 viled-side seeds) ----
 
 
@@ -312,6 +386,8 @@ __all__ = [
     "auto_suggest_threshold",
     "final_threshold_gate",
     "parse_quality_gate",
+    "parser_drift_null_rate_gate",   # NEW Phase 8 PARSE-FIX-04
+    "ParserDriftGateResult",         # NEW Phase 8 PARSE-FIX-04
     "final_m_gate",
     "final_n_gate",
     "auto_suggest_m",

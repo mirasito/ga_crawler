@@ -12,9 +12,12 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-# 13 goldapple.* keys, frozen at Wave 0/4 boundary. Schema-locked: any new
-# key must be added here AND in Phase 2 plan reviewer cross-check (mirror in
-# the orchestrator's stats merge audit log).
+# 16 goldapple.* keys:
+#   - 13 frozen at v1.0 Wave 0/4 boundary
+#   - 3 appended in v1.1 Phase 8 PARSE-FIX-04 (D-815): volume_null_rate,
+#     brand_null_rate, parser_drift_failure_reason
+# Schema-locked: any new key must be added here AND in Phase 2 plan reviewer
+# cross-check (mirror in the orchestrator's stats merge audit log).
 GOLDAPPLE_STATS_KEYS: tuple[str, ...] = (
     "goldapple.fetch_count",
     "goldapple.fetch_failures",
@@ -29,6 +32,10 @@ GOLDAPPLE_STATS_KEYS: tuple[str, ...] = (
     "goldapple.mean_fetch_seconds",
     "goldapple.camoufox_version",
     "goldapple.auto_suggest_m",
+    # ---- v1.1 Phase 8 PARSE-FIX-04 additions (D-815) ----
+    "goldapple.volume_null_rate",            # float in [0, 1]
+    "goldapple.brand_null_rate",             # float in [0, 1]
+    "goldapple.parser_drift_failure_reason", # str (sentinel "" when gate passed; see storage.sqlite Pitfall 4)
 )
 
 # Bare key name (without goldapple. prefix) → full namespaced key. Used by

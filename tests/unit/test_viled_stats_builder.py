@@ -112,8 +112,8 @@ def test_existing_goldapple_unchanged():
 
 
 def test_goldapple_stats_keys_unchanged():
-    """Phase 3 baseline 13 keys preserved."""
-    assert len(GOLDAPPLE_STATS_KEYS) == 13
+    """Phase 3 baseline 13 keys preserved + Phase 8 PARSE-FIX-04 +3 (D-815)."""
+    assert len(GOLDAPPLE_STATS_KEYS) == 16
     for k in GOLDAPPLE_STATS_KEYS:
         assert k.startswith("goldapple.")
 
