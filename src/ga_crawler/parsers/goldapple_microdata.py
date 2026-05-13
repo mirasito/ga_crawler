@@ -267,6 +267,65 @@ def _extract_strikethrough(tree: HTMLParser) -> Optional[int]:
     return None
 
 
+def _extract_volume_block(html: str) -> Optional[str]:
+    """Extract goldapple PDP structured volume block (e.g. '12объём / мл' or
+    'объём / мл5075125' for multi-variant SKUs).
+
+    Uses selectolax 0.4 Lexbor backend (CONTEXT.md D-806 — Lexbor import is
+    LOCAL to this helper, keeping module-top Modest-only per blast-radius
+    isolation D-807). Returns the composed text of the smallest ancestor node
+    that joins the `объём / мл` label with its numeric sibling(s), for
+    downstream NORM-03 parse_volume to consume.
+
+    DOM shape variants observed in W0 spike (Plan 08-01 shape-table.md):
+      - STEREOTYPE-style: parent `_ga-pdp-attribute-few` has child <div>12</div>
+        + child <div>объём / мл</div>  (label-after-number, single-variant)
+      - Armani-style: parent `_ga-pdp-attribute-few` has child label
+        + radio-group children "50", "75", "125" (label-before-number, multi)
+      - Givenchy baseline: same Armani-style label-before-radio-group shape.
+
+    Strategy: locate the label via `:lexbor-contains("объём")` (lowercase —
+    Lexbor's `i` flag is byte-level for non-ASCII so case-insensitive match
+    is unreliable for Cyrillic; live HTML always emits lowercase per W0
+    spike). Walk up ancestor chain (max depth 3) until ancestor's
+    text(deep=True) contains a digit — that ancestor's composed text is the
+    answer. parse_volume regex handles the joined / multi-variant string.
+
+    Returns None when:
+      - the "объём" label is not found (volumeless category — 5/30 in W0)
+      - no digit appears within depth-3 ancestor chain
+
+    Source: 08-RESEARCH.md § "selectolax 0.4 Lexbor" + § "Bug #1 (Volume Block)"
+    + empirical fixture probe (cc40621 + this commit) confirming both shapes
+    share parent class `_ga-pdp-attribute-few_`.
+
+    PARSE-FIX-01 (Plan 08-02). Pitfall 1 (leading space before `i` flag)
+    sidestepped by using lowercase literal directly. Pitfall 2 (Ё vs Е): W0
+    spike confirms 25/25 volumed PDPs use Ё — single-selector form suffices.
+    """
+    import re
+    from selectolax.lexbor import LexborHTMLParser  # local import per D-806
+
+    tree = LexborHTMLParser(html)
+    label_nodes = tree.css('div:lexbor-contains("объём")')
+    if not label_nodes:
+        return None
+    label = label_nodes[0]
+    label_text = (label.text(deep=False, strip=True) or "")
+    unit_match = re.search(r"(мл|г|гр|oz|унц)", label_text, re.IGNORECASE)
+    unit = unit_match.group(1) if unit_match else "мл"
+    ancestor = label.parent
+    for _ in range(3):
+        if ancestor is None:
+            return None
+        composed = (ancestor.text(deep=True, strip=True) or "")
+        digit_match = re.search(r"\d+(?:[.,]\d+)?", composed)
+        if digit_match:
+            return f"{digit_match.group(0)} {unit}"
+        ancestor = ancestor.parent
+    return None
+
+
 def _extract_availability(tree: HTMLParser) -> str:
     """Map schema.org availability URL to enum string (PARSE-06).
 
@@ -355,8 +414,8 @@ def parse_pdp(html: str, url: str) -> Optional[GoldappleRawProduct]:
     # Availability (PARSE-06)
     availability = _extract_availability(tree)
 
-    # Volume passthrough - Phase 2 NORM-03 owns regex extraction
-    raw_volume_text = name or None
+    # Volume: structured flex-box (PARSE-FIX-01) with name fallback
+    raw_volume_text = _extract_volume_block(html) or name or None
 
     # Final required-fields check (PARSE-05): name must be non-empty
     if not name:
