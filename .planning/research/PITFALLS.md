@@ -1,667 +1,595 @@
-# Pitfalls Research
+# Pitfalls Research — v1.1 Parser Fixes + Live-HTML Harness + KZ Operator Deploy
 
-**Domain:** Competitive e-commerce price scraping (beauty/cosmetics, KZ market): goldapple.kz vs viled.kz
-**Researched:** 2026-05-05
-**Confidence:** HIGH on anti-bot, matching, and operational pitfalls (multi-source verified). MEDIUM on KZ-specific legal/timezone specifics. LOW on goldapple.kz's exact anti-bot stack until empirically tested.
+**Domain:** Parser fixes against drifting live websites; live-HTML test harness construction; operator deploy of an existing scraper to KZ-region VPS (Yandex Cloud) vs EU (Hetzner CX22)
+**Researched:** 2026-05-13
+**Confidence:** HIGH on harness/cassette antipatterns + parser-fix overfitting (multi-source 2024-2026 retrospectives). HIGH on .env loading + cron TZ specifics (already burned by D-705 / SCHED-02 in v1.0). MEDIUM on Yandex Cloud KZ + Camoufox interaction (region launched 2024, limited corpus). MEDIUM on Healthchecks.io accessibility from KZ (no documented blockers, but no positive verification either).
 
-> Scope note: this document is intentionally focused on the two specific targets. "Generic web scraping advice" (rotate user-agents, use proxies, etc.) is mentioned only when the *specific failure mode* is non-obvious. Read top-to-bottom: pitfalls are ordered by how likely they are to wreck the v1 build.
+> Scope note: pitfalls are ordered by how likely they are to either (a) recur in v1.1 or (b) hide silently and waste a Sunday. Each pitfall is wired to a concrete v1.1 phase candidate in the final mapping. v1.0's PITFALLS.md covered the *building* phase — this document covers the *fixing + deploying* phase, which has a different failure surface.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Underestimating goldapple.kz anti-bot — building scraper around plain `httpx` first, then "adding Playwright later"
+### Pitfall 1: Fixing the parser against one PDP screenshot — works for `STEREOTYPE sago`, breaks for 50 other brand shapes
 
 **What goes wrong:**
-Developer prototypes against viled.kz with `httpx`/`requests`, gets clean data, applies the same approach to goldapple.kz, hits a Cloudflare 403 / managed challenge / `cf_clearance` cookie wall, then has to rewrite the whole fetch layer. Goldapple is the larger Russian retailer expanding into KZ — almost certainly behind Cloudflare or DataDome. Worse: a naive Playwright-without-stealth attempt also fails because `navigator.webdriver`, headless Chromium TLS fingerprint (JA3/JA4), and CDP artifacts all leak. The project loses 1-2 weeks rebuilding fetch infrastructure mid-build.
+Developer reads `v1.1-PARSER-BUG-FINDINGS.md`, sees the `STEREOTYPE sago` evidence, writes a regex `^([A-ZА-Я]+)\s+(.+)$` that splits uppercase-brand from lowercase-name. Ships. Run #14 fails on:
+- **Multi-word brands**: `TOM FORD private blend` → captures `TOM` as brand, drops `FORD`.
+- **Mixed-case brand designation**: `Diptyque tam dao` (cap-then-lower) → regex doesn't match at all → empty brand again.
+- **Brand with ampersand or apostrophe**: `Dolce & Gabbana light blue`, `L'Occitane shea butter` → splits at the wrong token.
+- **Numeric brand names**: `19-69 capri`, `27 87 oneness` → digit-prefix breaks character-class assumption.
+- **Russian brand collisions with Russian product name**: `НАТУРА СИБИРИКА крем для рук` — both brand and name in caps Cyrillic if the title is fully shouted.
+- **Brand that contains the product name verbatim** (already in DB sample): `Armaniarmani code` — the duplication is the *symptom*, not a fluke; the goldapple SSR-template emits brand twice and the heuristic must dedupe rather than split.
+
+Net effect: parser-fix appears to work in dev review (the one fixture passes), regresses 30-60% of the goldapple catalog in run #14, match-rate stays at 0%, and the operator is back to staring at an empty xlsx Monday morning. The 803-test suite still passes because no test covers the new shapes.
 
 **Why it happens:**
-viled.kz "just works" with httpx, so engineers extrapolate. Cloudflare detection in 2026 is multi-layer: TLS fingerprint (JA3/JA4 must match the User-Agent's claimed browser), HTTP/2 frame order, IP ASN reputation, and behavioral signals. Stealth plugins fix navigator-level signals but cannot fix a Linux Playwright TLS handshake claiming to be Chrome on Windows. Result: every layer above the fix layer leaks the bot.
+- The PDP screenshot is **N=1 evidence**, but the developer treats it as the schema definition. Goldapple's SSR template emits the brand as a structured field elsewhere on the page (per the live PDP `STEREOTYPE` brand badge); regexing the title is solving the wrong problem.
+- "Fix what's in front of you" is the cheapest dopamine loop; sampling 20 brands and listing variants first feels like wasted time.
+- The bug report shows the ONE shape that broke; the developer doesn't ask "what other shapes exist?"
+- E-commerce data is wildly heterogeneous: industry retrospectives report scrapers need weekly fixes on 10-15% of selectors, and the dominant cause is single-page-redesign-extrapolation. See [BinaryBits: Why Your Web Scraper Keeps Breaking](https://binarybits.co/blog/why-web-scraper-keeps-breaking).
 
 **How to avoid:**
-- **Probe goldapple.kz FIRST**, before touching viled.kz. The harder target dictates the architecture.
-- Build the fetch layer with two pluggable backends from day 1: (a) `curl_cffi` with `chrome124+` impersonation profile for cheap requests, (b) Playwright/Camoufox for JS-rendered pages and challenge solving. Pick per-target, not project-wide.
-- Use **residential proxies** for goldapple.kz from the start. Datacenter ASNs (AWS/Hetzner/OVH) are cataloged in detection databases — 40-60% success vs 85-99% for residential. Budget ~$8-15/GB; weekly run with bandwidth-frugal HTML-only fetches keeps cost low.
-- For Playwright path, prefer **Camoufox** (Firefox, binary-patched fingerprint, ~0% headless detection) or `playwright-stealth` v2.x (Apr 2026 update) over vanilla Playwright. Vanilla Playwright is detected immediately in 2026.
-- Match TLS profile to User-Agent. If you claim Chrome 124 on Windows, your JA4 must look like Chrome 124 on Windows. `curl_cffi` handles this; raw `httpx` does not.
+- **Sample-first protocol**: Before writing parser code, fetch 30+ live PDPs across stratified brand categories (lux/mass-market/niche/Russian/Western), dump to `.planning/spikes/v1.1-brand-name-shapes/`, eyeball the title field as a list. Categorise into shape buckets. THEN design the parser.
+- **Prefer structured fields over title heuristics**. The PDP renders a brand badge `<a class="brand-link">STEREOTYPE</a>` (or whatever the actual structure) — use *that* selector, not a regex on `<h1>`. The volume bug is the same pattern: there's a structured `[78] ОБЪЁМ / МЛ` block — target it directly, don't regex the name.
+- **Property-based tests with hypothesis or a hand-built brand-shape table**: parameterize the parser test over 30+ live brand titles capturing every shape variant. The new test file becomes the spec.
+- **Equivalence-class assertion**: After parsing, `assert brand.lower() not in name.lower()` — catches the Armani-in-name regression class as a universal invariant.
+- **Goldapple's own product schema, if any**: re-check 2026-05-13 PDP HTML for OpenGraph `og:title` / `og:brand` meta tags; SPA microdata can drift but OG tags rarely do (used by social previews → stable).
 
 **Warning signs:**
-- First scrape of goldapple.kz returns a Cloudflare interstitial HTML (look for "Just a moment...", "cf-mitigated", `<title>Just a moment</title>`).
-- HTTP 403 with `cf-ray` header.
-- HTTP 200 but suspiciously small response body (~5KB challenge page instead of full product HTML).
-- Captcha image / Turnstile widget appears in rendered HTML.
-- Request succeeds the first time and fails on the 5th — IP got flagged.
+- Test suite is green but match_rate < 30% on goldapple ⇄ viled overlap (D-405 KPI canary).
+- DB sample of last run shows brand-column populated for <80% of goldapple SKUs (the 88/88 NULL is the loud version; the silent version is 70/88 NULL).
+- `len(brand) <= 2` for any SKU (single letter or empty — likely the heuristic captured the wrong token).
+- Same SKU appears with different parsed brands across runs (heuristic is unstable, not deterministic).
 
 **Phase to address:**
-**Phase 1 (Reconnaissance + Fetch layer)** before any parsing work. Treat "can we fetch a goldapple product page reliably 100 times in a row" as a hard gate.
+**Phase 1 (Parser-fix research + sampling)** — must include 30-PDP eyeball survey + shape-table BEFORE Phase 2 ships code.
+**Phase 2 (Parser-fix code)** — implement structured-selector approach + parameterized tests on shape-table.
 
 ---
 
-### Pitfall 2: Silent parser drift — site redesign produces zero matches, weekly report says "ассортимент конкурента сократился на 100%"
+### Pitfall 2: Live-HTML cassettes captured once and never refreshed → harness goes stale and tests pass on dead fixtures
 
 **What goes wrong:**
-goldapple.kz tweaks a CSS class from `.product-card__price` to `.pdp-price-current`, parser silently returns `None` for every product. The pipeline doesn't crash — empty fields are valid Python. Telegram report fires Monday morning saying "0 совпадающих позиций" or "у Goldapple теперь 12 SKU вместо 3000". Pricing team makes decisions on garbage data. Discovery happens 1-2 weeks later when someone manually checks.
+v1.1 adds a `pytest-recording` (or vcrpy) harness that records goldapple/viled HTML responses into `tests/cassettes/`. First-run cassettes capture 2026-05-15 HTML. Tests pass. CI gets green. Sunday rolls around in 2026-08-20 — goldapple has redesigned the PDP template twice in between — and `pytest` is still cheerfully replaying the May fixture. Run #28 hits the new template, parser fails, match-rate drops to 0%. The harness gave **false confidence** instead of catching the drift it was added to catch.
+
+This is the meta-pitfall: the cure for "tests pass on frozen fixtures while live HTML drifts" can itself become "tests pass on slightly-less-frozen fixtures while live HTML drifts."
 
 **Why it happens:**
-Selectors fail "soft" — they return empty results, not exceptions. Tests pass against fixed HTML fixtures that never change. CI doesn't hit the live site. No one looks at intermediate output between runs.
+- pytest-recording defaults to `record-mode=none` (replay-only) to prevent accidental network calls. Devs don't reset it without a flag/cron job. See [pytest-recording docs](https://github.com/kiwicom/pytest-recording).
+- Refreshing cassettes is a manual `pytest --record-mode=rewrite` step that nobody puts on their calendar.
+- Cassettes get committed to git; once committed they look "official" and authoritative.
+- The harness purpose (catch drift) gets lost; cassettes get treated as test inputs, not drift detectors.
+- Industry retrospectives: silent failures via stale fixtures account for ~40% of production scraper outages in 2025 ([Grepsr: Testing vs Production](https://www.grepsr.com/blog/web-scraping-testing-vs-production/)).
 
 **How to avoid:**
-- **Hard-fail invariants**: After parsing each product, assert `price is not None`, `name is not None and len(name) > 3`, `volume is not None OR is_volumeless_category`. Raise, don't return None.
-- **Run-level sanity gates**: Reject the run if `len(products) < 0.7 × last_week_count`, or if the null-rate on any required field exceeds a threshold (e.g., >5% products without price). Send a "RUN REJECTED — likely structural drift" alert instead of a normal report.
-- **Field-distribution monitoring**: Log per-run cardinality: products parsed, % with price, % with volume, % with brand, mean price, distinct-brand count. Compare to last week. Slack/Telegram alert on >X% deviation.
-- **Per-target smoke fixtures**: Keep 5-10 known product URLs from each retailer in a `golden_products.json` file with expected fields. Before main run, fetch those 5-10 and verify exact match. If golden set fails, abort run.
-- **Use multiple selector strategies**: structured data (JSON-LD `Product` schema, `og:` meta tags, `<script type="application/ld+json">`) + CSS selectors as fallback. JSON-LD is more stable across redesigns than class names.
+- **Cassette-age canary**: a unit test asserts `max(cassette.mtime for cassette in tests/cassettes/) > now - 14 days` (or whatever cadence). Test fails CI when cassettes are stale → forces refresh before merge.
+- **Weekly automated cassette refresh job**: a separate cron entry (or GitHub Action with VPS secret) runs `pytest --record-mode=rewrite tests/live_html/` weekly. Diffs the cassette dir and posts to ops chat. PR-bot opens a review if diffs are non-trivial.
+- **Two-tier test classification**:
+  - **Tier A — unit tests** against frozen synthetic HTML in `tests/fixtures/` (fast, deterministic, run on every commit). These verify *parser logic*.
+  - **Tier B — live-HTML cassette tests** in `tests/live_html/` with cassettes refreshed weekly. These verify *parser-vs-current-site*. Mark with `@pytest.mark.live` and only run in a nightly/weekly job, not on every commit.
+  - **Tier C — true live tests** that hit the real site (no cassette). Run weekly pre-deploy or after suspicious diff. Marked `@pytest.mark.live_no_cassette`.
+- **Cassette-diff is the signal**: weekly refresh produces a diff PR. If `tests/cassettes/*.yaml` diff is non-empty, the site changed. Reviewer either updates parser, updates expectations, or notes "irrelevant CSS change."
+- **Document the refresh ritual** in README + CLAUDE.md as an explicit invariant: "cassettes refreshed weekly via `make refresh-cassettes` or via the Sunday post-run job."
 
 **Warning signs:**
-- Parsed product count drops >20% week-over-week with no announced site changes.
-- Null rate on any field jumps from <1% to >10%.
-- Mean price changes by >30% (indicates wrong selector, not a real promo).
-- Any field is `None` for 100% of products in a run.
+- `git log tests/cassettes/` shows no commits in >30 days while live runs still execute weekly.
+- Tests pass green but live run #N parses 0% of expected volumes (cassettes don't reflect the structural change).
+- New developer joins, runs `pytest` locally → passes; runs `weekly-run.sh --viled-only --sanity-gate-n 1` → reports empty.
+- `--record-mode=rewrite` produces large unexpected diffs that nobody triages.
 
 **Phase to address:**
-**Phase 2 (Parsing)** for hard-fail invariants and JSON-LD-first strategy.
-**Phase 4 (Pipeline/Operations)** for run-level gates and field-distribution monitoring.
+**Phase 3 (Live-HTML harness)** — must implement the three-tier classification AND the cassette-age canary AND the refresh job (or document the weekly manual ritual). Skipping the refresh side ships a Pitfall #2 generator.
 
 ---
 
-### Pitfall 3: Volume normalization eats matches — "30мл" ≠ "30 мл" ≠ "30ml" ≠ "30 ml" ≠ "1 fl oz"
+### Pitfall 3: Cassettes capture sensitive data — auth tokens, session cookies, anti-bot challenge cookies — get committed to git
 
 **What goes wrong:**
-viled has product as `Крем для лица 50 мл`, goldapple has it as `Крем для лица 50ml` (no space, Latin units). Strict `brand+name+volume` key produces zero matches. Pricing team sees "0% пересечения" and assumes the scraper is broken (it is, but not how they think). Or worse: viled lists `Крем 50 мл (3 шт)` (multipack of 3), goldapple lists single `Крем 50 мл`, key matches, price comparison is wrong by 3×.
+Developer captures a goldapple PDP cassette during a session that also did a Healthchecks.io ping and a Telegram-send-test. The recorded yaml file contains:
+- `cf_clearance` cookie value (Cloudflare anti-bot session) — leakage might let an attacker piggyback on the bypass.
+- `X-Hc-Ping-Key` query string in URL → committed to public repo → free wrapper for DDoS.
+- Bot token in an Authorization header from a debugging Telegram call.
+- Camoufox/Patchright user-agent + fingerprint — less catastrophic but still telegraphs setup.
+
+The cassette is committed by a developer who skimmed the file ("looks like HTML, fine"), the PR merges, the secret is now in git history forever. By the time it's noticed, the secret has been rotated → but the cassette commit still triggers GitGuardian alerts.
+
+Per CLAUDE.md, repo is private *now* — but the cost-of-leak is asymmetric and the repo may go public in the future.
 
 **Why it happens:**
-Cosmetics volume notation is wildly inconsistent across Russian retailers:
-- Spacing: `50мл` / `50 мл` / `50 МЛ`
-- Unit: `мл` / `ml` / `g` / `г` / `гр` / `oz` / `fl oz`
-- Decimal: `1.5 мл` / `1,5 мл` / `1.5мл`
-- Multipack: `3×50 мл`, `3 шт × 50 мл`, `3*50 ml`, `набор 3 × 50 мл`, `(3 pcs)`
-- Set vs single: `Набор: крем 50мл + сыворотка 30мл` (a kit, not one product)
-- Volume in name vs separate field: sometimes only in title, sometimes in attribute, sometimes both (and they disagree)
-- Missing volume: hair brush has no volume; fragrance always does — must be category-aware
+- vcrpy/pytest-recording record **everything** by default — request headers, cookies, response Set-Cookie, query strings. See [Redacting secrets and PII from VCR.py cassettes](https://imoskvin.com/blog/redacting-vcrpy-cassettes/).
+- Developers don't review yaml cassettes line-by-line; they trust the recording.
+- `git add tests/cassettes/` is bulk-add by convention.
+- `.gitignore` patterns for `.env` / `secrets/` don't cover cassette content (it's serialized inside a yaml).
+- Cassettes for "anti-bot tests" inherently capture anti-bot artifacts → the exact thing you don't want public.
 
 **How to avoid:**
-- Build a `Volume` value object: `(amount: Decimal, unit: enum {ML, G, OZ, FL_OZ, COUNT}, multipack: int = 1)`.
-- Parse with regex into canonical form: `(\d+[.,]?\d*)\s*(мл|ml|г|g|гр|oz|fl\s*oz)`. Normalize comma→dot, lowercase, strip.
-- Detect multipack pre-normalization: regex `(\d+)\s*(?:×|x|\*|шт)\s*(\d+\s*(?:мл|ml|г|g))` → expand to `(amount, unit, multipack=N)`.
-- Detect kits/sets: keywords `набор`, `set`, `комплект`, `kit`, `подарочный` in name → flag as `is_set=True`, **exclude from price-per-unit comparison** in v1.
-- Compare on **(brand, normalized_name, amount_ml_equivalent, multipack)**. Convert g↔ml only when category warrants (oils ≈ density 0.9; not safe for hair tools).
-- Log all unmatched-but-seemingly-similar pairs to a `match_review.csv` file. Manually review weekly to catch normalization gaps.
-- **Out of scope but plan for it**: v2 fuzzy matching (rapidfuzz) on normalized name when exact key fails. Don't ship in v1, but design schema to allow fuzzy candidates later.
+- **Configure `before_record_request` / `before_record_response` filters in conftest.py from day-1**:
+  ```python
+  @pytest.fixture(scope="module")
+  def vcr_config():
+      return {
+          "filter_headers": [
+              ("authorization", "REDACTED"),
+              ("cookie", "REDACTED"),
+              ("set-cookie", "REDACTED"),
+              ("x-bot-token", "REDACTED"),
+          ],
+          "filter_query_parameters": ["api_key", "ping", "uuid"],
+          "filter_post_data_parameters": ["password", "token"],
+          "before_record_response": redact_response_body,  # strip cf_clearance from body too
+      }
+  ```
+- **Pre-commit hook with `detect-secrets` or `gitleaks`** scanning `tests/cassettes/`. CI gate that fails the PR if a candidate secret is detected.
+- **Cassette PII scan canary**: a unit test loads every `*.yaml` in `tests/cassettes/` and asserts known-bad regex patterns (UUID-like ping tokens, `cf_clearance=`, `Authorization: Bearer`, Telegram bot-token format `\d{9,10}:[A-Za-z0-9_-]{35}`) are absent.
+- **Smaller default capture surface**: cassettes for *parser* tests don't need anti-bot challenge headers — only the final HTML body. Configure vcrpy to drop request/response headers entirely for parser-focused cassettes (`record_mode="new_episodes"` plus a request/response transformer that strips everything except body).
+- **Manual review checklist on PR**: every cassette-touching PR asks "have you skimmed for secrets?" — codify in `.github/PULL_REQUEST_TEMPLATE.md`.
 
 **Warning signs:**
-- Match rate <30% on brands you know exist on both sites (sanity-check 5 known overlapping SKUs by hand).
-- Price delta column shows ratio close to integer (3×, 2×) — suggests multipack mismatch.
-- Single-product matches with wildly divergent prices (>50% difference) — likely wrong volume.
+- Cassette yaml contains `cf_clearance=` literal, `Authorization: Bearer` literal, `bot\d+:` token shape, or `hc-ping.com/` UUID in a query string.
+- `git diff` on a cassette commit shows >50% of changed lines are headers/metadata (vs body content).
+- `detect-secrets scan` flags `tests/cassettes/`.
+- GitHub Secret Scanning sends an automated alert.
 
 **Phase to address:**
-**Phase 3 (Matching)** — must include explicit multipack/kit detection and unit normalization.
+**Phase 3 (Live-HTML harness)** — redaction config + canary must ship in the same plan that introduces the harness. Adding redaction *after* cassettes are committed is rotate-everything cleanup.
 
 ---
 
-### Pitfall 4: Cyrillic vs Latin brand name divergence — "Estée Lauder" / "Эсте Лаудер" / "Estee Lauder" / "ESTÉE LAUDER"
+### Pitfall 4: Live HTML loads via JS race conditions → harness flaky → "flaky tests" gets normalized → real drift hides
 
 **What goes wrong:**
-Goldapple.kz, being a Russian-roots retailer, sometimes lists international brands in Cyrillic transliteration (`Эсте Лаудер`, `Шанель`, `Диор`), sometimes in Latin (`Estée Lauder`, `Chanel`, `Dior`), sometimes inconsistently between the catalog page and the product page. viled.kz typically uses Latin. Strict brand-key match misses 30-50% of overlap. Diacritics (`é` vs `e`), case (`CHANEL` vs `Chanel`), and ampersand (`Dolce&Gabbana` vs `Dolce & Gabbana` vs `D&G`) compound the problem.
+Goldapple PDP renders title in SSR (in initial HTML) but renders the volume block via client-side JS hydration. Camoufox captures the page on `domcontentloaded` event ~600ms — sometimes the volume `<div>` is hydrated, sometimes not. Cassette test passes 7/10 runs and fails 3/10 with `volume_norm=None`. Devs add `@pytest.mark.flaky(reruns=3)` and move on.
+
+Six weeks later: the goldapple template change that *did* break volume extraction looks identical to the existing flake — same `volume_norm=None` symptom — and gets silenced by the flake-retry. The harness has trained itself to mask the very class of bug it was added to detect.
+
+Same risk for viled.kz: `__NEXT_DATA__` is in the HTML but the rendered DOM also has volume in a hydrated panel; if the parser walks both paths and one is conditional on JS, captures will diverge.
 
 **Why it happens:**
-- No standard transliteration: `ESTEE LAUDER` → `ЭСТЕ ЛАУДЕР` or `ЭСТИ ЛАУДЕР` are both seen.
-- Editorial inconsistency at the retailer (different categories curated by different teams).
-- Unicode normalization: `é` (single codepoint U+00E9) vs `é` (e + combining acute U+0301) compare unequal byte-wise.
-- Trademark variations: `L'Oréal` vs `LOreal` vs `Лореаль` vs `Loreal Paris` vs `L'Oréal Paris`.
+- Camoufox/Patchright wait strategies are imperfect: `wait_until="domcontentloaded"` returns before lazy-loaded sections render; `networkidle` is unreliable on sites with long-poll connections; explicit `wait_for_selector` only works if you know the selector.
+- Phase 1 v1.0 spike found cold-start "Loading…" race already — same family of bug.
+- Flake-retry decorators (`pytest-rerunfailures`, `pytest-flaky`) are designed to hide intermittent failures from CI noise → they will hide *real* intermittent failures too.
+- Developers normalize "retry 3 times" as a virtue ("CI is more stable now") rather than a debt.
 
 **How to avoid:**
-- Build a **brand alias table** seeded from viled.kz brands as canonical. For each viled brand, manually map known Cyrillic variants. Start with the top-50 brands by SKU count — covers 90% of catalog.
-- Apply Unicode NFKD normalization + accent stripping (`unicodedata.normalize('NFKD', s).encode('ascii', 'ignore')`) before comparison — handles `é`→`e`.
-- For unmapped brands, try transliteration libraries (`transliterate` package for ru↔en) as a fallback candidate, but **flag for human review** rather than auto-accept.
-- Lowercase, strip punctuation (`'`, `&`, `.`, `-`), collapse whitespace before comparison.
-- Maintain alias table in version control (`brand_aliases.yaml`); review weekly when unmatched-brand list grows.
-- Log "brands seen on goldapple but not in alias table" each run — this is your manual review queue.
+- **Capture cassettes with deterministic wait conditions**: explicit `await page.wait_for_selector("[data-testid='volume-block']", timeout=15s)` or whatever the real anchor is. If selector doesn't exist on this page-type (e.g. hair brush has no volume), branch explicitly, don't fall through.
+- **Cassettes are deterministic by construction**: once recorded, the cassette IS the request/response pair. Flakiness from cassette playback indicates a *parser non-determinism* (e.g. parser uses `dict` iteration order, or asserts position-of-element on a multi-block page) — fix the parser, not the test.
+- **Ban `@pytest.mark.flaky` in `tests/live_html/`** via grep canary in CI. Force the cause to be diagnosed.
+- **Two-capture verification**: when refreshing a cassette, capture twice 30 seconds apart. Diff. If diff is non-trivial (more than timestamp / nonce), the page is non-deterministic in a way that breaks parser assumptions → either the parser walks the page wrong or the wait strategy is wrong. Don't ship until diff stabilizes.
+- **Save the screenshot alongside the cassette**: `tests/cassettes/goldapple-stereotype-sago/page.html` + `page.png` + `page.har`. Visual diff for the developer; HAR for network-level inspection.
 
 **Warning signs:**
-- A specific brand has >20 SKUs on goldapple but zero matches against viled — likely an unmapped Cyrillic alias.
-- Brand alias table hasn't grown in weeks but unmatched-brand log keeps growing.
-- Two brands in alias table with similar names (`Эсте Лаудер` and `Эсти Лаудер` both mapping to `Estée Lauder`) suggests inconsistent source data.
+- Any test in `tests/live_html/` decorated with `flaky`/`rerun` markers.
+- `pytest --record-mode=rewrite` produces volatile diffs (different content each run).
+- Cassette playback failure rate >5% in nightly job.
+- Tests that "sometimes pass, sometimes fail" are accepted as normal.
 
 **Phase to address:**
-**Phase 3 (Matching)** — alias table is core infrastructure, not a v2 nice-to-have.
+**Phase 3 (Live-HTML harness)** — wait-strategy + flake-ban canary belong in the harness scaffold. **Phase 2 (Parser fix)** also needs to verify parsers don't depend on JS-only DOM that may not be in the cassette.
 
 ---
 
-### Pitfall 5: Pricing extraction — picking strikethrough/from/club price instead of current public price
+### Pitfall 5: Drift detection only watches the SKUs that worked yesterday — site adds a new category that bypasses the brand-intersect filter, silently shrinking the dataset
 
 **What goes wrong:**
-A goldapple product card shows: `~~6 990 ₸~~ **4 990 ₸** | По Gold Card: 4 490 ₸ | от 4 990 ₸`. The parser grabs whichever number happens to be in the first `.price` element and reports it. Sometimes it's the strikethrough (old price), sometimes Gold Card price (out of scope per PROJECT.md), sometimes the lowest variant ("from"). Comparison to viled.kz is meaningless. Worse: parser silently picks differently for different products in the same run.
+v1.0 goldapple crawl uses `intersect_brand_pool` to limit goldapple URLs to brands present on viled. Site introduces a new category "Корейская косметика" with brand `MIXSOON` not on viled yet. Goldapple slug pattern changes from `/<brand>/<sku>` to `/korean/<brand>/<sku>` for items in this new top-level path. The `intersect_brand_pool` bucket index (Path A from Wave-7 gap-closure plan 03-08) was tuned to longest-prefix-in-whitelist on the old slug pattern — new pattern falls through, those URLs never enter the crawl frontier. We never notice because *the brands we already had still work*.
+
+Six months later commercial team asks "почему у нас нет матча на Korean skincare? У goldapple их полно" — discovery via user complaint, not via alerting.
 
 **Why it happens:**
-Beauty retailers display 3-5 prices simultaneously: original, current, member/loyalty, "from" (variant range), bulk-discount. CSS classes are often non-semantic (`.price-1`, `.price-2`). Markup changes per A/B test. The "obvious" price visually is not always the first in the DOM.
+- Drift detection is usually shaped like "compare today's parse vs yesterday's parse on the same URLs." It cannot detect URLs that *never enter* the frontier.
+- The brand-intersect filter is a v1 cost-control mechanism (don't crawl irrelevant brands); the assumption that "irrelevant today = irrelevant tomorrow" is unstated and unverified.
+- Sitemap drift is a separate failure mode from PDP drift — different parser, often missed.
+- Industry retrospective: "field-level completeness failures, when not actively monitored, are discovered on average 3-5 days later through downstream reporting discrepancies" ([extralt: Ecommerce scraping in 2026](https://extralt.com/blog/ecommerce-web-scraping)). For unknown-categories it's months, not days.
 
 **How to avoid:**
-- **Prefer JSON-LD / structured data**: `<script type="application/ld+json">` with `Product.offers.price` is the canonical current public price per schema.org. Use this first.
-- If falling back to HTML: **explicitly select for semantic intent**, not position. Look for `data-price-type="final"`, `[itemprop="price"]`, or class names containing `current` / `final` / `actual`. Reject classes containing `old`, `was`, `crossed`, `striked`, `club`, `member`, `gold`, `from`.
-- Capture **both** prices when possible: `current_price` and `original_price` (for discount %). Discount = (1 - current/original). Useful for "промо-мониторинг" goal.
-- Filter products where price text contains `от` / `from` — these are variant ranges, not single prices. Handle as "needs variant selection" or skip.
-- Sanity-check: assert `100 ≤ price ≤ 1_000_000` (₸). Cosmetics outside this range = parsing error.
-- Currency: assert `₸` or `KZT` is in the source text. If you scrape a `.ru` mirror by accident, you get rubles, and your delta math is off by ~5×.
+- **Sitemap delta canary**: weekly job re-downloads `goldapple.kz/sitemap.xml` (or whatever the master URL index is), compares against last-week's sitemap, logs:
+  - new top-level path segments (e.g. `/korean/` is new)
+  - new slug-pattern shapes (regex-equivalence-class of slugs)
+  - SKU count delta per top-level category
+- **Brand-discovery widening**: alongside `intersect_brand_pool`, run a tiny **"reconnaissance" crawl** that samples 10 random URLs per top-level category every week and dumps brand names found. If a brand appears >3 weeks in a row that's NOT on viled, flag for review — could be a category viled should expand into.
+- **Don't conflate "no match" with "no SKU"**: matcher already separates `goldapple_total_count` from `match_count`. Add a third metric `goldapple_categories_seen` (count distinct top-level path segments). If this drops to a number lower than last week, alert.
+- **Anti-bot-on-subset**: goldapple may eventually challenge *only the new category* (different WAF rule). Smoke-probe must rotate across categories, not just hit the same warm URL.
 
 **Warning signs:**
-- Distribution of prices is bimodal (cluster at low + high) — suggests sometimes catching strikethrough.
-- Median price changes >30% week-over-week — wrong field.
-- Discount column shows 0% for all products on goldapple (parser caught only one price field, original=current).
-- Negative discount (current > original) — swapped fields.
+- `goldapple_total_count` from sitemap parse drops or holds flat while site is observably adding products (manual spot-check).
+- New goldapple URLs appearing in browser autocomplete that the crawler never visits.
+- Sitemap diff job (if implemented) flags new path segments.
+- Reports go from "X% match-rate" to "X% match-rate" week after week but commercial team complains coverage feels narrow.
 
 **Phase to address:**
-**Phase 2 (Parsing)** with mandatory currency + range assertions. **Phase 5 (Reporting)** must surface discount% so anomalies are visible.
+**Phase 4 (Drift detection extensions)** — sitemap-delta canary + brand-discovery widening. Cannot be addressed only in parser-fix phase because parsers see only the URLs they're given.
 
 ---
 
-### Pitfall 6: Stock detection — "out of stock" vs "hidden" vs "removed" vs "URL changed"
+### Pitfall 6: D-705 .env loading pitfall recurs — Python child sees stale env when invoked directly (root cause of run #13 `delivery_status=skipped_no_credentials`)
 
 **What goes wrong:**
-Last week a product had `Цена: 5 990 ₸ | В наличии`. This week the URL returns 404, or shows "Товар временно недоступен", or returns a redirect to the category page, or the price is 0, or a "Уведомить о поступлении" button instead of "В корзину". Treating all of these the same — "product disappeared, exclude from comparison" — produces three different bugs:
-1. False "ассортимент сократился": product is just out of stock, not delisted.
-2. False "новый товар появился": URL changed (slug edit on goldapple side), same product imported as new.
-3. False price delta: `price=0` for OOS products treated as "now free".
+Already burned us in run #13. Operator runs `python -m ga_crawler deliver-run --run-id 13` directly from a fresh shell that doesn't have `TG_BOT_TOKEN` exported. Bash wrapper `bin/weekly-run.sh` does `set -a; source .env; set +a` correctly — but the direct CLI invocation bypasses the wrapper. Python's `os.environ` doesn't auto-load `.env`; `python-dotenv` only loads if the code explicitly calls `load_dotenv()`. Result: `delivery_status=skipped_no_credentials`, ops alert fires, operator scratches head ("I have a .env right there...").
+
+In v1.1 this recurs if:
+- The new live-HTML harness shells out to a Python helper that needs `TG_BOT_TOKEN` for a smoke message → child doesn't see it.
+- Phase audit paperwork generation runs a one-off `python -m ga_crawler audit-foo` → no .env load.
+- Operator deploys to new VPS, tests `deliver-run` manually before cron handoff → silent skip.
 
 **Why it happens:**
-Retailers don't have a single signal. Goldapple in particular has multiple states: in stock / OOS / coming soon / pre-order / regional unavailable / archived. The DOM only weakly distinguishes them. URLs are not stable identifiers — slug changes (`krem-uvlazhnyayushchiy-50ml` → `krem-uvlazhnyayushchiy-novyy-50ml`) reset identity.
+- Python `subprocess.run([...])` inherits parent `os.environ` by default, but if parent shell never sourced `.env`, child sees nothing. Bash `source` is *not* automatic.
+- `python-dotenv` is library-level — only loads when imported and called. CLI entrypoints sometimes import it and sometimes don't; inconsistency across subcommands.
+- Wrapper-only contract is invisible: nothing in the Python code says "this requires bash wrapper context" → operator who reads `python -m ga_crawler deliver-run --help` gets no warning.
+- See [Python subprocess env pitfall](https://github.com/python/cpython/issues/120836) — Windows-specific but the inheritance model bites cross-platform when parent env is partial.
 
 **How to avoid:**
-- Define a **stock state enum**: `IN_STOCK`, `OUT_OF_STOCK`, `UNAVAILABLE`, `DELISTED`, `URL_CHANGED`, `UNKNOWN`. Map every product to exactly one. Never collapse to a boolean.
-- For each retailer, document the DOM signals per state (text patterns: `В наличии`, `Нет в наличии`, `Скоро в продаже`, `Уведомить о поступлении`, button presence, schema.org `availability` field). Capture in a `stock_signals.md` reference file.
-- **Never use price=0 as OOS signal** — assert price>0 or set state=OOS explicitly.
-- For "disappeared" products (last seen N=1 week ago, now 404), don't immediately mark `DELISTED`. Set `state=URL_CHANGED_OR_DELISTED`, and try to re-find them by `(brand, name, volume)` key against current week's full catalog. If found at new URL → update URL. If not found after 2-3 weeks → mark `DELISTED`.
-- Compute identity by `(brand, normalized_name, volume)` not URL. URL is a pointer, not the identity.
-- Use `Product.offers.availability` from JSON-LD (`InStock` / `OutOfStock` / `PreOrder` / `Discontinued`) when available.
+- **`load_dotenv(verbose=True)` at CLI entrypoint** — `src/ga_crawler/__main__.py` or `cli.py` calls `python-dotenv` unconditionally for every subcommand, idempotent (no-op if vars already set). This makes the CLI work standalone without the bash wrapper.
+- **Fail-loud preflight**: each subcommand that needs Telegram credentials calls `assert_env(["TG_BOT_TOKEN", "TG_BUSINESS_CHAT_ID"])` early; on miss, log `"missing TG_BOT_TOKEN; if running standalone, did you `source .env` or have you populated .env at $CWD?"` and exit with a documented code (3 for deliver-run per README §3).
+- **Single canonical source-of-truth for env contract**: a `.env.example` with comment headers grouping vars by subcommand. Test (canary) that asserts every var referenced by `os.environ[...]` in source code is documented in `.env.example`.
+- **Operator runbook update**: README §7 "Operations runbook" recovery recipes already shell out to `python -m ga_crawler ...`. Each one must either (a) document `export $(grep -v '^#' .env | xargs)` as prerequisite OR (b) rely on the in-Python `load_dotenv()` fix above. Pick (b) — less for the operator to remember.
+- **Canary test**: assert that `python -m ga_crawler deliver-run --help` in a clean shell with `.env` present in CWD produces the same env-contract output as via wrapper — proves the CLI loads `.env` on its own.
 
 **Warning signs:**
-- Week-over-week "delta delisted" jumps significantly while "delta added" jumps similarly — likely URL-rotation, not real churn.
-- All disappeared products are from one brand or category — likely a scraping/pagination issue, not delisting.
-- Products oscillate between "delisted" and "active" weekly — definitely identity bug.
+- `delivery_status=skipped_no_credentials` in a run that completed everything else.
+- Operator manually runs a recovery subcommand and the run silently degrades.
+- New subcommand added by a phase reads env-vars but doesn't call `load_dotenv()`.
 
 **Phase to address:**
-**Phase 2 (Parsing)** for state enum. **Phase 3 (Matching)** for identity-based reconciliation across weeks.
+**Phase 5 (Operator deploy)** — `load_dotenv()` at CLI entrypoint must be added BEFORE first VPS deploy, otherwise the first manual recovery on the VPS hits this. Co-locate with operator runbook update.
 
 ---
 
-### Pitfall 7: Pagination / infinite-scroll truncation — silently scraping only first 30 products of 3000
+### Pitfall 7: Cron timezone gotcha — Yandex Cloud KZ default TZ might be Moscow (UTC+3) not Almaty (UTC+5), `CRON_TZ` invariant becomes critical
 
 **What goes wrong:**
-Goldapple category page uses infinite scroll. `httpx` fetches the initial HTML and gets only the first 30-60 products. Parser reports "Goldapple has 60 products in 'Уход за лицом'". Real catalog: 2000+. Comparison is on ~3% of actual catalog.
+Operator deploys to Yandex Cloud Almaty zone. Yandex Cloud Ubuntu images historically default to `Europe/Moscow` (Russian-headquartered company, Russian default). Cron file from `deploy/etc-cron-d-ga_crawler` has `CRON_TZ=Asia/Almaty`, which Vixie cron respects file-scoped — good. BUT bash scripts inside the run might call `date +%F` to construct log filenames, and `date` uses the system `/etc/timezone`. Result:
+- Cron fires at Almaty Sunday 23:00 (correct).
+- Log filename becomes `weekly-run-2026-05-18.log` because system TZ says Moscow, where it's still 21:00 Sunday — fine.
+- BUT: logrotate runs at `06:25 system-TZ`, which is `08:25 Almaty` — different from documented "Monday 06:25 UTC" assumption in README §7 logrotate edge cases.
+- Healthchecks.io schedule was set to `cron 0 23 * * 0 Asia/Almaty` — pings arrive as expected.
+- BUT: HC.io dashboard timestamps might display in operator's browser TZ, which the team in Almaty reads as their local time → consistent.
+- AND: `bin/backup.sh` rotation logic uses `date +%F` for filenames — if system TZ is Moscow, two consecutive Almaty days could share a backup filename (rare edge but possible).
+
+The pitfall is **mixed TZ layers** — cron is file-scoped, but bash `date` is system-scoped, and Python `datetime.now()` is system-scoped. They diverge under stress.
 
 **Why it happens:**
-- Modern e-commerce uses lazy-load: products beyond fold are fetched via XHR/GraphQL on scroll.
-- Pagination might not have visible page links — just a "Показать ещё" button.
-- Listing page might be SSR for SEO (first N products) but client-rendered for the rest.
-- API behind the scroll might be authenticated/CSRF-tokened, looking different from the web call.
+- `CRON_TZ` only scopes the cron daemon's schedule interpretation; it does NOT export `TZ=` to the spawned child process.
+- Yandex Cloud images often default to `Europe/Moscow`, sometimes `UTC`. Hetzner CX22 defaults to UTC. Different starting point → different cron drift class.
+- Camoufox/Firefox uses its own TZ-spoof for fingerprint (Camoufox can be configured with a target locale that doesn't match the system) — yet another layer.
+- Operator deploys to Yandex Cloud, sees first cron tick fire at the expected wall-clock time, assumes correct, doesn't check that downstream timestamps agree.
 
 **How to avoid:**
-- **Find the underlying API**: open DevTools → Network → XHR while scrolling a category page. Almost always there's a `/api/catalog/products?page=N&category=X` endpoint returning JSON. Hit that directly — far more reliable than scrolling a headless browser.
-- If only browser-driven scraping works, use Playwright with explicit scroll loop: scroll to bottom, wait for new product count to stabilize, repeat. Cap iterations and assert final count matches the displayed "Total: N products" label on the page.
-- **Always extract total-count from the listing page** (most catalogs show "Найдено: 2 437 товаров" or similar) and assert your scraped count ≥ 95% of declared total. Hard-fail on mismatch.
-- Track sub-pagination: a single category may have multi-page listings even with infinite scroll (page 1 = first 240 results, page 2 = next 240, etc.). Iterate `?page=N` until empty.
-- For viled.kz: site is smaller, traditional pagination likely sufficient — but apply the same total-count check.
+- **Standardize system TZ at deploy**: README §2 step 1.5 add `sudo timedatectl set-timezone Asia/Almaty` between OS deps install and ga_crawler user create. Idempotent + visible. **Adds belt-and-braces over the `CRON_TZ` invariant.**
+- **Canary test**: assert that the cron template line `CRON_TZ=Asia/Almaty` AND a README line documenting `timedatectl set-timezone Asia/Almaty` both exist. Source-lock both shapes.
+- **TZ-aware log filename test**: assert `bin/weekly-run.sh` uses `date +%F` AND that the operator setup ensures system TZ matches `CRON_TZ`. Or migrate to `TZ=Asia/Almaty date +%F` inside the wrapper to make it explicit (preferred — survives wrong system default).
+- **Python datetime audit**: any `datetime.now()` (naive) call in v1.1 new code → reject in code review. Use `datetime.now(tz=ZoneInfo("Asia/Almaty"))` or `datetime.now(tz=timezone.utc)` explicitly.
+- **Healthchecks.io schedule verify**: README §5 step 4 already says timezone `Asia/Almaty` — keep, AND add post-deploy verification: trigger one manual run, check HC dashboard shows "last run was N minutes ago" matching wall-clock-Almaty (catches a mis-configured timezone in HC settings).
 
 **Warning signs:**
-- Scraped count is suspiciously round (exactly 30, 60, 120 — page sizes).
-- Scraped count ≪ declared count on category header.
-- Always missing the same brands (those with many products → exceeded the loaded slice).
+- Log filename day-of-week disagrees with the actual day the run fired (`weekly-run-2026-05-18.log` containing a Sunday run that fired Sunday 23:00 Almaty would still look like Monday in Moscow TZ — confusing).
+- Backups rotate at unexpected wall-clock times.
+- HC.io alerts arrive "off-schedule" relative to user expectation.
+- Two backup files share a date suffix.
 
 **Phase to address:**
-**Phase 1 (Reconnaissance)** to identify pagination strategy per site. **Phase 2 (Parsing)** to enforce total-count assertion.
+**Phase 5 (Operator deploy)** — TZ-normalization step added to README + canary on cron-template invariant.
 
 ---
 
-### Pitfall 8: "Bran goldapple, only пересекающиеся бренды" — getting the brand list wrong, scraping useless brands or missing them
+### Pitfall 8: Yandex Cloud Kazakhstan vs Hetzner EU — IP geography helps goldapple anti-bot but introduces new compatibility unknowns for Camoufox/Firefox stack
 
 **What goes wrong:**
-Per PROJECT.md, goldapple is scraped only for brands present on viled.kz. Two sub-failures:
-1. **Brand-list staleness**: viled.kz adds a brand mid-week → goldapple scrape misses it that week → first-week artificial gap in report.
-2. **Brand-name mismatch leaks**: the brand-list filter uses viled's brand spelling, goldapple lists it differently (Pitfall 4) → filter excludes valid brand → scraping nothing useful for that brand.
-3. **Goldapple has the brand under a different category structure** → category-level filtering misses products that exist under a different taxonomy.
+Operator picks Yandex Cloud KZ (Karaganda DC, launched April 2024) because "KZ IP will help goldapple anti-bot." After deploy:
+- **Outbound bandwidth pricing surprise**: Yandex Cloud charges per-GB egress; goldapple crawl ~500 MB/week — manageable but operator didn't budget.
+- **Camoufox/Firefox binary** built for a slightly different libc / glibc / Mesa stack than the Yandex Cloud base image (often a slightly older Ubuntu variant or custom kernel). Firefox 142 fork might fail to launch with cryptic `libxslt` / `libstdc++` errors. Worked on Hetzner Ubuntu 24.04, breaks on Yandex Cloud.
+- **DC IP block flagged anyway**: Yandex Cloud Karaganda IPs are *datacenter* ASN, not residential. Cloudflare/DataDome bot-detection databases catalog ASN, not country. Result: same 403 challenge from goldapple as Hetzner Falkenstein — KZ geography didn't help because the IP is still a known DC.
+- **Healthchecks.io reachability**: HC.io runs on Hetzner bare-metal in EU. Outbound HTTPS from Yandex Cloud KZ → HC.io EU should work but routes through Russia first; if any geopolitical filtering hiccups happen (rare but documented for Russia↔EU routes 2022-2025), HC pings could drop intermittently. Dead-man's-switch then fires false alarms.
+- **Egress to api.telegram.org**: Telegram is unblocked in KZ as of 2026 (last block was Russia 2018-2020, not KZ), but Yandex Cloud network policies might have implicit filtering for `t.me` / `api.telegram.org` since Yandex is Russian-corporate; unverified.
+- **Egress to PyPI** (for `uv sync`): goes through European mirrors via Russia; intermittent slowness.
 
 **Why it happens:**
-- Naive filter: `if product.brand.lower() in viled_brands_lowercase: keep`. Cyrillic/Latin/diacritics break it.
-- Brand list is built once at parser-init, not refreshed mid-run → drift between viled and goldapple scrape.
-- Goldapple search-by-brand may be more reliable than scraping all categories and filtering — but easier to miss in initial design.
+- "KZ IP solves goldapple" is an assumption, not a verified fact. v1.0 spike showed `Camoufox-direct, 99/100, no proxy needed` from Hetzner — there was NEVER a proven need for KZ IP.
+- Yandex Cloud KZ is new (2024 launch), small corpus of community deployments, edge cases not well documented.
+- Camoufox is a fork-of-fork-of-Firefox; its binary linkage assumptions track its build host, not yours.
+- Different cloud providers have different egress quirks; Russian-headquartered ones have different geopolitical exposure than EU/US providers.
 
 **How to avoid:**
-- Build the brand list **at the start of every run** by scraping viled.kz fully first, then deriving the brand set from real data, then scraping goldapple.
-- Use the **brand alias table** (Pitfall 4) when filtering goldapple. Don't compare raw strings.
-- On goldapple, prefer scraping by brand directly: `goldapple.kz/brand/<slug>` typically lists all SKUs of that brand across categories. More reliable than category-then-filter.
-- Log "viled brands not found on goldapple" per run — interesting business signal (brand absent at competitor) AND a sanity check on filter bugs.
-- Capture `goldapple_brand_url` per brand alongside the alias — caches a known-good URL.
+- **Re-read v1.0 RECON-01 spike memo** (2026-05-06) before picking provider. Camoufox-direct from Hetzner already works — there is **no evidence** that KZ IP is required. Default = Hetzner CX22 EU per README §2 unless v1.1 surfaces concrete anti-bot regression.
+- **If Yandex Cloud is chosen**: smoke-test Camoufox binary launch BEFORE wiring cron. Concrete steps:
+  ```bash
+  sudo -u ga_crawler /opt/ga_crawler/.local/bin/uv run python -c \
+    "from camoufox.async_api import AsyncCamoufox; import asyncio; \
+     asyncio.run(AsyncCamoufox().__aenter__())"
+  ```
+  Capture exit code, dynamic-library errors, missing-deps. If failure, escalate via `apt install <missing-libs>` BEFORE proceeding past README §2 step 4.
+- **Verify outbound paths**: from VPS run `curl -I https://hc-ping.com/test`, `curl -I https://api.telegram.org/bot111:test/getMe`, `curl -I https://goldapple.kz/`. All three must return non-zero meaningful response. Latency >2s to HC.io → consider alternate monitor (Better Uptime, etc).
+- **Recovery path documented**: README adds an explicit "if KZ IP fails too" runbook entry — residential proxy (Decodo / IPRoyal, ~$8-15/GB) configured via env-var, single config switch, no code change.
+- **Pre-commit to Hetzner**: stretch v1.1 ships Hetzner. v2 (only if needed) revisits KZ-region after evidence accumulates.
 
 **Warning signs:**
-- A specific viled brand has 30 SKUs but zero goldapple matches across multiple weeks — alias gap, not real absence.
-- Goldapple scraped count for a brand wildly varies week-over-week — pagination or filter instability.
+- Camoufox launch fails on first VPS smoke-test with library error.
+- HC.io pings successful from local dev box but intermittent from VPS.
+- Goldapple smoke-probe returns Cloudflare interstitial despite KZ IP (proves the geography hypothesis wrong).
+- Telegram `getMe` returns 403 or hangs (cloud-network filtering).
+- Outbound bandwidth charges show up in Yandex Cloud billing > $10/month for our 500MB/week footprint.
 
 **Phase to address:**
-**Phase 1 (Reconnaissance)** to confirm brand-page URLs exist. **Phase 3 (Matching)** for alias-aware filtering.
+**Phase 5 (Operator deploy)** — provider-choice decision + smoke-test gate BEFORE moving past README §2 step 4. If `--provider=yandex` is chosen, ADD a compatibility-smoke phase plan.
 
 ---
 
-### Pitfall 9: Empty-result reports and silent cron failures — Monday morning report says "успешно: 0 товаров"
+### Pitfall 9: Cassettes grow unbounded → repository bloat → CI slows → developers stop running tests locally
 
 **What goes wrong:**
-Three classic failure modes that all look identical to the user:
-1. The cron job didn't run at all (server reboot, time zone change, crontab syntax, container OOM).
-2. Cron ran, scraper crashed early, "report" is the partial empty state.
-3. Scraper "succeeded" but parsed 0 products (Pitfalls 1, 2, 7) and dutifully reported "0 совпадений".
-
-In all three the team gets either nothing or a useless report Monday morning. By the time someone investigates, the failed run can't be reproduced (target site state has changed).
+Each goldapple PDP cassette is ~30-50 KB of HTML; if Phase 3 captures 30 brand-shape variants × 2 retailers × multiple page-types (PDP / catalog / sitemap) → 200+ cassettes × 50 KB = ~10 MB. Then refresh-weekly job appends new cassettes (different file names for different SKUs sampled this week) → 50 MB by month 3. Then someone records full catalog pages (5 MB each) → 500 MB. Repo balloons.
+- `git clone` takes minutes (was seconds).
+- `pytest tests/live_html/` reads gigabytes of yaml → slow startup → devs skip running it locally → drift hides.
+- Git history bloats with binary-ish yaml diffs → `git log -p` unusable.
+- CI cache invalidates on every cassette refresh.
 
 **Why it happens:**
-- Cron silently swallows stdout/stderr unless redirected.
-- "Successful exit code" doesn't mean "scraped successfully" — only "didn't crash".
-- No external watchdog; the system that's supposed to alert is the same system that's down.
+- vcrpy serializes the entire HTTP exchange; HTML bodies are the bulk and they don't compress in yaml.
+- Cassettes captured for "let me verify this one thing" tend to accumulate; nobody deletes.
+- The shape-table from Pitfall #1 wants 30+ samples per retailer — that's the *minimum* corpus, not the maximum.
+- No `tests/cassettes/.gitattributes` filter → text-diff treats yaml as text → noisy diffs.
 
 **How to avoid:**
-- **Dead-man's-switch monitoring**: free tier of Healthchecks.io or Cronitor. Scraper pings `/start` at run start, `/success` at successful end, `/fail` on exception. If no ping arrives within grace window, Healthchecks alerts via email/Telegram. This catches "didn't run at all".
-- **Run-result hard gate** before sending to Telegram: assert `viled_count > 1000`, `goldapple_count > 500`, `match_count > 100` (or whatever historical baselines warrant). On gate fail → send `RUN FAILED — see logs` to ops Telegram, do NOT send the broken report to the business team.
-- **Two Telegram targets**: ops chat (you, with full logs) and business chat (pricing team, with clean report). Failures route to ops only. Successes route to both.
-- **Structured logs with rotation**: `loguru` or `structlog` to `logs/run-YYYY-MM-DD.log`. Every parsed product, every fetch, every retry. Keep 12 weeks.
-- Capture run metrics in DB: `runs(id, started_at, ended_at, viled_count, goldapple_count, match_count, status, error)`. Lets you build trend charts and detect anomalies.
-- Test the **failure path** on day 1: deliberately break the parser, confirm ops alert fires, confirm business chat doesn't get a broken report.
+- **Cassette size budget canary**: assert `sum(size for f in tests/cassettes/*) < 50 MB`. Fail CI if exceeded. Forces curation.
+- **Per-shape-class cassette**: keep ONE cassette per *shape* (e.g. `goldapple-volume-structured-block.yaml`), not one per SKU. Add SKU-specific cassettes only when documenting a specific bug. Drop the cassette once the fix ships unless it's representative of a permanent shape class.
+- **Strip response bodies of irrelevant noise pre-record**: HTML can be downsampled to "just the part the parser touches" — extract `<div data-component="pdp-main">` subtree, drop CSS, drop scripts. Cassette becomes 2-5 KB instead of 50 KB. Doable via vcrpy `before_record_response` hook.
+- **Compress with git LFS** if cassettes must be full HTML — moves bulk out of main git history. Adds a deploy step (`git lfs install`) but keeps the repo lean.
+- **Quarterly cassette purge**: scheduled to delete cassettes >6 months old that aren't referenced by any test. Force re-record on next refresh.
 
 **Warning signs:**
-- Empty/sparse reports.
-- Healthchecks.io shows "down".
-- Run metrics row missing for a week.
+- `du -sh tests/cassettes/` > 20 MB.
+- `git clone` time visible to user as a wait.
+- CI `pytest tests/live_html/` runtime > 60 seconds.
+- Developer says "I'll skip the live tests, takes too long."
+- `git log --stat` shows cassette files in nearly every commit.
 
 **Phase to address:**
-**Phase 4 (Pipeline/Operations)** — ship monitoring before automating the schedule. Manually-triggered runs need fewer guardrails; scheduled runs absolutely require them.
+**Phase 3 (Live-HTML harness)** — size canary + per-shape-class discipline in the initial design. Adding curation after bloat is much costlier.
 
 ---
 
-### Pitfall 10: Time zone bug — weekly cron on UTC server fires at the wrong KZ time
+### Pitfall 10: Audit paperwork done after-the-fact loses fidelity (v1.0 retrospective lesson — and v1.1 ships SECURITY/VALIDATION for phases 2/4/6 retroactively)
 
 **What goes wrong:**
-PROJECT.md says: "ночь воскресенья → отчёт в понедельник". Server hosted in EU/US-East datacenter runs UTC. `cron 0 0 * * 0` fires Sunday 00:00 UTC = Sunday 06:00 Almaty (UTC+5). Run completes ~08:00 Almaty Sunday. Team checks Monday 09:00 expecting the report — it's been there for 25 hours, but the data covers Saturday-into-Sunday, missing Sunday's pricing changes. Or worse: scheduled `0 0 * * 1` (Monday 00:00 UTC) fires Monday 05:00 Almaty, run takes 3 hours, report arrives 08:00 Almaty Monday — but if scrape took 4 hours, report misses morning standup.
+v1.0 retrospective explicitly flags: "SECURITY.md was only generated for phases 3, 5, 7. VALIDATION.md only for 2, 3, 5, 6, 7." Now v1.1 has to generate **SECURITY.md for phases 2/4/6 + VALIDATION.md for phase 4** as carryover.
 
-KZ doesn't observe DST so at least that pitfall is avoided — but if you host in a DST-observing region and cron uses local server time, the run shifts 1 hour twice a year.
+The pitfall: writing security threat models for code that already shipped is essentially **code-review-flavored-as-paperwork** — the threats already either materialized or didn't. Without the prospective discipline ("what if X attacker tries Y?"), the doc becomes a defensive justification of what was built rather than a critique of what could be attacked.
+
+Worse: v1.1 might apply the same "do it later" pattern to its own new artifacts (parser-fix SECURITY, harness SECURITY, deploy VALIDATION) → repeats the trap.
 
 **Why it happens:**
-- Cron defaults to system time zone. Cloud VPS images often default to UTC.
-- Developers think in their local time when writing schedules.
-- "Sunday night" is ambiguous — KZ Sunday-into-Monday or developer's Sunday-into-Monday?
+- "Code first, paper later" is the universal default; paperwork has lower dopamine and feels like overhead.
+- `/gsd-complete-milestone` discovers the gap at milestone close — too late to influence design.
+- Retrospective SECURITY analyses often pass the verdict gate because the worst-case threats didn't materialize *yet*, not because they were designed out.
+- v1.0 retrospective specifically calls this out as the dominant reason v1.0 closed `tech_debt` not `passed`.
 
 **How to avoid:**
-- Set crontab `CRON_TZ=Asia/Almaty` at the top, or run scheduler under a process that accepts TZ-aware schedules (e.g., APScheduler with `timezone='Asia/Almaty'`).
-- Use `Asia/Almaty` explicitly. Kazakhstan unified to UTC+5 in March 2024 (single time zone). Avoid `Asia/Aqtobe`, `Asia/Qyzylorda` — historical aliases, may behave unexpectedly with stale tzdata.
-- Document the schedule decision: "Run starts Sunday 22:00 Asia/Almaty, expected duration 2-4h, report delivered before Monday 06:00 Almaty for morning standup."
-- All timestamps in DB and logs in UTC ISO-8601. Convert to Almaty only at presentation layer (Telegram message, Excel header).
-- Verify on first deploy: `date` on server, `crontab -l`, plus a test run to confirm actual fire time.
+- **`/gsd-secure-phase` and `/gsd-validate-phase` as phase-close prerequisites**, not milestone-close. v1.1's `/gsd-execute-phase` or `/gsd-transition` workflow should refuse to proceed past phase N until phase N's SECURITY.md + VALIDATION.md are present.
+- **Threat model written BEFORE code in each phase**: the threat list informs test design, not the other way around.
+- **Retroactive phases use a different verdict bar**: SECURITY/VALIDATION written for already-shipped code should explicitly note "retroactive — threats inferred not designed-against, recommend pen-testing or chaos exercises to compensate."
+- **Pair carryover with new work**: v1.1 SECURITY for phase-2 viled parser is a 2-page doc; pairing it with phase-2-parser-fix-of-v1.1 forces the author to think about new code AND retrospective code in the same session.
 
 **Warning signs:**
-- Report consistently arrives 5h earlier or later than expected.
-- Run-metrics `started_at` doesn't match Sunday-22:00-Almaty (in UTC: 17:00 Sunday).
-- DST transition weeks: report 1h offset from baseline (only if hosted in DST region).
+- Phase N+1 starts before phase N's audit paperwork exists.
+- Milestone audit verdict comes back `tech_debt` with paperwork items.
+- SECURITY.md for a shipped phase contains zero "this threat is currently exploitable" findings (probably means rubber-stamp).
+- VALIDATION.md doesn't link to specific test files / canaries.
 
 **Phase to address:**
-**Phase 4 (Pipeline/Operations)**.
-
----
-
-## Moderate Pitfalls
-
-### Pitfall 11: Telegram 50MB hard limit on Bot API uploads — Excel report grows past it
-
-**What goes wrong:**
-Initial Excel is 2MB. Six months in, with full snapshot history embedded, multi-sheet report and >5000 matched SKUs, the file crosses 50MB. `sendDocument` fails with "Request Entity Too Large". Report silently fails to deliver; only the text summary gets through.
-
-**How to avoid:**
-- Excel report should NOT embed all historical snapshots. Embed: latest snapshot, last 4 weeks of price history per SKU, top-N changes. History lives in DB.
-- Compression: write `.xlsx` (already zipped) not `.xls`. Avoid embedded images. Set column types correctly (numeric not string).
-- If you need bigger payloads: self-host the Telegram Bot API server (`tdlib/telegram-bot-api`) — raises limit to 2GB. Or use the user-bot approach (Telethon/Pyrogram) — uploads up to 1.5GB.
-- Realistic v1 estimate: well under 50MB. But add a pre-send check: `if file_size > 45MB: send_compressed_or_warn`.
-- Telegram also rate-limits: ~30 messages/sec to different chats, 1 msg/sec to same chat, 20 msgs/min for bulk. Not a concern for weekly delivery, but don't burst-send 50 separate messages.
-
-**Warning signs:**
-- Report file approaches 30MB.
-- Telegram returns `RetryAfter` or `Request Entity Too Large`.
-
-**Phase to address:** **Phase 5 (Reporting)** — set file-size budget upfront.
-
----
-
-### Pitfall 12: Database history bloat — full weekly snapshots compound to GBs
-
-**What goes wrong:**
-Naive schema: every Sunday, INSERT all ~3000 goldapple + ~500 viled SKUs into `price_history` with full row. After 1 year: 52 × 3500 = ~180K rows. After 3 years and growth: millions. Sub-100MB (manageable for SQLite), but unindexed queries slow to seconds. If you also store full HTML for forensics, multiply by 100.
-
-**How to avoid:**
-- **Don't store full HTML in DB**. Store HTML to `snapshots/YYYY-MM-DD/<retailer>/<sku_hash>.html.gz` filesystem-side. Reference from DB by path. 10-100x storage savings.
-- **Schema**: `products` (SKU identity, current state) + `price_observations` (sku_id, run_id, price, original_price, availability, observed_at). Latter is append-only time-series.
-- **Index**: `(sku_id, observed_at DESC)` for "latest price per SKU" queries — most common access pattern.
-- **Retention**: retain weekly snapshots for 2 years, then downsample to monthly for years 2-5. Or just keep all — at 200K rows/year, SQLite handles fine through year 5+.
-- **SQLite is appropriate for v1**. Migration to Postgres is warranted only if (a) multiple writers, (b) >10M observations, (c) need TimescaleDB hypertables. None apply at weekly cadence.
-- VACUUM periodically (monthly cron) to reclaim space.
-
-**Warning signs:**
-- DB file >1GB before year 1.
-- Report-gen queries take >30s.
-- Backup/restore takes minutes.
-
-**Phase to address:** **Phase 4 (Persistence/Pipeline)** — get the schema right early; migrating later is painful.
-
----
-
-### Pitfall 13: Aggressive scraping → IP banned mid-run → partial weekly report
-
-**What goes wrong:**
-Scraper runs 10 concurrent requests against goldapple. Halfway through, all IPs in proxy pool get rate-limited or blocked. Run fails with 200 products parsed of 3000 expected. Run gate (Pitfall 9) catches it and alerts ops, but you've burned proxy budget and now have to wait out the IP cooldown.
-
-**How to avoid:**
-- **Concurrency: 1-3 max** for goldapple. Weekly cadence means you have hours; speed is irrelevant. Sequential is fine for v1.
-- **Delay between requests**: random uniform 2-5 seconds. NOT a fixed delay (looks robotic).
-- **Honor `Retry-After` header**: if 429, wait the indicated time. If no header, exponential backoff with jitter: `2^attempt × random(1.0, 1.5)`, capped at 60s. Max 3 retries per URL, then give up and log.
-- **Distinguish retryable from non-retryable**: 429, 503, 502 → retry. 403, 401, 404 → don't retry (different action needed).
-- **Session persistence**: Cloudflare's `cf_clearance` cookie is per-IP and per-fingerprint. Reuse browser session across requests. Don't open a fresh browser per page — looks bot-like AND wastes the clearance you earned.
-- **viled.kz**: smaller, less defended, but be polite. 1 req/sec is plenty. You're a guest, not a customer. (And: the team owns viled.kz — be extra polite to your own infrastructure.)
-
-**Warning signs:**
-- Increasing 429/503 rate during a run.
-- Cloudflare challenge pages partway through a run that wasn't there at start.
-- Run completes but with significant gaps.
-
-**Phase to address:** **Phase 1 (Fetch layer)** — bake rate limits in from start, don't bolt on after blocks.
-
----
-
-### Pitfall 14: Robots.txt and ToS exposure — moral/practical, not just legal
-
-**What goes wrong:**
-Both sites likely have `robots.txt` disallowing automated access to product listings, and ToS prohibiting scraping. Legally enforceable in KZ for **public** product data is weak (Pitfall: KZ Law 94-V regulates *personal* data, not commercial product info; public re-collection is permitted with attribution). But: violating ToS gives the target legitimate ground to block your IP range, send a cease-and-desist, or pursue civil action under unfair competition statutes. For a competitor scraping a competitor (viled scraping goldapple), this isn't theoretical.
-
-**How to avoid:**
-- **Read both robots.txt files** at project start. Most likely, `goldapple.kz/robots.txt` disallows `/api/`, `/search`, etc. but allows category and product pages (those are SEO targets — they want crawled). Document what's allowed/disallowed and design around it.
-- Read ToS for both. Note any explicit anti-scraping clauses.
-- **Identify yourself honestly in User-Agent** when feasible, with contact email: `Mozilla/5.0 ... ViledPriceMonitor/1.0 (contact: ops@viled.kz)`. This converts you from "anonymous scraper" to "identifiable competitor doing competitive intelligence" — legally weaker target for blocking, harder to argue malicious intent. Trade-off: makes you trivially identifiable, so you'd better not be doing anything sketchy.
-- **OR** the opposite: use realistic browser UAs for stealth. Pick one, document the choice, don't mix. (For goldapple, given Cloudflare, realistic UA is operationally necessary.)
-- Stay strictly on **public unauthenticated pages** (PROJECT.md already commits to this — good).
-- Don't republish goldapple content. Internal use for pricing only is far more defensible than republishing/aggregating publicly.
-- Rate-limit conservatively (Pitfall 13). Demonstrating low-impact scraping helps if challenged.
-- Capture the legal reasoning in a doc the team and lawyer can review. Useful when leadership asks "are we sure this is OK?"
-
-**Warning signs:**
-- Cease-and-desist email.
-- Sudden permanent IP block across all proxies (manual action, not rate limit).
-- ToS update on goldapple.kz that explicitly mentions automated access or competitive intelligence.
-
-**Phase to address:** **Phase 0 (Project setup)** — review and document before writing code.
-
----
-
-### Pitfall 15: Excel report unfit for human use — pricing team complains it's noise
-
-**What goes wrong:**
-Report includes 5000 matched SKUs, all columns, raw numeric prices. Pricing team opens it, sees a wall of numbers, can't tell what changed, what matters. Reverts to manual spot-checks. Tool gets ignored within 2 months — exactly the "это никто не использует" failure mode a non-validated v1 risks.
-
-**How to avoid (preview — own pitfall area, but flag here for roadmap):**
-- Excel report: separate sheets `Summary`, `Top movers (week)`, `Promo activity`, `Assortment gaps`, `Full data`. Top sheets are short and curated; full data is for drilling.
-- Conditional formatting on price-delta column (red/green).
-- Sort by absolute price-delta or by % delta — biggest movers first.
-- Telegram text summary ≤10 lines: counts, top-3 price changes, top-3 new products at competitor, link to full report.
-- Show **Last week's price** alongside this week — pricing team thinks in deltas, not absolutes.
-- Validate the format with one pricing-team user **before** automating weekly delivery.
-
-**Phase to address:** **Phase 5 (Reporting)** — design with the actual user, not in isolation.
-
----
-
-## Minor Pitfalls
-
-### Pitfall 16: Encoding bugs — Cyrillic mojibake in Excel
-
-**What goes wrong:** Excel opens CSV in Windows-1251 by default; UTF-8 without BOM displays as `Ð£Ð²Ð»Ð°Ð¶Ð½ÑÑÑÐ¸Ð¹` instead of `Увлажняющий`.
-
-**How to avoid:** Write `.xlsx` (always UTF-8 internally) not raw CSV. If CSV is required, write UTF-8 **with BOM** (`utf-8-sig` in Python). Use `openpyxl` or `xlsxwriter` for xlsx, never csv.writer for international data.
-
-**Phase to address:** Phase 5.
-
----
-
-### Pitfall 17: Currency rounding drift
-
-**What goes wrong:** Storing prices as `float` (`5990.0`) is fine until subtraction: `5990.0 - 5989.99 = 0.010000000000218279`. Reports show "delta = 0.0100000..." occasionally.
-
-**How to avoid:** Store as `Decimal` (Python `decimal.Decimal`) or as integer-tenge (`int`, kopecks-equivalent). Round to whole tenge for display. KZT has no fractional unit in practice on retail prices.
-
-**Phase to address:** Phase 2.
-
----
-
-### Pitfall 18: Captcha encountered, no plan
-
-**What goes wrong:** Cloudflare Turnstile or hCaptcha widget appears mid-run. Scraper has no solver, fails the run.
-
-**How to avoid:** v1 design: **avoid** triggering captcha (residential proxies, low rate, stealth browser). If captcha appears, log + abort + alert. v2 if regular: integrate 2Captcha/Capsolver API ($0.001-0.003 per solve). Don't build solver as a primary v1 feature — it's a band-aid that adds complexity and cost.
-
-**Phase to address:** Phase 1 (avoid). Backlog for v2 (solve).
-
----
-
-### Pitfall 19: HTML changes per A/B test, run-to-run
-
-**What goes wrong:** Goldapple runs A/B test on layout. Some users see variant A, some variant B. Your scraper, with consistent fingerprint, lands on one bucket — but the bucket changes by IP. Selectors that worked yesterday break today, then work tomorrow.
-
-**How to avoid:** Maintain selectors for both variants where detected. Use JSON-LD primarily — A/B tests rarely change structured data. On selector failure, try alternate selector before failing.
-
-**Phase to address:** Phase 2.
-
----
-
-### Pitfall 20: Volume disagreement between title and attribute
-
-**What goes wrong:** Title says `Крем 50 мл`, attribute panel says `Объём: 30 мл` (data-entry error at retailer). Parser picks one; matching fails against other retailer.
-
-**How to avoid:** Capture both, prefer attribute (more structured) but log mismatches. If they disagree, lower confidence on the SKU and exclude from automatic matching — surface in a "review" sheet.
-
-**Phase to address:** Phase 2/3.
+**All phases of v1.1** — workflow-level enforcement. Specifically: **Phase 6 (Audit carryover)** to ship the v1.0 retroactive docs as a *distinct phase* rather than as background work.
 
 ---
 
 ## Technical Debt Patterns
 
+Shortcuts that seem reasonable but create long-term problems.
+
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Vanilla Playwright (no stealth) for goldapple | Fast prototype | Detected immediately by Cloudflare; rebuild required | **Never** for goldapple. OK for viled if it works. |
-| Hard-coded brand alias list in code | Zero infra | Code change every time a brand is added | Only first 2-3 weeks; promote to YAML/DB by Phase 3 |
-| `requests`/`httpx` only, no curl_cffi | Simpler dep | Goldapple blocks within hours | Never for goldapple. OK for viled. |
-| Skip run-level gate, just send report | One less feature | Garbage reports erode user trust → tool dies | Never if scheduled. OK for manual ad-hoc runs. |
-| Single Telegram chat (ops + business) | Simpler config | Ops noise leaks to business; failures look like reports | Day 1 only — split before scheduling. |
-| SQLite + filesystem snapshots | Zero infra cost | Manual backup discipline; no concurrent writers | Through year 2 / single-machine deployment |
-| `float` for prices | Trivial | Off-by-cent reports, hard-to-debug delta noise | Never. Use Decimal/int from start. |
-| URL as product identity | Easy join | URL changes break weekly continuity (Pitfall 6) | Never. Use (brand, name, volume) hash. |
-| No total-count assertion on listing pages | One less line of code | Silent partial scrape (Pitfall 7) | Never. |
-| Skip JSON-LD, parse HTML directly | Don't have to learn schema.org | Brittle; rebuild on every redesign | When site has no JSON-LD (rare). Try JSON-LD first always. |
-| One UA, no rotation | Simpler | More likely to fingerprint-flag | OK at low volume (weekly, ~3K requests). Rotation matters at higher volume. |
+| Fix parser against single PDP screenshot ("ship it, see if it works Sunday") | 1-day turnaround | Pitfall #1 regression: works for 1 brand shape, breaks 50 others; back-and-forth across 3+ weekly runs | Never for goldapple/viled in v1.1. Acceptable for one-off ops scripts that crawl ≤10 URLs. |
+| Capture cassettes once, never refresh | Tests stay green | Pitfall #2: harness becomes lie | Only for parser-internal-logic tests that don't depend on live HTML structure. Synthetic-fixture tests are fine forever. |
+| `@pytest.mark.flaky(reruns=3)` on live-HTML tests | Green CI badge | Pitfall #4: real drift hides behind retry-noise | Never on `tests/live_html/`. Acceptable on Telegram-send tests that hit real API (rate limits cause real flakiness). |
+| Commit cassettes without redaction config | Saves 30min of config | Pitfall #3: rotate-everything-and-cleanup-git-history if secrets leak | Never. Add redaction config in same PR that introduces cassettes. |
+| Run parser-fix without sampling 30+ shapes first | Skip "wasted" survey day | Pitfall #1 | Never for the goldapple bugs explicitly cited in v1.1-PARSER-BUG-FINDINGS.md (Armani-prefix, volume-block, viled volume_raw). |
+| Deploy to Yandex Cloud KZ without Camoufox launch-smoke | Saves 1h of pre-deploy testing | Pitfall #8: first cron tick fails Sunday night, debugged Monday morning at 2am | Never. Always smoke-test browser binary on a new image. |
+| Defer .env `load_dotenv()` to "real CLI rework later" | Saves 1h, "wrapper already handles it" | Pitfall #6: silent skipped_no_credentials on every manual recovery | Never if the CLI is operator-facing. Acceptable for internal dev-only entrypoints. |
+| Audit paperwork after milestone close | Phase work feels faster | Pitfall #10: `tech_debt` verdict + retroactive docs of weaker quality | Never per v1.0 retrospective lesson. Always run `/gsd-secure-phase` and `/gsd-validate-phase` at phase close. |
+| Skip sitemap-delta canary "because we have brand-intersect filter" | Less monitoring surface | Pitfall #5: new categories invisible for months | Acceptable in v1 (already shipped); must close in v1.1 or v1.2. |
+| Hardcode `mtime`-based cassette age expectation as literal date string in test | Quickest implementation | Test will start failing 14 days after commit, blocking unrelated PRs | Never. Use relative window (`now - 14 days`). |
 
 ---
 
 ## Integration Gotchas
 
+Common mistakes when connecting v1.1 new code to v1.0 surfaces.
+
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Cloudflare-protected goldapple.kz | Plain httpx; vanilla Playwright | curl_cffi (chrome124+ profile) for HTML pages; Camoufox or playwright-stealth for JS-rendered/challenged. Residential proxy. |
-| viled.kz | Skipping it because "it's our site, no anti-bot" | Still rate-limit politely; still treat as flaky external system. Same parser architecture as goldapple. |
-| Telegram Bot API | Sending raw report; no error handling | Retry with backoff on 5xx; on 429 honor `retry_after`; pre-validate file size <45MB; separate ops/business chats. |
-| JSON-LD product schema | Not checking it exists | Always check `<script type="application/ld+json">` first. Many KZ retailers use Bitrix → standard schema.org Product output. |
-| Cron / scheduler | System-time vs. business-time | `CRON_TZ=Asia/Almaty` or APScheduler with explicit timezone. |
-| Healthchecks.io | Pinging only on success | Ping start/success/fail separately. Set grace time = expected_duration × 2. |
-| Excel writer | csv.writer for Cyrillic | openpyxl/xlsxwriter (UTF-8 by default in xlsx). |
-| Proxy provider | Datacenter proxies for goldapple | Residential. Budget ~$10-30/month for weekly 2-3GB. |
-| Logger | print() / default logging | loguru or structlog — structured, rotated, easy to grep. |
-| Git | Committing logs / DB / .env | .gitignore for `*.log`, `*.db`, `.env`, `snapshots/`, `secrets/`. |
+| New parser code ↔ existing `ParseDispatcher` (D-14 routing) | Adding a third parser strategy (JSON-LD fallback?) without updating dispatcher → silent unrouted SKUs | Extend dispatcher first, add unit test for new route, then add parser. Dispatcher test should fail loud on unrouted shapes. |
+| Live-HTML harness ↔ existing 803 unit tests | Harness imports same fixtures dir → cassette pollution into synthetic-fixture tests | Strict directory separation: `tests/fixtures/` (synthetic, frozen) vs `tests/cassettes/` (live, refreshed). Different conftest fixtures, different marker namespace. |
+| Cassette tests ↔ Camoufox fetcher | Tests directly invoke real Camoufox to record → CI requires browser binary, slow | Cassettes recorded against any HTTP backend that hits the live site; replay path uses a thin mock client that responds from cassette. Decouple recording-time backend from replay-time backend. |
+| Parser-fix matcher integration ↔ v1.0 `denormalized matches` schema (D-401) | Parser now emits a structured `brand` field; matcher still uses old key composition that strips brand from a concatenated string | After parser-fix, re-derive matcher's `make_key()` from the new `brand`/`name`/`volume` fields explicitly. Add canary that asserts `make_key(brand="Armani", name="armani code", volume="...")` doesn't accidentally re-concatenate. |
+| New volume extractor ↔ v1.0 `NORM-03` normalizer | Volume now comes from a structured block as `"75"` (just digits, no unit) → existing regex `(\d+)\s*(?:мл|ml|г|g)` returns None because no unit | Normalizer accepts `(volume_raw: str, unit_hint: Literal["ML","G","..."] = None)` — caller passes hint when known. Existing regex-on-name path still works for viled-style data; structured-block path passes hint. |
+| Live-HTML harness CI ↔ existing GitHub Actions / CI config | Harness needs Playwright/Camoufox binaries on CI runner → CI fails or skips silently | Either: split CI into "unit" (no browser) and "live" (browser) workflows OR run harness only on a self-hosted runner (VPS, post-deploy). Skip-with-warning is acceptable; skip-silent is not. |
+| Telegram delivery from VPS ↔ Yandex Cloud KZ egress | `aiogram` async client hangs on `api.telegram.org` if Yandex Cloud has implicit egress filter | Smoke-test `getMe` from VPS BEFORE wiring cron. Document fallback: route Telegram through HTTP proxy if direct egress is filtered. |
+| HC.io pings from VPS ↔ wrapper exit codes | Wrapper exits before HC.io ping fires on hard-crash (already mitigated D-701 by pinging from bash, not Python) | Verify v1.1 doesn't add a Python-only ping path; HC pings stay in bash per D-701. New code uses bash to ping if needed. |
+| Backup cron ↔ live-HTML cassette refresh cron | Both write to `/opt/ga_crawler` concurrently → SQLite WAL contention or git race | Run cassette refresh from a separate working tree (`/opt/ga_crawler-test/`) or as a non-cron operator-initiated task. Don't co-schedule with backup or weekly-run. |
 
 ---
 
 ## Performance Traps
 
+Patterns that work at small scale but fail as cassette-volume and run-frequency grow.
+
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Concurrent fetch on goldapple | Cloudflare blocks across pool | Sequential or concurrency=2 max | Day 1 if too aggressive |
-| Loading full HTML history into memory for diff | Run uses 4GB+ RAM | Stream from DB; diff per-SKU | Year 2 (~200K observations) |
-| No DB index on (sku_id, observed_at) | Report-gen takes minutes | Composite index | After ~50K observations |
-| Storing HTML in DB | DB size in GBs; backup slow | Filesystem + path reference | Within first 6 months |
-| Re-fetching unchanged products | Wastes proxy bandwidth | Conditional GET (If-Modified-Since); skip if last-week's hash matches | Goldapple-scale (~3K SKUs/week) — bandwidth costs add up |
-| Headless browser per request | 10x slower; more detectable | Single browser, multiple pages, persistent context | Goldapple has 3000+ products |
-| Synchronous Excel write of all sheets | Memory spike at end of run | xlsxwriter streaming mode (`constant_memory=True`) | When report >50MB |
+| Loading every cassette in conftest.py session-scope fixture | Pytest startup 30s+; devs skip local runs | Module-scope fixture per cassette file; lazy yaml deserialize | ~50 cassettes (~5 MB), Pitfall #9 |
+| Recording cassettes against real Camoufox each run | CI run > 10 min; bandwidth cost to goldapple; Sunday ops drift | Record once locally, replay in CI. Refresh job is separate. | First merge that adds >5 live tests |
+| Storing full PDP HTML in cassettes (with images base64'd, scripts, CSS) | Cassettes 200 KB+ each; repo bloat | `before_record_response` strips `<script>`, `<style>`, images. Body becomes ~5 KB. | First 20 cassettes |
+| Diff-based drift detection re-parses every snapshot in DB on every run | Run wall-time grows O(history); week 50 takes 30+ minutes | Compare only against `v_current_snapshots` view (last run per SKU) — already exists in v1 schema. | Run #50 or so |
+| Sitemap-delta canary loads full sitemap into memory | OOM on Hetzner CX22 4GB if sitemap >100k URLs | Stream-parse with lxml `iterparse` or splitting strategy. | If goldapple sitemap >200K URLs (currently 45K per v1.0 Wave-7) |
+| Cassette refresh job in same git working tree as production | Mid-refresh race between cron weekly-run and cassette-refresh causes file lock errors | Refresh in `/opt/ga_crawler-test/` (separate clone). Push cassette updates via PR. | First Sunday where refresh and run overlap |
+| Property-test brand-shape table loaded as Python list at module import | Test collection time > 5s, IDE intellisense lags | Use `pytest.mark.parametrize` with `indirect=True` and a fixture that yields per-row. | 100+ shape rows |
+| Camoufox launched per-test in pytest | Each test 5-10s startup; full suite 30+ min | Session-scope Camoufox fixture; reset cookies between tests | First 10 live-no-cassette tests |
 
 ---
 
 ## Security Mistakes
 
+Domain-specific security issues for parser-fix + harness + KZ deploy work.
+
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Telegram bot token in repo | Anyone can hijack the bot, send fake reports, or read incoming messages | `.env` file, gitignored. Token in env var. Rotate if leaked. |
-| Proxy credentials in code | Bandwidth theft, billing surprise | Same — env var. Use provider's IP allowlist if available. |
-| Logging full request/response with cookies | `cf_clearance` and session cookies leaked to log files / log aggregator / git | Redact `Cookie`, `Authorization`, `set-cookie` headers in logs. |
-| Storing raw HTML with potentially-PII responses | Goldapple might leak A/B-test user IDs, recommendation tokens in HTML | Strip script tags before storing; periodic purge of snapshots >90d unless needed. |
-| Running scraper as root in container | Compromised scraper = compromised host | Non-root user in Dockerfile; minimal capabilities. |
-| Trusting scraped HTML in Excel formulas | Malicious product name `=cmd|...` (CSV injection) opens calculator on user's machine | Prefix any cell value starting with `=`, `+`, `-`, `@`, tab, CR with `'` — disables formula interpretation. |
-| Pickling untrusted objects | Code execution if cache file tampered | Use JSON for caches, not pickle. |
-| No auth on dead-man's-switch ping URL | Anyone with the URL can fake a healthy ping | Use random UUID in URL; treat as a secret. |
+| Commit cassette containing `cf_clearance` cookie | Attacker piggybacks on anti-bot bypass; in extreme case rate-limit shared with abuser | Pitfall #3 redaction config; pre-commit `detect-secrets` |
+| Commit cassette containing `hc-ping.com/<uuid>` URL | Anyone with repo access can spoof success/failure pings → mask real outages | Filter `hc-ping.com` from query params; redact path segments matching UUID regex |
+| Commit cassette containing `https://api.telegram.org/bot\d+:...` | Bot token leak → attacker sends messages to business chat as our bot | Filter `bot\d+:` in URL path; pre-commit gitleaks scan |
+| Yandex Cloud VPS without firewall → SSH open to world | Compromised, scraper hijacked for botnet | `ufw allow 22/tcp; ufw enable` BEFORE first `weekly-run.sh`; preferably restrict SSH to known IPs |
+| `.env` committed accidentally (history retention) | Long-lived bot token leak | `.gitignore .env`; pre-commit `gitleaks`; verify `git ls-files | grep -E "^\.env$"` is empty in canary |
+| Cassette refresh job runs as root | Single bug → full system compromise | Refresh runs as `ga_crawler` user; sudo limited to single deploy commands |
+| Storing residential proxy credentials in cassettes (if Tier-3 escalation is added) | Proxy credential leak ≈ paying for someone else's traffic | Strip `Proxy-Authorization` headers; never log full proxy URLs |
+| Live-HTML cassettes log scraping evidence (e.g. timestamps, user-agent rotation patterns) that goldapple's legal team could subpoena if scraping dispute arises | Legal exposure if KZ-legal review (deferred to v2 per PROJECT.md) goes wrong | Keep cassette commit messages neutral ("update goldapple fixture"); keep `.planning/` private; don't tag cassettes with anti-detection-specific labels in public files |
+| Parser-fix code reads/writes outside `/opt/ga_crawler/` (e.g. `os.path.expanduser("~")` leaks home dir) | Privilege escalation on shared infra; cron-user confusion | Path-canary: assert all file I/O is within `/opt/ga_crawler/` or `/var/log/ga_crawler/` |
 
 ---
 
 ## UX Pitfalls
 
+Common operator/team UX mistakes specific to v1.1 scope.
+
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Report dumps 5000 rows of raw data | "Слишком много, не понятно что важно" — gets ignored | Top 50 movers + summary + full sheet. Conditional formatting. |
-| Telegram text mirrors entire Excel | Spam fatigue | 8-12 line summary; counts + top-3 deltas + Excel link. |
-| Failure delivered same channel as success | Team can't tell broken from real | Two chats: ops vs. business. |
-| No "what changed since last week" | Team has to manually compare to last week's file | "Δ vs предыдущая неделя" column. New SKUs flagged. Disappeared SKUs flagged. |
-| All Cyrillic OR all English in headers | Mixed audience confusion | Russian headers (audience is RU-speaking pricing team). UTF-8 throughout. |
-| Tенге shown as `5990.0` | Hard to read, looks like float bug | Format `5 990 ₸` (NBSP thousands separator, ₸ symbol). |
-| Time stamps in UTC | "When was this scraped??" confusion | Almaty time in user-facing surfaces; UTC in DB only. |
-| No URL link to product page | Can't verify suspect prices manually | Every row links to both viled and goldapple product URLs. |
+| Empty xlsx delivered to business chat (Sunday morning sees empty file) | Lost trust; pricing team assumes scraper broken; manual fallback | Hard-gate at delivery: if `match_count == 0` OR `goldapple_total_count == 0`, route to ops-only with explicit failure reason; never deliver empty xlsx to business chat. (Already partially in v1.0 D-611; v1.1 should harden the threshold.) |
+| Cassette refresh job posts noisy diffs to ops chat every week | Ops chat fatigue; alerts ignored | Filter diff noise: only post if cassette content (not just timestamp/order) differs; weekly digest, not per-cassette message |
+| Parser-fix verification asks operator "did Sunday's run look right?" — operator can't tell from xlsx alone | Discovery delay; another bad week | Auto-compute parse-quality KPIs in weekly summary: `% volumes parsed`, `% brands non-empty`, `% match-rate`. Display in Telegram summary, not just xlsx. |
+| Failure-test (SC#5 per README §6) shows up as real alert in HC dashboard, ops marks each "expected" manually | Alert fatigue; one Sunday a real failure gets marked "expected" by reflex | Test-failure script auto-tags HC.io alert as `test` via UI label OR uses a separate HC check `ga_crawler test-failure` per [HC docs configuring_checks] |
+| New cassette-refresh PR opens automatically every week → reviewer fatigue | PR-approval rubber-stamping risks merging real-drift cassette changes without parser update | Bot opens PR only if diff is non-trivial AND parser tests still pass against new cassettes (auto-validation). If parser breaks against new cassette, PR labeled `drift-detected` and assigned to maintainer. |
+| Yandex Cloud KZ deploy README assumes Russian-language Yandex docs are accessible — operator clicks through to broken/Russian-only pages | Setup friction; doc abandonment | README links only to English-language Yandex Cloud docs OR pre-screenshot critical steps |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Goldapple fetch**: Often missing residential proxy — verify with VPN-off test from different IPs over a week.
-- [ ] **Stealth setup**: Often missing TLS fingerprint match — verify with bot.sannysoft.com or creepjs.
-- [ ] **Pagination**: Often missing total-count assertion — verify scraped count ≥ 95% of category-page-displayed total.
-- [ ] **Brand filter**: Often missing Cyrillic alias entries — verify by spot-checking 10 known overlapping brands.
-- [ ] **Volume parsing**: Often missing multipack / kit detection — verify with regex test suite covering all observed formats.
-- [ ] **Stock state**: Often missing distinct OOS vs. delisted — verify state enum coverage with sample of 50 known products in each state.
-- [ ] **Price field**: Often grabs strikethrough or club price — verify spot-check 20 products against site-displayed price.
-- [ ] **Currency**: Often missing currency assertion — verify all parsed prices have ₸/KZT in source.
-- [ ] **Run gate**: Often passes empty-result runs — verify by deliberately breaking parser and confirming the gate catches it.
-- [ ] **Cron monitoring**: Often missing dead-man's-switch — verify by stopping cron and confirming Healthchecks alert fires.
-- [ ] **Time zone**: Often UTC — verify report arrives at expected Almaty time on first scheduled run.
-- [ ] **Telegram delivery**: Often missing rate-limit and size handling — verify with intentionally-too-big test file.
-- [ ] **Encoding**: Often UTF-8-without-BOM CSV — verify Cyrillic readable when opened in Excel-Windows.
-- [ ] **DB schema**: Often product-by-URL — verify URL change doesn't lose product identity across weeks.
-- [ ] **Logs**: Often missing redaction — verify no `cf_clearance` cookie or proxy password appears in any log.
-- [ ] **Excel injection**: Often missing — verify a product named `=1+1` doesn't render as `2` in Excel.
-- [ ] **Decimal pricing**: Often `float` — verify `5990.00 - 5989.99` displays as expected, not as `0.0100000...`.
-- [ ] **Brand list**: Often built once — verify it refreshes from current viled scrape each run.
-- [ ] **Discount detection**: Often shows 0% always — verify on known-promo product.
+Things that appear complete in v1.1 but may be missing critical pieces. Use during phase verification.
+
+- [ ] **Parser fix shipped for `STEREOTYPE sago` shape:** Often missing 30-shape regression coverage — verify `tests/unit/test_goldapple_brand_extraction.py` has parametrized cases for `multi-word brand`, `ampersand brand`, `numeric brand`, `Cyrillic-caps brand`, `brand contains name verbatim`, `samples-size/multipack`, `gift-set`, `out-of-stock-SKU`.
+- [ ] **Live-HTML harness installed:** Often missing the **refresh job** — verify `bin/refresh-cassettes.sh` exists AND a cron/CI schedule fires it weekly AND cassette-age canary test exists.
+- [ ] **Cassettes committed:** Often missing **redaction config** — verify conftest.py has `filter_headers`, `filter_query_parameters`, and a canary test scans cassettes for known-bad regex.
+- [ ] **Volume extraction fixed:** Often missing **categorization for volumeless SKUs** (hair tools, brushes, gift cards) — verify parser exposes `is_volumeless=True` for these and matcher honors it; verify volume-null-rate KPI is computed and gated.
+- [ ] **Brand extraction fixed:** Often missing **invariant assertion** `brand.lower() not in name.lower()` post-parse — verify canary.
+- [ ] **Sitemap-delta drift detection:** Often missing **alert path** — verify diff is posted somewhere (ops chat, dashboard, log-grep canary), not just computed silently.
+- [ ] **Operator deploy doc updated:** Often missing **provider-fork** (Hetzner vs Yandex Cloud) explicit decision recorded — verify README §2 has a "If you chose Yandex Cloud KZ instead" sub-section OR a doc-only spike memo locks the choice.
+- [ ] **`load_dotenv()` at CLI entrypoint:** Often missing **canary test** — verify `python -m ga_crawler deliver-run --help` with `.env` in CWD and `TG_BOT_TOKEN` only in `.env` actually loads (test via subprocess in fresh shell context).
+- [ ] **First Sunday production cron tick verified:** Often missing **verifier resume of phase-7 UAT** — verify `/gsd-verify-work 7` was rerun post-tick and converted blocked items to pass.
+- [ ] **SECURITY/VALIDATION carryover docs for phases 2/4/6:** Often missing **threat-link-to-test mapping** — verify each documented threat has a test or canary that exercises it (not just prose).
+- [ ] **Cassette canary catches `cf_clearance` / `bot\d+:` / `hc-ping.com/UUID`:** Often missing — explicit regex set in `tests/test_cassette_redaction.py`.
+- [ ] **Camoufox launch-smoke on target VPS:** Often missing — verify operator runbook lists `uv run python -c "from camoufox..."` smoke step BEFORE first `weekly-run.sh`.
+- [ ] **CRON_TZ + system TZ both Asia/Almaty:** Often missing **system-TZ check** — verify README §2 step 1.5 adds `timedatectl set-timezone Asia/Almaty` AND that a canary asserts both invariants.
+- [ ] **Match-rate KPI gates v1.0 D-405 still active:** Often broken by v1.1 if matcher formula changes — verify D-405 source-lock canary still green AND parser-fix didn't inadvertently boost match-rate via false positives (e.g. fuzzy fallback sneaking in).
+- [ ] **Three-tier test classification (unit / cassette / live):** Often missing **CI awareness** — verify `pyproject.toml` `[tool.pytest.ini_options]` markers documented AND default `pytest` invocation runs only unit (fast), with explicit opt-in for cassette/live tiers.
 
 ---
 
 ## Recovery Strategies
 
+When pitfalls occur despite prevention, how to recover.
+
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Goldapple IP banned | LOW | Wait 24-48h. Rotate residential proxy pool. Reduce concurrency to 1. Re-test. |
-| Cloudflare hardened — stealth no longer works | MEDIUM | Switch from Playwright-stealth to Camoufox; or upgrade curl_cffi profile to newest Chrome. |
-| Site redesign breaks parser | MEDIUM | Run gate catches the run (no broken report sent). Manually update selectors. Add fixture. Backfill missed week if possible by re-scraping (Goldapple won't have history but viled snapshot might be cached). |
-| Brand alias misconfigured | LOW | Update YAML alias table. Re-run last week's matching against existing snapshots (don't need to re-scrape). |
-| Telegram delivery fails | LOW | Manual file send via desktop client. Add retry logic with self-hosted Bot API server for >50MB. |
-| Cron didn't run | LOW | Manual trigger; Healthchecks already alerted. |
-| DB corruption | MEDIUM | SQLite has built-in `.recover`. Restore from latest backup (you DO have nightly backup of `*.db` to filesystem snapshot, right?). |
-| Wrong prices shipped to pricing team | HIGH (trust damage) | Send correction Telegram message immediately. Document root cause publicly to team. Add a regression test. Trust takes weeks to rebuild. |
-| Cease-and-desist from goldapple | HIGH | Stop scraping immediately. Consult lawyer. Re-evaluate project scope vs. risk. May need to switch to manual collection or licensed data feed (e.g., DataFeedWatch, e-comma). |
-| Disk full from snapshots | LOW | Run snapshot retention cleanup. Add monitoring. |
+| **#1 Parser-fix overfits, regresses week N+1** | MEDIUM (1-2 day rework + re-run) | (a) `/opt/ga_crawler/.venv/bin/python -m ga_crawler matcher-run --run-id N` after parser hotfix (D-412 idempotent); (b) hotfix is itself a Phase-2 follow-up plan, not a milestone; (c) post-mortem captures the missed shape class → add to parametrized test corpus. |
+| **#2 Stale cassettes** | LOW (1 hour) | `pytest --record-mode=rewrite tests/live_html/`; commit diff; if diff is enormous, file a "parser-fix-needed" ticket; meanwhile cassette-age canary keeps red until resolved. |
+| **#3 Secret committed to cassette** | HIGH (rotate + git-history-rewrite) | (a) Rotate the leaked secret IMMEDIATELY (`@BotFather /revoke` for Telegram, regen HC.io ping URL, etc); (b) `git filter-repo --path tests/cassettes/X.yaml --invert-paths` to scrub history; (c) force-push (only if you own the only remote); (d) add the redaction config in same PR; (e) GitGuardian/secret-scan re-audit. |
+| **#4 Flake-decorator hiding drift** | MEDIUM (find the masked failures) | (a) Remove all `@pytest.mark.flaky` from `tests/live_html/`; (b) run suite; (c) any test that fails has a real issue — bisect parser vs cassette vs wait-strategy. |
+| **#5 Sitemap drift unnoticed for months** | MEDIUM (1 week to add canary, 1 month for parsers to widen) | (a) Snapshot today's sitemap as baseline; (b) implement diff canary; (c) when canary fires, prioritize parser/matcher widening as a milestone-scoped plan. |
+| **#6 `skipped_no_credentials` on manual recovery** | LOW (1 hour) | (a) Hotfix `load_dotenv()` in CLI entrypoint; (b) re-run `python -m ga_crawler deliver-run --run-id N`; (c) canary test added in same PR. |
+| **#7 TZ mismatch caused wrong-day filenames** | LOW (1 hour for fix, log filenames stay confusing for current week) | (a) `timedatectl set-timezone Asia/Almaty`; (b) verify next run's filename + `date +%F` agree; (c) accept that historical `weekly-run-2026-MM-DD.log` filenames for the affected window are off-by-day. |
+| **#8 Yandex Cloud Camoufox launch fails** | MEDIUM (1-3 days; might require provider switch) | (a) Capture exact lib error; (b) `apt install` missing deps; (c) if still failing, try Patchright as fallback; (d) if still failing, revert to Hetzner EU and accept the IP-geography unknown. |
+| **#9 Repo bloat from cassettes** | MEDIUM (1 day for migration to LFS or curation) | (a) Inventory cassette sizes; (b) downsample bodies via the `before_record_response` hook; (c) re-record everything; (d) consider `git lfs migrate` for historical bloat. |
+| **#10 Audit paperwork tech-debt at milestone close** | LOW per phase, HIGH cumulative | (a) Stop new phase work; (b) run `/gsd-secure-phase` and `/gsd-validate-phase` for the carryover phases; (c) only after all phases have audit docs, resume new work. |
 
 ---
 
 ## Pitfall-to-Phase Mapping
 
-Roadmap-friendly summary. Phase numbering is a recommendation; reorder to match your actual roadmap.
+How v1.1 roadmap phases should address these pitfalls. Phase numbering is suggested ordering — roadmapper may re-order based on dependencies.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| 1. Anti-bot underestimation | Phase 1 (Reconnaissance + Fetch) | 100 sequential successful goldapple product fetches |
-| 2. Silent parser drift | Phase 2 (Parsing) + Phase 4 (Operations) | Deliberately break a selector in a test, confirm hard-fail + alert |
-| 3. Volume normalization | Phase 3 (Matching) | Regex unit tests on 30+ real volume strings; multipack tests |
-| 4. Brand Cyrillic/Latin | Phase 3 (Matching) | Top-50 brands have aliases; manual spot-check 10 known matches |
-| 5. Price field selection | Phase 2 (Parsing) | Spot-check 20 prices against rendered page values |
-| 6. Stock state ambiguity | Phase 2 (Parsing) + Phase 3 (Matching) | State enum covers 5 documented signals per retailer |
-| 7. Pagination truncation | Phase 1 (Reconnaissance) + Phase 2 | Scraped count ≥ 95% of declared total |
-| 8. Brand-list filter for goldapple | Phase 3 (Matching) | Brand list refreshed per-run; alias-aware filter |
-| 9. Empty/silent runs | Phase 4 (Operations) | Healthchecks fires; run gate blocks empty reports; ops vs business chats |
-| 10. Time zone | Phase 4 (Operations) | First scheduled run lands at expected Almaty time |
-| 11. Telegram 50MB | Phase 5 (Reporting) | Synthetic 60MB test file fails gracefully with ops alert |
-| 12. DB bloat | Phase 4 (Persistence) | Schema review; snapshots on filesystem not DB |
-| 13. Aggressive scraping | Phase 1 (Fetch) | Sustained 1-hour run with no 429/503 spike |
-| 14. Legal/ToS exposure | Phase 0 (Setup) | robots.txt + ToS reviewed and documented |
-| 15. Unusable report | Phase 5 (Reporting) | Pricing team uses report 4 weeks running |
-| 16-20. Encoding/precision/captcha/AB/volume-disagreement | Phases 2-5 | Specific to each — see pitfall body |
+| #1 Parser-fix overfits to one PDP shape | **Phase 1 (Parser-fix research / sampling)** | 30-shape table exists in `.planning/spikes/v1.1-brand-name-shapes/`; canary parametrizes against it; match-rate KPI improves >0% post-fix on live run |
+| #1 (code side) | **Phase 2 (Parser-fix implementation)** | Parametrized tests pass for all 30 shapes; `brand.lower() not in name.lower()` canary passes; goldapple `volume_norm` non-null rate >90% |
+| #2 Stale cassettes | **Phase 3 (Live-HTML harness)** | Cassette-age canary present; refresh job documented or scheduled; 3-tier test classification ships |
+| #3 Cassette secrets leak | **Phase 3 (Live-HTML harness)** | Redaction config in conftest.py; PII-scan canary; gitleaks/detect-secrets pre-commit |
+| #4 Flake hides drift | **Phase 3 (Live-HTML harness)** | `pytest.mark.flaky` grep-banned in `tests/live_html/`; deterministic wait strategy documented; cassette-determinism test (record twice 30s apart, diff) |
+| #5 Sitemap/category drift bypasses brand-intersect filter | **Phase 4 (Drift detection extensions)** | Sitemap-delta canary computes weekly; ops alert on new top-level path segments; `goldapple_categories_seen` KPI in summary |
+| #6 `.env` not loaded in CLI standalone path | **Phase 5 (Operator deploy + CLI hardening)** | `load_dotenv()` at CLI entrypoint; canary test in clean-shell context; README recovery recipes don't require `source .env` |
+| #7 TZ mismatch between cron and system | **Phase 5 (Operator deploy + CLI hardening)** | `timedatectl set-timezone Asia/Almaty` in README §2; canary on `CRON_TZ` invariant; explicit log filename TZ verification |
+| #8 Yandex Cloud / Camoufox compatibility unknown | **Phase 5 (Operator deploy + CLI hardening)** | Provider-choice decision recorded as D-NNN; if Yandex Cloud, Camoufox launch-smoke in operator runbook BEFORE cron handoff |
+| #9 Cassette repo bloat | **Phase 3 (Live-HTML harness)** | Cassette size budget canary <50MB; body-downsampling hook configured; per-shape-class curation discipline documented |
+| #10 Audit paperwork done after-the-fact | **Phase 6 (Audit carryover)** + workflow enforcement across all phases | SECURITY.md for phases 2/4/6 + VALIDATION.md for phase 4 exist with verdict; each new v1.1 phase ships SECURITY+VALIDATION at phase close, not milestone close |
+
+### Phase ordering implications for roadmapper
+
+- **Phase 1 (research/sampling) must precede Phase 2 (parser code)** — Pitfall #1 demands shape-table BEFORE code.
+- **Phase 3 (harness) can run in parallel with Phase 2 (parser code)** — they share cassettes but build independently. The first parser-fix PR uses ad-hoc fixtures; once harness ships, regression tests move into cassettes.
+- **Phase 4 (drift extensions) is independent** of Phases 1-3 in code dependency, but should NOT ship before parser-fix lands — adding new drift detectors while parsers are broken creates noise.
+- **Phase 5 (operator deploy) blocks on Phase 2 minimum** — cannot deploy a still-broken parser. Phase 3 is nice-to-have for deploy but not blocking.
+- **Phase 6 (audit carryover) is an independent track** — can run parallel to everything; should close BEFORE milestone audit.
+
+### Phases that need deeper research flags
+
+- **Phase 5 (Operator deploy)**: provider choice (Hetzner EU vs Yandex Cloud KZ) needs a fresh research/spike — v1.0 RECON-01 didn't compare providers, just locked Camoufox-direct. Flag for roadmapper as "spike candidate" before full phase plan.
+- **Phase 4 (Drift detection)**: sitemap-delta canary design needs research on goldapple's sitemap structure (incremental? per-category?) and viled's catalog-shape stability. Flag as MEDIUM-research.
+- **Phase 3 (Live-HTML harness)**: choice of vcrpy vs pytest-recording vs hand-rolled is a small spike — both work, but pytest-recording has stronger ergonomics for our case ([pytest-recording](https://github.com/kiwicom/pytest-recording)). Flag as LOW-research, decide in phase plan.
 
 ---
 
 ## Sources
 
-Anti-bot detection (HIGH confidence — multi-source):
-- [Scrapfly — Bypass DataDome 2026](https://scrapfly.io/blog/posts/how-to-bypass-datadome-anti-scraping)
-- [ZenRows — Bypass DataDome Complete Guide 2026](https://www.zenrows.com/blog/datadome-bypass)
-- [Scrapfly — Bypass Cloudflare 2026](https://scrapfly.io/blog/posts/how-to-bypass-cloudflare-anti-scraping)
-- [AlterLab — Playwright Anti-Bot Detection 2026](https://alterlab.io/blog/playwright-anti-bot-detection-what-actually-works-in-2026)
-- [Scrapewise — Playwright Stealth 2026](https://scrapewise.ai/blogs/playwright-stealth-2026)
-- [Scrapfly — Playwright Stealth Bypass](https://scrapfly.io/blog/posts/playwright-stealth-bypass-bot-detection)
-- [Browserless — TLS Fingerprinting](https://www.browserless.io/blog/tls-fingerprinting-explanation-detection-and-bypassing-it-in-playwright-and-puppeteer)
-- [Datahut — curl_cffi Cloudflare 2026](https://www.blog.datahut.co/post/web-scraping-without-getting-blocked-curl-cffi)
-- [Scrapfly — curl-impersonate](https://scrapfly.io/blog/posts/curl-impersonate-scrape-chrome-firefox-tls-http2-fingerprint)
-- [Camoufox — Stealth Firefox](https://github.com/jo-inc/camofox-browser)
-- [pim97/anti-detect-browser-tools](https://github.com/pim97/anti-detect-browser-tools-tech-comparison)
-- [Plain Proxies — Residential vs Datacenter](https://plainproxies.com/blog/integrations/residential-vs-datacenter-proxies-difference)
-- [AlterLab — Cloudflare 6-Layer Guide 2026](https://alterlab.io/blog/scrape-cloudflare-protected-sites)
-- [Cloudflare — AI Crawler Permission 2025 announcement](https://www.cloudflare.com/press/press-releases/2025/cloudflare-just-changed-how-ai-crawlers-scrape-the-internet-at-large/)
+### Live-HTML harness / cassette tooling
+- [pytest-recording (kiwicom) — VCR.py-powered pytest plugin](https://github.com/kiwicom/pytest-recording) — record modes, `--record-mode` flag, env-var `VCR_RECORD_MODE`
+- [VCR.py 8.0 documentation](https://vcrpy.readthedocs.io/) — record modes (none/once/new_episodes/all/rewrite), filter_headers, before_record_response hooks
+- [Redacting secrets and PII from VCR.py cassettes (Illya Moskvin)](https://imoskvin.com/blog/redacting-vcrpy-cassettes/) — concrete filter patterns
+- [VCR & .gitignore (Ashley Lewis)](https://ashleymichal.github.io/VCR-and-gitignore/) — when to gitignore vs commit cassettes
+- [Test a Playwright Web Scraper (datawookie, 2025-04)](https://datawookie.dev/blog/2025-04-02-test-a-playwright-scraper/) — Playwright-specific cassette patterns
+- [Test a Web Scraper using VCR (datawookie, 2025-01)](https://datawookie.dev/blog/2025-01-28-test-a-web-scraper-using-vcr/) — pytest-vcr config examples
 
-Operational reliability (HIGH):
-- [Healthchecks.io — Cron Monitoring](https://healthchecks.io/docs/monitoring_cron_jobs/)
-- [Healthchecks.io — Dead Man's Switch](https://blogs.snehangshu.dev/dead-mans-switch-style-application-monitoring-with-healthchecksio)
-- [AWS Builders' Library — Timeouts/Retries/Backoff](https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/)
-- [Better Stack — Exponential Backoff](https://betterstack.com/community/guides/monitoring/exponential-backoff/)
+### Silent failure / drift retrospectives
+- [Why Most Web Scraping Systems Fail Silently (DEV Community, 2025)](https://dev.to/anna_6c67c00f5c3f53660978/why-most-web-scraping-systems-fail-silently-and-how-to-design-around-it-40o6) — "40% of production scraper outages 2025 caused by silent failures"
+- [Why Scraping Fails Silently — And Why That's Worse Than Crashing (Medium, Jan 2026)](https://medium.com/@patryk_b/the-silent-data-crisis-is-your-web-scraping-working-b87f2c7ad1b5) — silent failure design patterns
+- [Why Web Scrapers Fail in Production (Promptcloud)](https://www.promptcloud.com/why-web-scrapers-fail-in-production/) — 11 production failure modes
+- [Why Web Scraping Works in Testing but Fails in Production (Grepsr)](https://www.grepsr.com/blog/web-scraping-testing-vs-production/) — direct mapping of test/prod drift
+- [Ecommerce Web Scraping in 2026 (extralt)](https://extralt.com/blog/ecommerce-web-scraping) — 3-5 day average detection delay for completeness failures
+- [Why Your Web Scraper Keeps Breaking (BinaryBits)](https://binarybits.co/blog/why-web-scraper-keeps-breaking) — 10-15% weekly fix rate; selector-extrapolation antipattern
 
-Telegram delivery (HIGH):
-- [tdlib/telegram-bot-api — self-hosted](https://github.com/tdlib/telegram-bot-api)
-- [DEV — Self-Hosted Telegram API for 50MB bypass](https://dev.to/joybtw/how-i-self-hosted-the-telegram-bot-api-with-docker-to-bypass-50mb-upload-limits-483a)
+### Parser overfitting / multi-shape edge cases
+- [Scraping E-commerce through Brands (Web Scraper)](https://webscraper.io/blog/scraping-brands) — brand-prefix shape variants
+- [Multiple variations Web Scraper How-To](https://webscraper.io/tutorials/product-with-multiple-variations) — multipack/variant N×M matrix
+- [Cyrillic regex patterns reference](https://regexpattern.com/russian-cyrillic-characters/) — `\p{Cyrillic}` and pitfalls
+- [SPA Structured Data Implementation (Stackmatix)](https://www.stackmatix.com/blog/spa-structured-data-implementation) — microdata breaks on React re-render; JSON-LD preferred
 
-Storage (HIGH):
-- [SQLite Forum — Temporal Tables / Time-Series](https://www.sqliteforum.com/p/sqlite-and-temporal-tables)
-- [Timescale — TimescaleDB vs Postgres time-series](https://medium.com/timescale/timescaledb-vs-6a696248104e)
-- [DataCamp — SQLite vs PostgreSQL](https://www.datacamp.com/blog/sqlite-vs-postgresql-detailed-comparison)
+### Python env / subprocess
+- [Python subprocess env Windows pitfall (cpython#120836)](https://github.com/python/cpython/issues/120836) — env inheritance edge cases
+- [subprocess docs (Python 3.12)](https://docs.python.org/3/library/subprocess.html) — env parameter semantics
 
-Drift detection (MEDIUM):
-- [DEV — Self-Healing CSS Selector Repair](https://dev.to/viniciuspuerto/when-the-scraper-breaks-itself-building-a-self-healing-css-selector-repair-system-312d)
-- [Apify — Selector Auto Fixer](https://apify.com/quantifiable_bouquet/selector-auto-fixer)
-- [Medium — Smart Site Detection / Dynamic CSS](https://medium.com/@yukselcosgun/smart-site-detection-and-dynamic-css-selector-generation-for-resilient-scraping-ba8a5ba6ce26)
+### Yandex Cloud / KZ region
+- [Yandex launches new cloud region in Kazakhstan (DCD, April 2024)](https://www.datacenterdynamics.com/en/news/yandex-launches-new-cloud-region-in-kazakhstan/) — Karaganda DC launch
+- [Yandex Cloud begins providing services from KZ DC (TAdviser)](https://tadviser.com/index.php/Product:Yandex_Cloud_Virtual_Computing_Infrastructure_Services) — `kz1` region
+- [Yandex Cloud (Wikipedia)](https://en.wikipedia.org/wiki/Yandex_Cloud) — corporate context
 
-Product matching (MEDIUM):
-- [BrightData — Guide to Data Matching](https://brightdata.com/blog/web-data/guide-to-data-matching)
-- [PromptCloud — Price Scraping and Matching in eCommerce](https://www.promptcloud.com/price-scraping-in-ecommerce/)
-- [NetOwl — Fuzzy Name Matching](https://www.netowl.com/how-to-choose-a-fuzzy-name-matching-product)
+### Anti-bot / Camoufox
+- [camofox-browser (jo-inc) — Camoufox/Camofox stealth browser](https://github.com/jo-inc/camofox-browser) — drop-in Playwright replacement
+- v1.0 internal spike memo `.planning/spikes/01-goldapple/` (2026-05-06) — Camoufox-direct 99/100 from Hetzner EU, no proxy needed
 
-Legal / KZ (MEDIUM — domain-specific KZ guidance is sparse, used official law text):
-- [Adilet — Law of RK on Personal Data Z1300000094 (94-V)](https://adilet.zan.kz/eng/docs/Z1300000094)
-- [DLA Piper — Kazakhstan Data Protection](https://www.dlapiperdataprotection.com/index.html?t=law&c=KZ)
-- [Gratanet — Personal Data Protection KZ — State Oversight Updates](https://gratanet.com/publications/persona-data-protection-state-oversight-and-legislative-updates)
-- [ByteTunnels — Is robots.txt Legally Binding](https://bytetunnels.com/posts/is-robots-txt-legally-binding-scraping-law-explained/)
-- [Browserless — Is Web Scraping Legal 2026](https://www.browserless.io/blog/is-web-scraping-legal)
+### Healthchecks.io
+- [Healthchecks.io documentation](https://healthchecks.io/docs/) — cron mode, dead-man's switch, schedule semantics
+- [Configuring Checks (HC.io)](https://healthchecks.io/docs/configuring_checks/) — labels, timezone, grace period
 
-Confidence flags:
-- [LOW] Goldapple.kz's *exact* anti-bot stack — empirical reconnaissance required in Phase 1.
-- [LOW] viled.kz's defense level — assumption ("simpler") needs verification.
-- [MEDIUM] KZ-specific legal exposure for B2B competitive intel scraping — would benefit from a local lawyer review.
-- [HIGH] Generic Cloudflare/DataDome detection mechanics, residential vs datacenter, stealth tooling, monitoring patterns — all multi-source verified.
+### v1.0 internal references (project-specific)
+- `.planning/research/v1.1-PARSER-BUG-FINDINGS.md` — the 3 bugs to fix
+- `.planning/RETROSPECTIVE.md` § v1.0 — "What Was Inefficient" #5 (audit-framework lag); #4 (cold-start race); patterns established
+- `README.md` § 1 + § 7 — current operator runbook, `.env` loading pattern, TZ invariants
+- v1.0 `PITFALLS.md` (sibling research file) — building-phase pitfalls; not directly recurring but provides volume/multipack/anti-bot context
 
 ---
-*Pitfalls research for: competitive e-commerce price scraper (goldapple.kz vs viled.kz), beauty/cosmetics, KZ market*
-*Researched: 2026-05-05*
+*Pitfalls research for: v1.1 parser fixes + live-HTML harness + KZ operator deploy*
+*Researched: 2026-05-13*
+*Downstream consumer: gsd-roadmapper for v1.1 milestone phase plan*

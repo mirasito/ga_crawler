@@ -1,202 +1,211 @@
-# Project Research Summary
+# Project Research Summary — v1.1
 
-**Project:** GA Crawler — Competitive Pricing Intelligence (viled.kz vs goldapple.kz)
-**Domain:** Weekly batch web-scraping pipeline (beauty/cosmetics retail, KZ market)
-**Researched:** 2026-05-05
-**Confidence:** HIGH on tooling, architecture, feature taxonomy, and known pitfall classes; MEDIUM on goldapple.kz's specific anti-bot tier (must be confirmed empirically before committing to architecture).
+**Project:** ga_crawler — Competitive Pricing Intelligence (viled.kz vs goldapple.kz)
+**Domain:** Python web-scraper milestone — parser bug fixes + live-HTML test methodology + audit paperwork carryover + first operator VPS deploy
+**Researched:** 2026-05-13
+**Confidence:** HIGH (parser bugs evidence-backed in `v1.1-PARSER-BUG-FINDINGS.md`; library calls validated against Context7 and in-repo fixtures; ops pitfalls reproduce v1.0 D-705 / SCHED-02 lessons)
+
+---
 
 ## Executive Summary
 
-This is a small internal weekly batch ETL — not a SaaS — whose job is to deliver one well-formatted Excel report (with a Telegram text summary) to the viled.kz commercial team every Monday morning. The well-trodden expert pattern is a **modular monolith in Python** with a pipe-and-filter pipeline (Crawl → Parse → Normalize → Match → Snapshot → Report → Deliver), an **append-only snapshot history keyed by `run_id`** in SQLite, and **system cron** triggering one process on a small VPS. Stack research lands on Python 3.12 + uv + Playwright/curl_cffi + selectolax + SQLModel + pandas/xlsxwriter + aiogram on Hetzner CX22, with a **tiered anti-bot escalation path** (vanilla Playwright → Patchright → residential proxies → Camoufox/Scrapling) for goldapple.kz specifically.
+v1.0 shipped clean code on `tech_debt` verdict: 803 tests green, but live-run #13 (2026-05-13) revealed three parser bugs — goldapple `volume_norm` 88/88 NULL, goldapple brand/name concatenation (`Armaniarmani code`), viled `volume_raw` = full title — that zeroed the Excel report. The audit also flagged four missing paperwork artifacts (SECURITY.md × 3, VALIDATION.md × 1), and Phase 7 UAT left four items `blocked` pending a real VPS deploy and Sunday cron tick. v1.1 is a **narrow correctness + operations milestone** that closes all three threads without re-architecting v1.0.
 
-The single project-defining unknown is whether goldapple.kz is scrapable at all, and at what anti-bot tier. PROJECT.md commits to scraping goldapple, so if reconnaissance shows it requires a paid managed unblocker (Tier 4), the project's economics and scope materially change. Three of the four research files independently flag this as the lead risk, and STACK + PITFALLS both recommend a small spike before fixing tooling. ARCHITECTURE recommends building viled-first because viled feeds the goldapple brand list, while PITFALLS recommends probing goldapple first because anti-bot is the dominant unknown. **Reconciliation: a small Phase 1 reconnaissance spike on goldapple (just enough to confirm anti-bot tier and that scraping is feasible at all) — no parsing, no schema, no commitment — followed by the dependency-correct viled-first build order.** This bounds risk early without inverting the natural data flow.
+Across all four research dimensions (STACK / FEATURES / ARCHITECTURE / PITFALLS) the recommended approach **converges on the same plan**: keep the v1.0 pipe-and-filter monolith untouched; touch only `parsers/goldapple_microdata.py` + `parsers/viled_nextdata.py`; add live-HTML capture as a sibling test surface (NOT in the production pipeline); pay down paperwork in parallel; deploy last with `bin/setup-vps.sh` as a thin wrapper around the existing README §2 procedure. Library changes are minimal — selectolax 0.3 → 0.4 to unlock the Lexbor backend's `:lexbor-contains("ОБЪЁМ" i)` pseudo-selector (solves Bug #1 without library swap), and syrupy as a dev-only dep for HTML snapshot replay. **No infrastructure changes, no new SDKs, no Camoufox rev** (LOCKED at 0.4.11 per Phase 3 D-313).
 
-The other risks are well-understood: silent parser drift, Cyrillic↔Latin brand-name divergence (the dominant cause of missed matches in the RU/KZ beauty market), volume/multipack ambiguity, picking the wrong price field (strikethrough vs current vs Gold Card vs "from"), and silent cron failures. All have known prevention patterns: hard-fail invariants, run-level sanity gates, dead-man's-switch monitoring, JSON-LD-first parsing, a brand-alias YAML seeded from viled's top brands, and a stock-state enum (even if v1's UI surfaces it as a boolean — capturing the richer signal in the schema avoids a forced migration in v1.x). Capture strikethrough/`was_price` and track match-rate as a KPI from week 1 — both are nearly free to add now and prohibitively expensive to backfill later.
+Top risks are well-understood and pre-mitigated: (1) parser-fix overfitting to the single STEREOTYPE PDP screenshot — answered with a mandatory shape-sampling pre-spike against structured microdata (`<meta itemprop="name">`, `props.pageProps.attributes[].name == "Размер"`) rather than regex-on-title; (2) syrupy snapshots going stale — answered with `--snapshot-update` workflow and "missing snapshot = test failure" soundness rule; (3) Hetzner-vs-Yandex-Cloud-KZ provider choice — answered Hetzner-by-default (v1.0 RECON-01 already proved Camoufox-direct works from EU, no proxy needed), Yandex Cloud kept as documented fallback. v1.0 D-705 .env-loading recurrence and SCHED-02 cron-TZ traps are both wired into Phase 5 prevention.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack is intentionally boring everywhere except anti-bot, where goldapple.kz may force a tooling escalation. Single-process, single-VPS, no Celery, no Docker Swarm, no orchestrators. See `.planning/research/STACK.md` for the full tiered anti-bot strategy.
+v1.0 stack LOCKED. v1.1 adds two libraries, zero infrastructure.
 
-**Core technologies:**
-- **Python 3.12 + uv** — 2026 default for new Python projects; 10–100× faster dep management than pip+venv.
-- **Playwright 1.57** — headless browser for goldapple.kz (JS-rendered + anti-bot). Industry standard in 2026.
-- **curl_cffi 0.15** — HTTP client with browser TLS/JA3 fingerprinting; drop-in `requests` replacement that defeats the cheap layer of anti-bot. Use for viled.kz directly and for any goldapple endpoints that don't need JS.
-- **selectolax** — 10–30× faster than BeautifulSoup; sufficient for product-card extraction.
-- **SQLModel + SQLite (WAL mode)** — append-only snapshot history; right tool for "weekly batch, single writer, archival." Migration to Postgres is trivial later via SQLAlchemy 2.x.
-- **pandas 2.x + xlsxwriter** — Excel output with conditional formatting, frozen panes, autofilter — what commercial users expect.
-- **aiogram 3.27** — async-native Telegram bot for `send_document` + caption.
-- **System cron on Hetzner CX22** (~€4.50–€8/month) — single weekly job. APScheduler/Celery/Prefect are overkill.
+**v1.1 additions / upgrades:**
+- **selectolax** `>=0.3,<0.4` → `>=0.4.7,<0.5` — unlocks Lexbor backend (`from selectolax.lexbor import LexborHTMLParser`) with `:lexbor-contains("ОБЪЁМ" i)` pseudo-class. Exact primitive for Bug #1 (find label cell, walk to sibling holding `78`). Drop-in; Modest backend still works.
+- **syrupy** `>=4.7,<5.0` (dev-only) — pytest snapshot plugin with `SingleFileSnapshotExtension`. Subclass with `file_extension = "html"`, `_write_mode = WriteMode.TEXT`. **Soundness rule:** missing snapshot = test failure (not just diff) — directly addresses run #13 root cause.
 
-**Anti-bot escalation tiers (decided per goldapple spike, not project-wide):**
-- Tier 0 (viled): curl_cffi `impersonate="chrome"`, no proxy.
-- Tier 1: vanilla Playwright + realistic UA + slow rate.
-- Tier 2: **Patchright** (drop-in for Playwright; passes Cloudflare/DataDome/Akamai in 2026).
-- Tier 3: Patchright + **Decodo or IPRoyal residential proxies** (KZ/RU geo, ~$0.50–$2/run).
-- Tier 4: **Camoufox** (maintained `coryking` fork) or **Scrapling StealthyFetcher**; last resort = managed unblocker (ZenRows/Bright Data).
+**LOCKED (do NOT change):** Camoufox 0.4.11 (Phase 3 D-313 — smoke probe `camoufox_version_expected` invariant); curl_cffi 0.15; SQLite + SQLModel.
 
-**To avoid:** `requests`, `cloudscraper`, `playwright-stealth v1.x` (unmaintained), Selenium, Celery, Heroku/Fly.io for batch cron.
+**Rejected for v1.1:** `pytest-recording` / VCR.py (hooks urllib3; curl_cffi bypasses urllib3, Camoufox bypasses Python HTTP entirely — silently records nothing); `lxml` + `parsel` (5 MB native dep, zero incremental capability over selectolax 0.4); Patchright revisit (LOCKED out per D-313).
+
+**Hosting:** Default Hetzner CX22 EU (€4.50–€8/mo, RECON-01 verified 99/100 from Hetzner EU). Fallback Yandex Cloud kz1 — vanilla Ubuntu + SSH confirmed (no proprietary SDK), but requires KZ/RU-resident business for billing.
 
 ### Expected Features
 
-Feature taxonomy is well-established across SaaS pricing tools (Prisync, Skuuudle, Competera, Wiser); PROJECT.md has already cleanly eliminated platform-shaped features (dashboards, real-time alerts, repricing, multi-tenant). What remains is the smallest-useful Monday report. See `.planning/research/FEATURES.md`.
+Scope decomposes into **four explicit buckets**, 1:1 with PROJECT.md active requirements.
 
-**Must have (table stakes — all locked in PROJECT.md):**
-- Full viled.kz catalogue parser; brand-scoped goldapple.kz parser
-- Field extraction: name, brand, volume, current price, **strike-through/`was_price`**, in-stock, URL, currency
-- Strict-key matching: `lower(brand) + lower(name) + normalized_volume`
-- Brand and volume normalization tables (seeded from viled's top brands)
-- Append-only snapshot storage in SQLite, keyed by `(week_iso, retailer, sku)`
-- Excel report (Summary, Per-SKU deltas, Assortment gaps, Goldapple promos)
-- Telegram delivery (text headline + xlsx attachment)
-- Weekly cron, Sunday night Asia/Almaty
-- Run logs + parser-failure alert + retry/backoff + per-SKU isolation
-- **Match-rate as a KPI in the headline from week 1** (silent-failure canary)
+**Must have (P1):**
+- **Bucket A — Parser fixes:** A1 goldapple volume via Lexbor `:contains`; A2 brand/name via `<meta itemprop="name">`; A3 viled volume via `attributes[].name == "Размер"`; A4 null-rate gate validation; A5 match-rate floor alert.
+- **Bucket B — Live-HTML harness:** B1 syrupy infrastructure; B2 snapshot metadata; B3 `assert html == html_snapshot`; B6 Pydantic validation at `SqliteSnapshotWriter` boundary (defense-in-depth complement to A4).
+- **Bucket C — Paperwork:** C1–C3 SECURITY.md for phases 2/4/6; C4 VALIDATION.md phase 4; C5 audit-verdict flip `tech_debt` → `clean`.
+- **Bucket D — Operator deploy:** D1 VPS provisioned; D2 deploy via README §2 with new `bin/setup-vps.sh`; D3 smoke; D4 first Sunday cron tick; D5 deliberate-failure verify; D6 HC↔Telegram; D7 backup verify; D8 `/gsd-verify-work 7` resume flips 4 blocked UAT items.
 
-**Should have (post-v1 cheap wins):** week-over-week price delta column, brand-level aggregate sheet, new/disappeared SKU sheet, match-rate degradation alert, promo-frequency view.
+**Should have (P2 cheap-bundle):** B4 brand-coverage quota; B5 fixtures-refresh CLI (6th subcommand); smoke-probe URL rotation; VPS hardening doc + HC.io status URL.
 
-**Defer (v2+):** deterministic fuzzy matching with review queue, Postgres migration, second competitor / dashboard / email channel.
-
-**Anti-features explicitly rejected:** real-time monitoring, ML matching, image scraping, login/Gold-Card pricing, dynamic repricing, MAP compliance, share-of-shelf.
-
-**Two implicit additions worth flagging (not in PROJECT.md but strongly recommended):**
-1. **Capture strike-through / `was_price` in the v1 schema even if not surfaced in the v1 report** — PROJECT.md lists "цена до скидки"; keep it in storage from week 1 to avoid a re-crawl backfill later.
-2. **Track match-rate as a tracked KPI from day one** — canary for silent matching/parser failure; cheap to compute, expensive to add later because it has no historical baseline.
+**Anti-features (explicitly OUT — defer to v2):** viled SSR pagination; Docker; Postgres migration; fuzzy matching; second competitor; web dashboard; real-time/daily monitoring; KZ-legal review; ML/image capture.
 
 ### Architecture Approach
 
-A modular monolith with a pipe-and-filter pipeline. Each stage is a pure function (or DAO call) wired by a thin orchestrator (`run.py`) inside one process. Side effects (DB, Telegram, files) are isolated to Storage / Reporter / Delivery; Crawl / Parse / Normalize / Match are pure and trivially testable against captured HTML fixtures. The SQLite database is the integration backbone — every cross-stage hand-off goes through it, which makes any phase re-runnable for a `run_id`. See `.planning/research/ARCHITECTURE.md` for the full schema sketch and project layout.
+v1.0 clean pipe-and-filter monolith with strict module boundaries — v1.1 MUST NOT re-architect. Three orthogonal surgical changes + one operator track.
 
-**Major components:**
-1. **Orchestrator** — opens `run_id`, sequences phases, aggregates partial-failure status, ensures `runs` row is updated on every exit path.
-2. **Crawlers (per-site adapter)** — viled (curl_cffi/httpx) and goldapple (Playwright/Patchright + proxy) behind a common `Crawler` Protocol. Anti-bot strategy lives inside the adapter.
-3. **Parsers (per-site)** — JSON-LD first, `__NEXT_DATA__` / inline JSON second, CSS selectors as last-resort fallback. Hard-fail invariants on missing required fields.
-4. **Normalizer** — pure functions: brand alias resolution (Cyrillic↔Latin, NFKD + accent strip), volume canonicalization (multipack/kit detection, ml/g/oz unification), name lowercase + punctuation strip.
-5. **Matcher** — SQL JOIN on `(brand_norm, name_norm, volume_norm)` between viled and goldapple snapshots; writes `matches` table.
-6. **Storage** — SQLite with WAL: `runs` (failure-first), `snapshots` (append-only immutable history), `matches` (precomputed convenience). A `v_current_snapshots` view replaces a "current products" table.
-7. **Reporter** — pandas + xlsxwriter; writes a multi-sheet `.xlsx` to disk and a summary string. No Telegram coupling.
-8. **Delivery** — aiogram `send_document`; ops chat (failures) and business chat (clean reports) are separate.
-9. **Observability** — structlog JSON logs, `runs` row status counts, dead-man's-switch (Healthchecks.io), hard run-level sanity gates before any report is sent.
+**Major components touched:**
+1. **`parsers/goldapple_microdata.py`** — REPLACE line 358 `raw_volume_text = name or None` with `_extract_volume_block(tree)` helper (selectolax 0.4 Lexbor); REPLACE line 327–332 name extraction with sibling `<meta itemprop="name">` read inside product `itemscope`. Both fixture-verified against `_debug-product-page.html`.
+2. **`parsers/viled_nextdata.py`** — REPLACE line 215 `raw_volume_text=name` with `_extract_volume_from_nextdata(item, a0)` reading `props.pageProps.attributes[].name == "Размер"`. Clothing fixture confirms shape; 30-min Wave-0 probe against live beauty PDP confirms exact JSON path.
+3. **`tests/live/test_parser_drift.py`** (NEW) — sibling capture surface behind `@pytest.mark.live` (already declared unused in `pyproject.toml:51` — purpose-built). Does NOT enter production pipeline.
+4. **`scripts/capture_fixtures.py`** (NEW) + `tests/fixtures/<retailer>/_live-YYYY-MM-DD-<slug>.html` — retailer-grouped slicing preserved.
+5. **`bin/setup-vps.sh`** (NEW) — thin idempotent wrapper around README §2 8-step procedure. Same shape as existing `bin/weekly-run.sh` / `bin/backup.sh`. Provider-agnostic.
+
+**Internal contract preserved:** dispatcher dict shape (`parsers/dispatcher.py:51`) unchanged; `volume_raw` field already exists at line 64 — only its source changes. No schema migration, no matcher rewrite.
+
+**Backfill decision: forward-only — do NOT backfill runs 1–13** (HTML is gone; matcher idempotent; auto-suggest 4-week median rolls garbage out by run #17). Single-line annotation in `MILESTONES.md`.
+
+**Test count impact:** 803 → ~818 (15 new tests; no deletions).
 
 ### Critical Pitfalls
 
-Top five that materially shape the roadmap:
+1. **Parser-fix overfitting to single PDP.** STEREOTYPE regex breaks on TOM FORD, Dolce & Gabbana, 19-69 capri, НАТУРА СИБИРИКА. **Prevention:** mandatory 30-PDP shape-sampling sub-phase BEFORE code; prefer structured microdata fields over title regex; invariant canary `assert brand.lower() not in name.lower()`.
+2. **Stale snapshots going silent.** v1.0 fixtures captured May 5–11 didn't cover live May 13 PDPs. **Prevention:** syrupy `--snapshot-update` + missing-snapshot-fails-test soundness + scheduled `capture-fixtures` CLI.
+3. **PII / secrets in committed snapshots.** Snapshot scope is HTML body only (not headers/cookies); pre-commit `gitleaks`; canary scans for `cf_clearance=`, `bot\d+:`, UUID-shaped hc-ping paths.
+4. **D-705 .env-loading recurrence.** Run #13 already burned us. **Prevention:** `load_dotenv(verbose=True)` at CLI entrypoint (`src/ga_crawler/__main__.py`), idempotent; clean-shell canary test.
+5. **Cron TZ gotcha — Yandex Cloud KZ default Moscow.** `CRON_TZ` is file-scoped; bash `date` and Python `datetime.now()` use system TZ. **Prevention:** README §2 step 1.5 adds `sudo timedatectl set-timezone Asia/Almaty`; reject naive `datetime.now()` in v1.1 new code.
 
-1. **Underestimating goldapple.kz anti-bot.** Building against viled-with-`httpx` first and "adding Playwright later" loses 1–2 weeks. Vanilla Playwright is also detected immediately in 2026. **Mitigation:** probe goldapple first (small spike); design fetch layer with two pluggable backends; residential proxies from start; never use datacenter proxies for goldapple.
-2. **Silent parser drift.** A class-name change ships "0 совпадений" with a green checkmark. **Mitigation:** hard-fail invariants; run-level sanity gate (`viled_count > 1000`, `goldapple_count > 500`, `match_count > 100`); golden-product fixtures verified before each run; ops chat separate from business chat.
-3. **Volume + multipack normalization eats matches.** `30 мл` ≠ `30мл` ≠ `30ml`; `3×50 мл` matched against single `50 мл` produces a 3× wrong delta. **Mitigation:** `Volume(amount, unit, multipack)` value object; explicit multipack/kit regex pre-pass; kits flagged and excluded from price-per-unit comparison in v1.
-4. **Cyrillic vs Latin brand divergence.** `Estée Lauder` / `Эсте Лаудер` / `Estee Lauder` — strict matching loses 30–50% of overlap. PROJECT.md locks in strict-key matching, but a brand alias table is the only way strict matching works in this market. **Mitigation: brand-alias YAML seeded from viled's top-50 brands as a v1 deliverable** (not a v2 nice-to-have); NFKD + accent strip; log "brands seen on goldapple but not in alias table" as a manual review queue.
-5. **Wrong price field (strikethrough / Gold Card / "from"-variant) extracted.** Bimodal price distribution and 0% discount on every product are the symptoms. **Mitigation:** JSON-LD `Product.offers.price` first; reject CSS classes containing `old`/`was`/`crossed`/`club`/`gold`/`from`; capture both `current_price` and `original_price`; sanity-check `100 ≤ price ≤ 1_000_000 ₸`.
+See PITFALLS.md for full 10-pitfall list (drift detection bypass, Camoufox×Yandex compat, snapshot repo bloat, JS-race-flake hiding drift, retroactive paperwork losing fidelity).
 
-**Stock signal — schema vs surface tension:** PROJECT.md treats stock as a boolean ("в наличии или нет"), but PITFALLS argues for a richer state enum (`IN_STOCK`, `OUT_OF_STOCK`, `UNAVAILABLE`, `DELISTED`, `URL_CHANGED`, `UNKNOWN`) because conflating "OOS" with "delisted" produces three different downstream bugs. **Recommended resolution: store the enum from week 1, surface it as a boolean (`IN_STOCK` vs everything else) in the v1 report.** This avoids a retroactive schema migration when the team inevitably asks "why does this product keep flickering between weeks?"
+---
 
 ## Implications for Roadmap
 
-Suggested phase structure. The first phase is a **timeboxed reconnaissance spike** that reconciles the viled-first vs goldapple-first tension; everything after follows the dependency-correct order from ARCHITECTURE.md.
+**4 phases minimum.** FEATURES and ARCHITECTURE both propose 4; PITFALLS suggests 6 but the extras (shape-sampling spike, drift-detection-extensions) fold cleanly into Phase 1 sub-task and v1.2 defer respectively.
 
-### Phase 1: Goldapple reconnaissance spike (timeboxed, throwaway)
+### Convergence Across Research Files
 
-**Rationale:** Anti-bot on goldapple.kz is the project-defining unknown. STACK.md, PITFALLS.md, and ARCHITECTURE.md all flag it as the top risk; PITFALLS argues for probing goldapple first because if the answer is "Tier 4 / managed unblocker" the project's economics change. We do not invert the build order on the strength of that risk alone, but we do gate everything else on a tiny spike.
-**Delivers:** A signed-off answer to: (a) does vanilla Playwright pass goldapple? (b) if not, does Patchright pass it from the Hetzner EU IP? (c) if not, does Patchright + residential proxy pass it? (d) does goldapple expose a JSON catalog endpoint that lets us skip the browser? (e) what's the page-volume estimate for a typical brand's catalog (informs proxy budget)? Output is a one-page decision memo + 100 sequential successful goldapple product fetches in a notebook. Code is throwaway.
-**Stack decisions made here:** anti-bot tier (Tier 1/2/3/4), proxy provider (Decodo vs IPRoyal vs none), browser engine (Playwright vs Patchright vs Camoufox).
+All four agents land on the same phase order: **parser-fix → harness → paperwork → deploy**. Justifications:
 
-### Phase 2: Project skeleton + viled crawl + storage
+| Dimension | "Why parser-fix first" |
+|-----------|----------------------|
+| STACK | selectolax 0.4 needed for Bug #1; library change must precede test rebuild |
+| FEATURES | Bucket A is sole blocker for Bucket D — deploying broken parsers just produces more empty Excels |
+| ARCHITECTURE | Harness with no fix to test has zero signal |
+| PITFALLS | Sampling-first protocol must precede code; harness pins fix retroactively |
 
-**Rationale:** With anti-bot tier known, build the dependency-correct foundation. Viled feeds the goldapple brand list, so it must be parsed first within each run anyway. Viled is also the easier target — proves the pipeline shape end-to-end before adding goldapple's anti-bot complexity.
-**Delivers:** `python -m ga_crawler` runs end-to-end and writes a complete viled.kz snapshot to SQLite; `runs` row updated; structured logs to file. Schema is final (`snapshots`, `runs`, `matches` tables; **`was_price` and stock-state-enum columns present from day 1**, even if not yet surfaced).
-**Uses:** Python 3.12 + uv + curl_cffi + selectolax + SQLModel + structlog.
-**Implements:** Orchestrator, viled Crawler, viled Parser, Normalizer, Storage DAO.
+### Phase 1: Parser Bug Fixes (Bucket A + selectolax upgrade)
 
-### Phase 3: Goldapple crawl + parse (anti-bot tier from spike)
+**Rationale:** Only code-change phase; strongest invariant (tests stay green); harness needs known-good captures to lock in retroactively.
 
-**Rationale:** Apply the spike's findings against the now-stable storage and brand-list infrastructure. Brand-list is derived from viled snapshot at run start. Highest-risk phase even after the spike — expect iteration on selectors and proxy/cookie handling.
-**Delivers:** Brand-scoped goldapple snapshot writing to the same `snapshots` table; per-SKU failure isolation; sanity assertions (price range, currency, scraped count ≥ 95% of declared total).
-**Uses:** Playwright/Patchright (per spike), Decodo or IPRoyal residential proxy (per spike), JSON-LD-first parsing.
+**Delivers:** selectolax bump; 30-PDP shape-sampling spike (mandatory pre-code, output to `.planning/spikes/v1.1-brand-name-shapes/`); goldapple volume + brand/name fixes; viled volume_raw fix (with 30-min Wave-0 probe); 3 new live fixtures (`_live-2026-05-13-{stereotype,armani-code,contre-jour}.html`); ~15 parametrized tests; invariant canary; A4/A5; smoke-probe URL rotation in `gates.py:36`.
 
-### Phase 4: Matcher + brand alias table
+**Verification gate:** ~818 tests green; live dry-run yields `goldapple_comparable_count > 0`; `goldapple_volume_norm` non-null rate ≥ 90% for non-volumeless categories.
 
-**Rationale:** Strict-key matching is locked in PROJECT.md, but the dominant cause of missed matches in this market is Cyrillic↔Latin brand divergence, not weak matching algorithms. The brand-alias YAML is therefore a v1 deliverable, not a v2 nice-to-have. Volume canonicalization (including multipack/kit detection) belongs here too.
-**Delivers:** `matches` table populated for a `run_id`; `brand_aliases.yaml` seeded with viled's top-50 brands and observed Cyrillic variants from goldapple; `Volume` value object; "unmapped brands" log as a weekly review queue. **Match-rate is computed and logged.**
+### Phase 2: Live-HTML Harness (Bucket B + syrupy)
 
-### Phase 5: Reporter (Excel + summary)
+**Rationale:** Locks Phase 1 fix retroactively. New fixtures captured during Phase 1 ARE evidence the fix works; Phase 2 formalizes as repeatable.
 
-**Rationale:** Reporting reads from the DB only — no entanglement with delivery. Building it before Telegram lets us iterate on the format with the pricing team using `.xlsx` files on disk.
-**Delivers:** Multi-sheet Excel (Summary, Per-SKU deltas, Assortment gaps, Goldapple promos) with conditional formatting and Russian headers; text summary including counts, **match-rate as a tracked KPI from week 1**, top-3 movers; archived to disk.
-**Uses:** pandas + xlsxwriter.
+**Delivers:** syrupy dev-dep; `HTMLSnapshotExtension`; `scripts/capture_fixtures.py`; new `python -m ga_crawler capture-fixtures` CLI subcommand (6th — update Phase 7 source-locked canary); `tests/live/test_parser_drift.py` with `@pytest.mark.live`; B6 Pydantic validation at writer boundary; snapshot-PII canary; snapshot size budget canary (<50 MB).
 
-### Phase 6: Telegram delivery + ops/business chat split
+**Verification gate:** `pytest -m live` runs end-to-end; regression test loads Armani/STEREOTYPE/Contre-Jour snapshot and asserts fixed parser produces correct output (the "would have caught it" test).
 
-**Rationale:** Wrap the on-disk report in delivery only after the reporter is rock-solid. Two chats (ops + business) is the precondition for the run-level sanity gate to actually protect the team from broken reports.
-**Delivers:** `send_document` with caption to business chat on success; failure alerts to ops chat; pre-send file-size check; rate-limit / retry-after handling.
-**Uses:** aiogram 3.27.
+**P2-bundle-if-cheap:** B4 brand-coverage quota; B5 weekly schedule.
 
-### Phase 7: Scheduler + observability hardening
+### Phase 3: Audit Paperwork Carryover (Bucket C)
 
-**Rationale:** Manual `python -m ga_crawler` must be rock-solid before automation can hide issues. Schedule last.
-**Delivers:** Cron entry with `CRON_TZ=Asia/Almaty`; Healthchecks.io dead-man's-switch (start/success/fail pings); run-level sanity gate enforced before any business-chat delivery; deliberate-failure test confirming ops alert fires and business chat stays clean; nightly SQLite backup.
+**Rationale:** Fully independent — pure documentation, no code coupling. Per Pitfall #10, retroactive paperwork loses fidelity if treated as background work — must be distinct phase.
+
+**Delivers:** SECURITY.md for phases 2/4/6 via `/gsd-secure-phase`; VALIDATION.md phase 4 via `/gsd-validate-phase`; verdict-flip annotation in `milestones/v1.0-MILESTONE-AUDIT.md`.
+
+**Verification gate:** `/gsd-verify-work` transitions v1.0 verdict `tech_debt` → `clean`.
+
+**Parallel-safe:** can run alongside Phase 1 or 2 by a separate workstream.
+
+### Phase 4: Operator Deploy + First Production Cron Tick (Bucket D)
+
+**Rationale:** Ships whatever code is on main. D4 calendar-bound (next Sunday after D1–D3 land); plan v1.1 close at a Sunday boundary.
+
+**Delivers:** VPS provisioned (Hetzner default; Yandex fallback); `bin/setup-vps.sh` + structural canary test; `load_dotenv(verbose=True)` at CLI entrypoint (Pitfall #6 / D-705); README §2 step 1.5 `timedatectl set-timezone Asia/Almaty` (Pitfall #7); D2/D3/D5/D6/D7 ops verification; if Yandex Cloud → Camoufox launch-smoke before cron handoff + `curl -I` to hc-ping.com/api.telegram.org/goldapple.kz; D4 first Sunday cron tick; D8 `/gsd-verify-work 7` resume.
+
+**Verification gate:** Sunday Telegram delivery contains non-empty xlsx with `match_count > 0`; HC `/start` and `/success` pings recorded; 4 UAT items flip to `pass`; milestone closes.
 
 ### Phase Ordering Rationale
 
-- **Why a spike first, not viled first:** anti-bot risk is a binary project-feasibility gate, not a build-order question.
-- **Why viled before goldapple in the build:** viled produces the brand list that scopes the goldapple crawl, and viled is the easier target.
-- **Why matcher + alias table is its own phase:** strict-key matching is necessary but insufficient in this market; brand aliases are core infrastructure.
-- **Why reporter before delivery:** the on-disk Excel is independently testable; coupling them entangles "we built a report" with "Telegram credentials are right."
-- **Why scheduler last:** the system that's supposed to alert is the same system being scheduled — manual reliability must precede automation.
+- Parser-fix FIRST (only code; harness needs fix to pin)
+- Harness SECOND (locks fix retroactively; cannot precede Phase 1)
+- Paperwork PARALLEL (no code coupling; Pitfall #10 forces distinct phase)
+- Deploy LAST (ships main; D4 calendar-bound)
 
 ### Research Flags
 
-Phases likely needing deeper research during planning (`/gsd-plan-phase`):
-- **Phase 1 (Goldapple spike):** the whole phase *is* research.
-- **Phase 3 (Goldapple crawl):** depending on spike outcome, may need tier-specific research (e.g., "Patchright + Cloudflare Turnstile + KZ residential" if Tier 3, "self-hosted Camoufox tuning" if Tier 4).
-- **Phase 4 (Matcher + aliases):** beauty-vertical Cyrillic↔Latin transliteration patterns are MEDIUM confidence; spot-check 10 known overlapping brands during the phase.
+**Needs research during planning:**
+- **Phase 1** — 30-PDP shape-sampling sub-spike (≤2h): exact `:lexbor-contains()` literal whitespace/case for goldapple volume; viled `props.pageProps.item.attributes` path on beauty PDPs (clothing fixture confirms shape, beauty needs verification).
+- **Phase 4** — provider-choice (Hetzner vs Yandex Cloud KZ). v1.0 RECON-01 proved Camoufox-direct works from EU at 99/100 but didn't compare providers head-to-head. Default → Hetzner unless smoke regresses.
 
-Phases with standard patterns:
-- **Phase 2 (Skeleton + viled):** modular monolith + SQLModel + curl_cffi is well-trodden.
-- **Phase 5 (Reporter):** pandas + xlsxwriter is industry-standard.
-- **Phase 6 (Telegram):** aiogram `send_document` is documented; delivery is a thin wrapper.
-- **Phase 7 (Cron + Healthchecks):** standard ops; PITFALLS provides full checklist.
+**Standard patterns (skip research-phase):**
+- **Phase 2** — syrupy well-documented (Context7-verified); `SingleFileSnapshotExtension` subclass is 6-line addition.
+- **Phase 3** — pure paperwork via existing `/gsd-secure-phase` and `/gsd-validate-phase` workflows.
+
+---
+
+## What's Already Locked (Decision-Free Going Into Planning)
+
+- selectolax `>=0.4.7,<0.5` upgrade (Lexbor backend)
+- syrupy `>=4.7,<5.0` (dev-only) for HTML snapshot replay
+- **NO architecture changes** — pipe-and-filter monolith preserved
+- **Forward-only — no backfill** of runs 1–13
+- **`bin/setup-vps.sh` thin wrapper** (NOT cloud-init / Terraform / Ansible)
+- Camoufox 0.4.11 LOCKED (Phase 3 D-313)
+- SQLite stays (Postgres triggers not tripped)
+- Strict-key matching stays (fuzzy deferred to v2)
+
+## Open Questions That Block Roadmapping
+
+The user must decide before roadmapper runs:
+
+1. **Hetzner CX22 EU vs Yandex Cloud kz1.** Recommended default: **Hetzner.** Decision can be deferred to deploy-time if pre-deploy smoke from Hetzner EU passes.
+2. **Viled volume Wave-0 probe — P1 sub-task or separate phase?** Recommended: **P1 sub-task** (~1h impact; no calendar impact).
+3. **Smoke-probe URL rotation — Phase 1 or deferred?** Recommended: **bundle into Phase 1** (~30 min; future runs benefit immediately).
+4. **B4 brand-coverage + B5 fixtures-refresh — P1 or P2?** Recommended: **P2** — bundle into Phase 2 if it lands quickly; otherwise defer to v1.2.
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All core libraries verified via Context7 + Astral/PyPI/official docs (Jan–May 2026 sources). MEDIUM only on which anti-bot tier goldapple actually needs — by design, that's the spike. |
-| Features | HIGH | Feature taxonomy corroborated across 7+ SaaS pricing tools. PROJECT.md scope is already tight. |
-| Architecture | HIGH | Modular monolith + append-only snapshot pattern is canonical (SCD Type 2, idempotent ETL). |
-| Pitfalls | HIGH on anti-bot mechanics, drift detection, monitoring patterns, product-matching edge cases. MEDIUM on KZ-specific legal exposure. LOW on goldapple's exact anti-bot stack (resolved by spike). |
+| Stack | HIGH | selectolax 0.4 + Lexbor + syrupy Context7-verified; Yandex Cloud kz1 vanilla-Ubuntu confirmed against vendor docs; in-repo fixtures confirm microdata shapes |
+| Features | HIGH | Parser bugs evidence-backed (DB samples + live PDP screenshots); harness pattern corroborated across syrupy + Pydantic + Scrapy-Testmaster literature; 4-bucket decomposition maps 1:1 to PROJECT.md active reqs |
+| Architecture | HIGH | File-line references verified via direct code reads; `pyproject.toml:51` `live` marker already declared unused (purpose-built); forward-only backfill grounded in `strict_key.py` D-410 idempotency + `gates.py` 4-week median |
+| Pitfalls | HIGH on parser-overfit + snapshot-stale + D-705 + cron-TZ (multi-source 2024–2026 retros + v1.0 already-burned evidence); MEDIUM on Yandex×Camoufox compat (region 2024 launch, limited corpus); MEDIUM on HC.io reachability from KZ |
 
-**Overall confidence:** HIGH. The single MEDIUM-LOW spot — goldapple's anti-bot tier — is explicitly de-risked by Phase 1 before any architecture commitment.
+**Overall confidence: HIGH.**
 
-### Gaps to Address
+### Gaps to Address During Planning
 
-- **Goldapple anti-bot tier (LOW until spike).** Resolved by Phase 1. Outcome dictates Phase 3 stack.
-- **viled.kz defense level (LOW).** Assumption is "simpler than goldapple" but unverified. Spike should also probe a single viled product fetch with curl_cffi to confirm.
-- **Match-rate baseline for triggering v2 fuzzy matching (LOW).** No public data for cosmetics RU/KZ. Will be observed in weeks 1–4 of v1; threshold for v2 trigger to be set after that.
-- **KZ-specific legal exposure for B2B competitive intel (MEDIUM).** robots.txt + ToS review documented in Phase 1; ideally followed by a 30-min local lawyer review before Phase 7.
-- **Realistic page-volume estimate for goldapple brand-cross-section (UNKNOWN).** Determines proxy budget. Resolved during Phase 1 spike.
-- **Stock-signal DOM patterns per retailer (MEDIUM).** Need to capture into a `stock_signals.md` reference during Phase 2 (viled) and Phase 3 (goldapple).
+- Exact `:lexbor-contains()` literal for goldapple volume label — resolve via syrupy live capture in Phase 1 (15 min)
+- Viled `props.pageProps.item.attributes` exact JSON path for beauty PDPs — resolve via syrupy live capture (15 min)
+- Yandex Cloud kz1 Ubuntu 24.04 availability — verify at deploy time in console (no functional impact; uv installs Python 3.12 either way)
+- Goldapple geo-sensitivity (Hetzner EU vs KZ IP) — resolve with one Camoufox smoke probe from each before committing deploy target
+
+---
 
 ## Sources
 
-### Primary (HIGH confidence)
-- **Context7:** `/microsoft/playwright-python`, `/lexiforest/curl_cffi`, `/aiogram/aiogram`, `/jmcnamara/xlsxwriter`, `/agronholm/apscheduler`, `/scrapy/scrapy`, `/scrapy-plugins/scrapy-playwright`.
-- **Official docs / PyPI:** uv (Astral), curl_cffi ReadTheDocs v0.11.4, Patchright GitHub, Camoufox `coryking` fork, aiogram PyPI, SQLModel, Healthchecks.io, tdlib/telegram-bot-api.
-- **Canonical:** Wikipedia SCD Type 2; AWS Builders' Library — Timeouts/Retries/Backoff; SQLite Forum on temporal tables; Telegram Bot API; schema.org `Product`.
+**Primary (HIGH):**
+- Context7 `/syrupy-project/syrupy` — `SingleFileSnapshotExtension` API, `WriteMode.TEXT`, missing-snapshot soundness
+- Context7 `/websites/selectolax_readthedocs_io_en` — `:lexbor-contains("text" i)`, `LexborSelector.text_contains`
+- Yandex Cloud official docs — [compute/vm-create/create-linux-vm](https://yandex.cloud/en/docs/compute/operations/vm-create/create-linux-vm)
+- In-repo fixtures — `tests/fixtures/goldapple/_debug-product-page.html` (microdata); `tests/fixtures/viled/viled-pdp-multipack.html` (`{name: "Размер", value: "200мл + 200мл + 250мл"}`)
+- `.planning/research/v1.1-PARSER-BUG-FINDINGS.md` — DB samples + live PDP screenshots
+- v1.0 `RETROSPECTIVE.md` § "What Was Inefficient" #4, #5
 
-### Secondary (MEDIUM confidence — multi-source verified)
-- **Anti-bot 2026:** Scrapfly, ZenRows, AlterLab, Scrapewise, Browserless (TLS fingerprinting), Datahut (curl_cffi), Round Proxies (residential).
-- **SaaS feature landscape:** Prisync, Skuuudle, Price2Spy, Competera, Wiser, Intelligence Node, DataWeave, ClearDemand.
-- **Architecture/ETL:** breadcrumbscollector.tech (modular monolith), Hitchhiker's Guide to Python, Pmunhoz Blog (dbt SCD2), Fivetran (idempotent pipelines), Firecrawl reference.
-- **Hosting:** 1vps.com (Hetzner vs DO vs Fly.io 2026).
-- **Operations:** PromptCloud, Ficstar, ScrapingAnt, Better Stack.
+**Secondary (MEDIUM):**
+- [DCD: Yandex launches kz1 in Karaganda](https://www.datacenterdynamics.com/en/news/yandex-launches-new-cloud-region-in-kazakhstan/)
+- [Bright Data: Web Scraping with curl_cffi (2026)](https://brightdata.com/blog/web-data/web-scraping-with-curl-cffi)
+- [Simon Willison: Snapshot testing with Syrupy](https://til.simonwillison.net/pytest/syrupy)
+- [Stop Silent Scraper Failures: Pydantic Layout Change Detection](https://dev.to/withatte/stop-silent-scraper-failures-using-pydantic-for-instant-layout-change-detection-4p1k)
 
-### Tertiary (LOW confidence — single-source or inference)
-- **KZ legal:** Adilet (Law 94-V), DLA Piper, Gratanet — would benefit from local lawyer validation.
-- **Beauty-vertical Cyrillic↔Latin transliteration patterns:** derived from general normalization principles plus PROJECT.md context.
-- **Match-rate threshold for fuzzy-matching trigger:** observed empirically.
-- **Goldapple's exact anti-bot stack:** unverified until Phase 1 spike.
+**Inherited from v1.0 (LOCKED):** Python 3.12, uv 0.11.x, Camoufox 0.4.11, curl_cffi 0.15, SQLModel 0.0.24, pandas 2.2, xlsxwriter 3.2, aiogram 3.27, structlog 25, tenacity 9, pydantic 2.10, pytest 8, respx 0.21.
 
 ---
-*Research completed: 2026-05-05*
+*Research completed: 2026-05-13*
 *Ready for roadmap: yes*

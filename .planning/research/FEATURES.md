@@ -1,199 +1,187 @@
-# Feature Research
+# Feature Research — v1.1
 
-**Domain:** Competitive e-commerce price intelligence (internal tool, single beauty retailer, two .kz sites, weekly cadence)
-**Researched:** 2026-05-05
-**Confidence:** HIGH (feature taxonomy is well-established across Prisync / Price2Spy / Skuuudle / Competera / Wiser / DataWeave / Intelligence Node; the specific PROJECT.md scope is already tightly constrained by the user)
+**Domain:** Subsequent milestone for ga_crawler — parser-bug fixes, live-HTML test harness, audit-paperwork carryover, operator deploy
+**Researched:** 2026-05-13
+**Confidence:** HIGH (parser bugs are evidence-backed in `v1.1-PARSER-BUG-FINDINGS.md`; harness patterns corroborated across VCR.py, pytest-recording, Scrapy-Testmaster, snapshot-testing literature; operator-UAT checklist already drafted in `07-HUMAN-UAT.md` from v1.0)
 
 ---
 
-## Framing — What This Tool Actually Is
+## Framing — What v1.1 Actually Is
 
-This is **not** a competitive-intelligence SaaS. It is a small internal pipeline producing **one weekly report** for the viled.kz commercial team comparing **two retailers** (viled.kz vs goldapple.kz) on **public prices only**. PROJECT.md has already eliminated whole categories of features (real-time, dashboards, ML matching, multi-competitor, login-gated prices). The job here is to ruthlessly distinguish what the team needs in the Monday-morning Excel from what would just inflate scope.
+v1.0 shipped with audit verdict **`tech_debt`** — code clean, paperwork incomplete, three parser bugs discovered in live-run #13. v1.1 is a **narrow correctness + operations milestone**:
 
-A useful mental model: a SaaS like Prisync sells the *platform*. This project sells the *report*. So features that exist to make a platform marketable (dashboards, dynamic repricing rules, integrations, multi-tenant alerts) become anti-features here.
+1. Fix three parsers (goldapple volume, goldapple brand/name, viled volume_raw) so the Monday Excel actually contains matched rows.
+2. Install a **live-HTML test methodology** so fixture-vs-live drift cannot silently zero out the report a second time.
+3. Pay down paperwork debt (SECURITY.md × 3, VALIDATION.md × 1) flagged by v1.0 audit.
+4. Stand the pipeline up on a VPS and complete the four `blocked` UAT items in `07-HUMAN-UAT.md` so the first production cron tick on a real Sunday closes v1.1.
+
+Scope discipline: this milestone does **NOT** revisit v1.0 feature scope (no pagination, no Docker, no fuzzy matching, no second competitor). Anything outside the four buckets above is deferred to v2.
+
+Mental model: v1.0 was "build the thing." v1.1 is "make the thing produce correct data on a real schedule, with tests that would have caught the bugs we shipped, and the paperwork the auditor asked for."
 
 ---
 
 ## Feature Landscape
 
-### Table Stakes (Users Expect These)
+### Table Stakes (Must Ship in v1.1)
 
-Without these, the pricing team will not trust or use the report. PROJECT.md already commits to all of these — they are non-negotiable.
+Each row below is mandatory: missing it means either the Excel still ships empty, the v1.0 audit findings remain open, or operator deploy stays in `blocked` UAT limbo.
 
-#### Crawling / Parsing
+#### Bucket A — Parser Fixes (the bugs that made run #13's Excel empty)
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Full catalogue discovery on viled.kz | Without it the report's denominator (our assortment) is wrong; assortment-gap analysis requires it | MEDIUM | Likely category/sitemap walk; 1000s of SKUs not 100k. Locked in PROJECT.md |
-| Targeted catalogue discovery on goldapple.kz, scoped to viled.kz brands | Goldapple has ~100k SKUs; only overlapping brands are useful and safer to crawl. Locked in PROJECT.md | MEDIUM | Brand list derived from viled.kz pass; iterate brand-by-brand |
-| Product attribute extraction: name, brand, volume/weight, current price, original/strike-through price, in-stock flag, URL | Every comparison row depends on these fields; "price" alone is not enough — promo detection needs original price | MEDIUM | Per-site parsers with selector-based extraction; volume is the trickiest field (often embedded in name) |
-| Promotional price detection (current price vs MSRP / strike-through) | The team explicitly cares about goldapple promos; without strike-through detection a 30%-off SKU looks like a permanent low price | LOW–MEDIUM | Mostly a parser concern: capture both prices, derive `is_on_promo = strike != null && current < strike` |
-| Stock / availability detection | "Out of stock" prices are noise and shouldn't drive pricing decisions; goldapple frequently lists OOS items | LOW | Boolean per SKU; usually a DOM signal ("В наличии" / button state) |
-| Anti-bot resilience for goldapple.kz (headless / proxy / pacing) | Without this the crawl simply fails. Locked in PROJECT.md | HIGH | Stack research handles the *how*; the *requirement* is non-negotiable |
-| Idempotent weekly snapshot (re-runs don't duplicate or corrupt history) | A failed Sunday run gets re-run Monday; the team must trust there's exactly one snapshot per week | LOW | Snapshot keyed by `(retailer, week_iso)`; upsert semantics |
+| Feature | Why Required | Complexity | Notes / v1.0 dependency |
+|---------|--------------|------------|--------------------------|
+| **A1. Goldapple volume extraction from structured PDP block** | 78/78 SKU in run #13 had `volume_raw=NULL` → matcher produced zero comparable rows → empty Excel. Bug #1 in `v1.1-PARSER-BUG-FINDINGS.md`. | M | Touches `src/ga_crawler/parsers/goldapple_*.py` (microdata path from Phase 3). Live PDP renders volume as flexbox `<div>`s with literal label "ОБЪЁМ / МЛ" — must move from microdata/`itemprop="size"` selector to positional/textual selector. Dependency on v1.0: `SqliteSnapshotWriter` schema + `volume_norm` normalizer (unchanged — only feed it the right string). |
+| **A2. Goldapple brand / name separation** | Names like `Armaniarmani code` and empty `brand` column poison the matcher key. Bug #2. | M | Same module as A1. Parser currently appears to concatenate two adjacent text nodes into a single `name` string. Fix likely lives at the title-extraction site, not in the normalizer. v1.0 `brand-aliases.yaml` (58 brands, 46 Cyrillic aliases) stays unchanged — fix is upstream of alias resolution. |
+| **A3. Viled volume_raw distinct from name** | `volume_raw` currently equals the entire `name` verbatim; volume only survives when literally embedded as `"100 мл"` in the title. Bug #3. | S–M | `src/ga_crawler/parsers/viled_nextdata.py`. Needs spike against the live `__NEXT_DATA__` payload to find a dedicated volume field; if no such field exists, document the limitation explicitly in the normalizer + emit an audit-log line per parse so the count is visible. v1.0 normalizer logic survives. |
+| **A4. Hard-fail / null-rate gate enforcement validation** | v1.0 has D-218 "parse-quality gate FIRST (`null_rate ≤ 5%`)" but run #13 finished `status=success` despite 100% null `volume_norm` on goldapple. Pitfall #2 from PITFALLS.md ("silent parser drift") materialized exactly as documented. | S | Likely a sanity-gate threshold or scope bug — verify the gate runs against `volume_norm` (not just `current_price`), and that `goldapple_comparable_count=0` short-circuits the run to `failure`. v1.0 D-411 `read_run_status skip protocol` is the right place to extend. |
+| **A5. Match-rate floor alert in delivery** | v1.0 ships match-rate KPI (Phase 4 D-405) but did not alert when it crashed to zero. Should at minimum tag the Telegram business message with an exclamation-state when match-rate falls below floor (e.g. 30%). | S | Lives in delivery message template (Phase 6). Does NOT change D-605 invariant — Telegram still doesn't fail the run, but the human-readable summary surfaces the regression. |
 
-#### Product Matching
+#### Bucket B — Live-HTML Test Harness (so v1.1 bugs don't recur)
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Strict normalized-key matching: `lower(brand) + lower(name) + normalized_volume` | The whole report hinges on "same product, two prices." Without matching there is no comparison. Locked in PROJECT.md | MEDIUM | Normalization is the actual work: lowercase, strip punctuation, normalize ml/мл/g/г, collapse whitespace, strip vendor codes |
-| Brand normalization (synonyms, transliteration, casing) | Beauty brands routinely appear as `L'Oréal` / `L'Oreal` / `Лореаль` / `loreal`. Without a synonym map, half the matches die silently | MEDIUM | Hand-curated brand dictionary seeded from viled.kz brand list; grows over weeks |
-| Volume normalization (50ml = 50 мл = 50 ML = 0.05L) | Same reason — silent match loss. Cosmetics units are messy: ml, g, шт, set sizes | LOW–MEDIUM | Regex + unit table; locked to canonical `(value, unit)` tuple |
-| Match-rate visibility in the report (X of Y viled SKUs matched on goldapple) | The team needs to know when matching is degrading vs the assortment is genuinely diverging | LOW | One number in the Telegram summary; trend it week over week |
+The v1.0 audit identified the methodology gap explicitly: 803 unit tests all green, but fixtures captured at Phase 2/3 build time (May 5–11) didn't cover the PDP shapes live on May 13. Industry-standard pattern for this gap is **cassette-based HTTP recording + scheduled re-capture + schema validation**. See [pytest-recording (VCR.py for pytest)](https://github.com/kiwicom/pytest-recording), [Scrapy-Testmaster](https://github.com/ThomasAitken/Scrapy-Testmaster), and [Pydantic for layout-change detection](https://dev.to/withatte/stop-silent-scraper-failures-using-pydantic-for-instant-layout-change-detection-4p1k).
 
-#### Reporting
+| Feature | Why Required | Complexity | Notes / v1.0 dependency |
+|---------|--------------|------------|--------------------------|
+| **B1. Cassette capture + replay infrastructure** | Foundation for everything in Bucket B. Lets us save a real PDP as a fixture file with metadata (URL, captured-at timestamp, SHA256), then replay it under pytest. | M | Two viable patterns: (a) **VCR.py + pytest-recording** for the curl_cffi viled path (records full HTTP cassettes); (b) **raw `.html` files with sidecar `.json` metadata** for the Camoufox/Playwright goldapple path (VCR doesn't intercept browser traffic cleanly — write a thin helper that calls Camoufox + saves `page.content()` to disk). Pick (b) for goldapple to avoid a VCR-vs-browser detour; (a) for viled is cheap. |
+| **B2. Cassette schema: live-captured-at YYYY-MM-DD + brand + URL + SHA256** | Without metadata we cannot answer "is this fixture stale?" or "do we cover Armani-branded SKUs?" Required for B3 + B4. | S | One JSON sidecar per HTML file. Schema: `{retailer, url, captured_at, brand, sku_id, html_sha256, parser_version}`. Stored under `tests/fixtures/live/{retailer}/{brand}/{sku_id}.{html,json}`. Aligns with v1.0 `brand-aliases.yaml` taxonomy. |
+| **B3. Assertion API: parser output vs expected snapshot** | The "did parsing produce the right fields" test. Without this the cassettes are inert files. | S | Either approval-test style (parser output checked into `expected/*.json`, diff is the test) via [syrupy](https://github.com/syrupy-project/syrupy), or explicit assertions on Pydantic-validated dicts. Approval-style is lower-friction; pick syrupy. Each fixture has both an input (`.html`) and an expected output (`.snap.json`); `pytest --snapshot-update` regenerates when parser is intentionally changed. |
+| **B4. Brand-coverage quota per parser** | Run #13 missed Armani because no Armani fixture existed at build time. Fixture coverage must be tracked **per brand-prefix** (or per category) so adding a brand to viled automatically demands a fixture or fails CI. | M | Custom pytest check: for each brand in `brand-aliases.yaml`, assert ≥1 fixture exists under `tests/fixtures/live/goldapple/{brand}/`. The check skips brands explicitly listed as `volumeless` or `not-on-goldapple`. Smaller scope: enforce only for brands that appeared in last 4 weekly runs (avoids forcing fixtures for one-off brands). |
+| **B5. Scheduled re-capture CLI (`fixtures-refresh`)** | Cassettes go stale; sites change. Need a one-command operator step to re-fetch every fixture URL, diff against stored HTML, and flag drifted ones. This is the [Scrapy-Testmaster dynamic update](https://github.com/ThomasAitken/Scrapy-Testmaster) pattern adapted to our two parsers. | M | New CLI subcommand (current count = 5: weekly-run, goldapple-smoke, matcher-run, report-run, deliver-run; this adds a 6th — update the source-locked canary in Phase 7). For each fixture: re-fetch via the production fetcher (curl_cffi or Camoufox), compute new SHA256, compare. Output: list of `unchanged | minor-drift | major-drift | unreachable`. Major-drift → run parser against new HTML, surface diff, prompt operator to accept (regenerate snapshot) or fix (parser bug). Run weekly or monthly, NOT in the Sunday-night pipeline. |
+| **B6. Schema validation on every snapshot insert** | Defense-in-depth: even if parsers silently change, [Pydantic validators](https://dev.to/withatte/stop-silent-scraper-failures-using-pydantic-for-instant-layout-change-detection-4p1k) at the DB boundary will reject `volume_norm=NULL` for non-`volumeless` categories. Closes the gap A4 partially addresses by making it structural, not gate-based. | S | Add a Pydantic model `SnapshotRecord` in front of `SqliteSnapshotWriter.write_*`. Run #13-style failure becomes a `ValidationError` at insert time, surfaces in logs immediately, doesn't reach the matcher. v1.0 dependency: `SqliteSnapshotWriter` is the only writer (per architectural invariant in MILESTONES.md). |
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Per-SKU price delta table (matched products, our price, their price, abs delta, % delta) | Core deliverable. Locked in PROJECT.md | LOW | One sheet in the Excel; sortable by % delta |
-| Assortment summary (total SKUs each side, matched count, match rate %) | Headline KPI for the Telegram message | LOW | Aggregates of the same data |
-| Assortment gap list (brands/products on goldapple not on viled, scoped to overlapping brands) | One of three explicit use cases in PROJECT.md ("ассортиментные разрывы") | LOW–MEDIUM | Just a `LEFT ANTI JOIN`; need a brand-overlap filter so it's actionable |
-| Promo monitoring sheet (goldapple SKUs currently with strike-through, discount %) | Explicit use case #3 in PROJECT.md | LOW | Filter on `is_on_promo = true` from snapshot |
-| Telegram text summary (top-line numbers + Excel attachment) | Locked in PROJECT.md | LOW | python-telegram-bot or raw Bot API; the summary is ~10 lines |
-| Excel-friendly output (xlsx with frozen headers, sortable, no merged cells) | Pricing teams live in Excel filters/pivots; a CSV is a downgrade | LOW | `openpyxl` or `pandas.to_excel`; small effort, high satisfaction |
+#### Bucket C — Paperwork Carryover (v1.0 audit findings)
 
-#### Delivery
+| Feature | Why Required | Complexity | Notes / v1.0 dependency |
+|---------|--------------|------------|--------------------------|
+| **C1. SECURITY.md for Phase 2** | v1.0 audit verdict `tech_debt` lists this. Phase 2 ships SQLite + viled curl_cffi crawler + brand-aliases.yaml — needs explicit threat enumeration (creds in `.env`, `.db` file permissions, brand-aliases as supply-chain). | S | Run `/gsd-secure-phase 2` retroactively per audit recommendation. No code change — paperwork. |
+| **C2. SECURITY.md for Phase 4** | Audit-flagged. Matcher reads from snapshots, writes denormalized matches table; threat surface is SQL injection on brand alias / volume normalization input. | S | Same workflow as C1. |
+| **C3. SECURITY.md for Phase 6** | Audit-flagged. Telegram delivery handles bot token + chat IDs from `.env`, sends files to external API. Threat surface: secret-leak on log, oversized-file rejection, abuse via chat-ID spoofing. | S | Same workflow as C1. |
+| **C4. VALIDATION.md for Phase 4** | Audit-flagged. Phase 4 has 465+ tests but no VALIDATION.md document — the audit framework expects the meta-doc. | S | Run `/gsd-validate-phase 4`. No code change. |
+| **C5. Audit-framework completion record (in MILESTONES.md or v1.1 archive)** | Once C1–C4 land, v1.0 audit verdict can flip from `tech_debt` to `clean` retroactively. Worth recording the transition. | S | Single line in `milestones/v1.0-MILESTONE-AUDIT.md` (or a v1.1 patch file). |
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Weekly cron-triggered run, Sunday night → Monday morning delivery | Locked in PROJECT.md; Monday delivery is the entire point | LOW | OS cron / systemd timer / cloud scheduler — pick one in stack research |
-| Telegram bot delivery (text + Excel) | Locked in PROJECT.md; team lives in Telegram | LOW | One bot, one chat (group or DM) |
+#### Bucket D — Operator Deploy + First Production Cron Tick
 
-#### History / Analytics
+`07-HUMAN-UAT.md` already documents 4 `blocked` items; this milestone unblocks them via real-VPS execution. Hetzner CX22 EU is the v1.0 recommended path (`MILESTONES.md` § "Next Milestone Operator Path"). Yandex Cloud KZ remains a fallback if EU geofencing fires on goldapple.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Persistent history of every weekly snapshot in DB (not just the latest) | Locked in PROJECT.md; required for week-over-week deltas and promo trends | LOW | SQLite v1; schema: `snapshot(week, retailer, sku, price, was_price, in_stock, ...)` |
-| Week-over-week price change column in the report | "Same SKU, what changed since last Monday" is the highest-signal column for a pricing manager | LOW | Self-join `snapshot` on `week-1` |
-
-#### Operations
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Run logs (started, finished, duration, counts per stage) | Locked in PROJECT.md; the team needs to know whether Monday's data is real or stale | LOW | Structured logs to file + stdout; one log per weekly run |
-| Parser-failure alerting (Telegram message when a run fails or counts drop suspiciously) | Silent failure is the #1 risk in scraping per industry consensus. If goldapple parser breaks on Sunday and nobody notices, Monday's report is wrong | MEDIUM | Two checks: (a) hard failure → exception → alert; (b) "soft failure" → SKU count this week << last week → alert |
-| Retry with exponential backoff on transient errors (429, 5xx, timeouts) | Industry standard; without it a transient blip kills the whole run | LOW | tenacity / urllib3 Retry; standard pattern |
-| Per-SKU failure isolation (one bad page doesn't kill the run) | A single malformed product page on goldapple should not invalidate the entire crawl | LOW | try/except around parse, log + continue, dead-letter list |
+| Feature | Why Required | Complexity | Notes / v1.0 dependency |
+|---------|--------------|------------|--------------------------|
+| **D1. VPS provisioned (Hetzner CX22 EU OR Yandex Cloud KZ small)** | Without a real server no UAT item can flip from `blocked`. | S (ops) | Decision gate: EU first (default per v1.0 STACK.md); if `goldapple-smoke` regresses from EU IP, fall back to Yandex Cloud KZ. Hetzner CX22 ≈ €4.50–€8/month (from v1.0 STACK.md). |
+| **D2. Deploy per README.md §2 (8-step Russian operator runbook)** | The runbook exists from Phase 7 D-707. Executing it once is the v1.1 deploy. | M (ops) | Steps: useradd, uv install, uv sync, `playwright install firefox`, copy `deploy/*` to `/etc/cron.d` + `/etc/logrotate.d`, populate `.env` (TG_BOT_TOKEN, TG_BUSINESS_CHAT_ID, TG_OPS_CHAT_ID, HC_PING_URL), `chmod 0600 .env`. |
+| **D3. Smoke gate: `bin/weekly-run.sh --viled-only --sanity-gate-n 1`** | Flips one `blocked` UAT item to `pass`. Validates that the bash wrapper + flock + log redirect work on the target VPS. | S (ops) | UAT smoke-gate item from `07-HUMAN-UAT.md`. |
+| **D4. First production cron tick (Sunday 23:00 Asia/Almaty → Monday ~02:00–03:00 report)** | UAT SC#1 cron timing item. Cannot be simulated — must be a real Sunday. | S (wait) | After D2 + D3 pass, the next Sunday's tick is the test. |
+| **D5. Deliberate-failure verification: `bin/test-failure-alert.sh`** | UAT SC#5 item. Exercises D-605 invariant (Telegram failure ≠ run failure) and HC.io dead-man's-switch flag-on-failure semantics. | S (ops) | Already built in Phase 7 (`bin/test-failure-alert.sh`); just run it on the real server. |
+| **D6. HC↔Telegram integration UAT** | UAT item — HC.io's webhook should fire a Telegram ops-channel alert when the cron run fails to ping. Real-world test of the alert path. | S (ops) | Requires HC.io UI setup (3rd-party); already documented in README.md §6. |
+| **D7. Backup verification: first `bin/backup.sh` execution on VPS** | Phase 2 ships `bin/backup.sh` (SQLite online `.backup` + 4-rotate retention). Has not been exercised on real production data. | S (ops) | Verify file is created with correct permissions, retention rotates. |
+| **D8. Resume `/gsd-verify-work 7` to flip 4 blocked UAT items** | After D3–D7 pass, the verification workflow can mechanically flip the 4 `blocked` items in `07-HUMAN-UAT.md` to `pass`, closing Phase 7 audit at full bar. | S | Mechanical follow-up. |
 
 ---
 
-### Differentiators (Worth Adding If Cheap, But Not for v1)
+### Differentiators (Add Only If Cheap During v1.1)
 
-These are where commercial tools compete. For an internal weekly report most of them are **not justified** — but a few are cheap enough that they'd add real signal once v1 is live.
+These would harden v1.1 but are not required for the milestone to ship. Most belong to a later cycle.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Per-SKU price history chart (small PNG embedded in Telegram or extra Excel sheet) | Pricing managers love trend lines; one glance shows "they've been undercutting us for 6 weeks" | MEDIUM | Cheap-ish with matplotlib; defer until v1 ships and team asks |
-| Brand-level summary sheet (avg delta % per brand, # SKUs per side, share of overlap) | Useful for category managers ("we lose worst on La Roche-Posay this week"); just an aggregate over the per-SKU sheet | LOW | Add in v1.x once the team confirms they want it |
-| Promo-history tracking (this SKU went on promo X weeks ago; promo frequency per brand) | Lets the team predict goldapple's next campaign window | MEDIUM | Already implicit in the snapshot history; just a query |
-| New / disappeared SKU detection (week-over-week additions and removals on each side) | Surfaces both assortment opportunities and competitor delisting signals | LOW | `FULL OUTER JOIN` on adjacent snapshots |
-| Matching review queue (low-confidence matches surfaced in a sheet for human override) | Catches the ~5–15% of products the strict key misses; a manual override file feeds back into normalization | MEDIUM | Only useful once fuzzy matching is added (v2). Skip for v1 |
-| Configurable brand-of-interest filter in the report | Lets the team focus a given week on a category they're repricing | LOW | One CLI/env flag; easy add post-v1 |
-| Extra delivery channel — email or Google Sheets push | Nice for archiving / forwarding outside Telegram | LOW–MEDIUM | Defer; Telegram + xlsx already covers requirement |
-| Currency/FX-aware comparison (KZT vs RUB if goldapple displays RU prices in some surfaces) | Goldapple.kz should serve KZT, but a sanity check column protects against accidentally comparing currencies | LOW | Cheap insurance; record `currency` field in snapshot |
-| Match-rate trend alert (alert when match rate drops > N% week-over-week) | Catches silent matching regressions caused by site HTML changes | LOW | One extra threshold check in operations |
+| **Random live-URL sampling per CI run** | Beyond fixed fixtures: each CI run also fetches N random PDPs from production and asserts the parser produces non-empty fields. Catches drift in real-time, not just on `fixtures-refresh` runs. | M | Risk: makes CI flaky if goldapple rate-limits — keep N small (3 viled + 3 goldapple) and skip on PR builds, run only on weekly CI. Adds operational complexity; defer unless B5 alone proves insufficient. |
+| **Cassette diff visualization on PR** | When a parser change updates `.snap.json` files, surface the diff inline in PR review. Lowers the "did I mean to change this snapshot?" cognitive cost. | M | syrupy already produces decent diffs in pytest output; PR-comment integration is nice-to-have. |
+| **Match-rate trend chart in Telegram business message** | Pricing team would see "match-rate has dropped from 65% to 12% in 3 weeks" before silent failure becomes a problem. Extends v1.0 A5 from a floor-alert to a trend signal. | M | Needs matplotlib + small PNG attachment. Defer to v1.2 unless team explicitly asks. |
+| **Operator status dashboard URL (HC.io status page)** | HC.io provides public/shared status URLs; bookmark for team. | S | Pure ops, near-zero code. Worth adding to README.md during D2 if time permits. |
+| **VPS firewall + fail2ban hardening doc** | Improves the SECURITY.md set with a deploy-time hardening checklist. | S | Belongs to README.md or a new `deploy/HARDENING.md`. Cheap; consider bundling with D2. |
 
 ---
 
-### Anti-Features (Tempting But Wrong For This Tool)
+### Anti-Features (Explicitly Out of v1.1 Scope)
 
-Features SaaS pricing tools advertise that the team will not benefit from — and that would explode scope, cost, or risk.
+Easy to get pulled into during a "while-we're-at-it" deploy. Locked out below with reasoning to prevent re-adding.
 
-| Feature | Why Requested / Surface Appeal | Why Problematic Here | Alternative |
-|---------|-------------------------------|----------------------|-------------|
-| Real-time / hourly / daily monitoring | "Faster is better" intuition; SaaS marketing | Weekly cadence is locked; daily crawls multiply anti-bot risk on goldapple by 7x and add zero business value to a weekly pricing review | Stay weekly per PROJECT.md |
-| Real-time price-change alerts (Telegram ping per SKU) | Sounds responsive | Pricing managers don't act per SKU per hour; alerts become noise; weekly digest is the actual workflow | Aggregate in the Monday report |
-| Web dashboard / charts UI | Looks professional in demos | Excel + Telegram already match the team's tooling; a dashboard is a second product to maintain with no users | Excel sheet with frozen panes |
-| ML / deep-learning fuzzy product matching | Marketed by Competera / DataWeave / Intelligence Node | Two-retailer overlap on a single language pair (RU/KZ) does not justify ML infra; strict key + brand/volume normalization will hit acceptable coverage. Locked in PROJECT.md as v2 | Strict key v1; deterministic fuzzy (token sort ratio) only if v1 coverage is poor |
-| Image-based matching | Some SaaS use it for marketplace dedup | Both sites have structured product names; image matching is huge effort for marginal lift on overlapping brands | Skip entirely |
-| Login-gated / Gold Card / personalized pricing | "We want the *real* price" | Account-blocking risk, ToS violations, and viled.kz competitor is the *public* price; comparing public-to-loyalty is unfair anyway. Locked out in PROJECT.md | Public price only |
-| Dynamic repricing / auto-adjustment of viled.kz prices | Headline feature of Prisync, Wiser, Omnia | Out of scope; this tool informs human decisions, it does not write to viled.kz catalogue | Humans set prices using the report |
-| Multi-competitor / multi-marketplace expansion (Mechta, Sulpak, Wildberries…) | "While we're at it…" | Each new site is a new parser, new anti-bot story, new normalization edge cases — and goldapple alone covers the strategic question. Locked out in PROJECT.md | Add a second competitor only after v1 ships and the team explicitly requests it |
-| MAP (Minimum Advertised Price) compliance reporting | Standard SaaS feature | viled.kz is a retailer, not a brand owner; MAP enforcement is the brand's job, not theirs | Skip |
-| "Share of shelf" / digital-shelf ranking (search result position) | Hot topic in retail intelligence (Particl, Intelligence Node) | Requires crawling search results pages (very different parser) and is a marketing/SEO question, not a pricing-team question | Skip |
-| Image and description scraping | Convenient for a richer "product detail" view | Multiplies bandwidth, storage, and parse complexity for zero pricing value. Locked out in PROJECT.md | Name + brand + volume + price only |
-| Multi-tenant / per-user / role-based access | SaaS necessity | Single team, one chat, no auth model needed | One Telegram chat, done |
-| In-tool ticketing / annotation / approval workflows | Enterprise add-ons | Excel comments + chat already cover this | None needed |
-| API / external integrations (Shopify, Magento, ERP) | Standard SaaS bullet | viled.kz integration is a separate, much bigger project; the report is the integration | None for v1 |
-| Forecasting / predictive pricing (ML-based price recommendations) | Competera/Wiser headline feature | Forecasting on 2 retailers × ~weekly observations is statistically thin; pricing managers want *visibility*, not predictions | Show history, let humans decide |
-| CDC (change-data-capture) streaming pipeline | "Modern data stack" appeal | Weekly snapshots written to a single SQLite/Postgres are sufficient; CDC is a hammer for an entirely different problem (continuous downstream consumers) | Snapshot table + week-over-week query |
+| Anti-Feature | Why Tempting | Why Not in v1.1 | Defer To |
+|--------------|--------------|-----------------|----------|
+| Viled SSR pagination beyond page 1 | Run #13 only had 82 SKU (page 1 only); doubling coverage seems valuable. | v1.0 CARRYOVER section (`MILESTONES.md`) explicitly defers this — SSR ignores `?page=N` and 9 other URL conventions per Phase 3/7 ops backlog. Belongs to v2 (separate spike). | v2 |
+| Docker image for the crawler | Phase 7 D-710 deferred to v2 because Camoufox Firefox 135 ≠ Playwright Chromium-based image. Would simplify VPS install. | Resolving D-710 requires a Camoufox-compatible base image build — multi-day spike. Not in v1.1's narrow scope. | v2 (INFRA-V2-04 backlog) |
+| Postgres migration | Tempting "while we're touching the schema for B6 Pydantic validation". | v1.0 STACK.md migration criteria not met (single writer, weekly, no remote dashboard yet). SQLite still right tool. | v2+ when criteria trip |
+| Fuzzy / token-set matching | Match-rate may look low after parser fixes land — tempting to "just add fuzzy". | PROJECT.md locks strict-key for v1.x; fuzzy is explicit v2 candidate. Adding now confounds the "did the parser fixes actually work?" measurement. | v2 (only if v1.1 strict-key match-rate is empirically unacceptable) |
+| Second competitor (mechta / sulpak / wildberries) | Operator deploy is "the time to add another retailer". | Each new site = new parser + new anti-bot story + new normalization. PROJECT.md anti-feature. | v2+ when team explicitly requests |
+| Web dashboard or status UI | Run #13 silent-failure pain is fresh; "we need a dashboard" feels natural. | PROJECT.md anti-feature for v1.x. Telegram + Excel + HC.io already cover the workflow. Differentiator D-table-row covers the cheap version (HC.io status page). | v2+ |
+| Real-time / daily monitoring | Run #13 missed a problem for ~hours — "more frequent runs would have caught it". | False premise: parser bug would have produced empty Excels daily instead of weekly. Right answer is B5 + B6, not higher cadence. PROJECT.md anti-feature. | Never (locked out) |
+| KZ-legal review bundled into v1.1 | v1.0 CARRYOVER lists it; deploy time seems "the right time". | 30-min lawyer engagement is a separate workstream — orthogonal to code or deploy. Bundle into next ops cycle. | v1.2 or operator backlog |
+| Camoufox+EU "smoke from Hetzner" pre-validation as a v1.1 phase | v1.0 CARRYOVER calls this out as an operator concern. | The validation happens in D3 naturally; doesn't need a separate phase. | Subsumed into D3 |
+| ML / image / description capture | None of these came up in run #13. | Anti-features in v1.0 FEATURES.md; nothing changed. | Never (locked out) |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Catalogue discovery (viled)]
-    └──feeds──> [Brand list]
-                   └──scopes──> [Catalogue discovery (goldapple)]
-                                       └──feeds──> [Product extraction]
-                                                          └──feeds──> [Snapshot storage]
-                                                                            ├──feeds──> [Matching]
-                                                                            │              └──feeds──> [Per-SKU delta report]
-                                                                            │              └──feeds──> [Assortment gap list]
-                                                                            ├──feeds──> [Promo report] (needs strike-through field)
-                                                                            └──feeds──> [Week-over-week deltas]
-                                                                                              └──feeds──> [Match-rate trend alert]
+[A1 Goldapple volume]     ─┐
+[A2 Goldapple brand/name] ─┼─required-by──> [A4 null-rate gate validates again]
+[A3 Viled volume_raw]     ─┘                       └──> [matcher produces non-zero rows again]
+                                                              └──> [Excel sheets stop being empty]
+                                                                       └──> [A5 match-rate floor alert]
 
-[Snapshot storage] ──requires──> [Idempotent weekly key]
-[Brand normalization] ──enables──> [Matching]
-[Volume normalization] ──enables──> [Matching]
-[Run logs] ──enables──> [Parser-failure alerting]
-[Retry logic] ──reduces failures into──> [Run logs]
-[Per-SKU failure isolation] ──prevents──> [Whole-run loss from one bad page]
-[Telegram text summary] ──depends on──> [Excel report] (summary numbers come from the same data)
+[B1 Cassette infra]
+    └──enables──> [B2 metadata schema]
+                       └──enables──> [B3 assertion API (syrupy)]
+                                          ├──enables──> [B4 brand-coverage quota]
+                                          └──enables──> [B5 fixtures-refresh CLI]
+[B6 Pydantic validation at DB boundary] ──independent of B1–B5──> [defense-in-depth A4]
+
+[A1/A2/A3] ──verified-by──> [B3 against newly captured fixtures]   # parser fixes are validated by harness
+[B1–B6]   ──verified-by──> [B5 first refresh] + [tests/ green]
+
+[C1 SECURITY.md ph2]  ─┐
+[C2 SECURITY.md ph4]  ─┼──all-must-land──> [C5 audit-record flip to clean]
+[C3 SECURITY.md ph6]  ─┤
+[C4 VALIDATION.md ph4]─┘
+
+[D1 VPS] ──prerequisite-of──> [D2 deploy] ──prerequisite-of──> [D3 smoke]
+                                                                    └──> [D4 first cron]
+                                                                              └──> [D5 deliberate-failure] + [D6 HC↔TG] + [D7 backup]
+                                                                                          └──> [D8 verify-work flip 4 UAT items]
+
+[Bucket B] ──not-blocking──> [Bucket D]   # deploy doesn't have to wait for harness
+[Bucket A] ──must-land-before──> [Bucket D]  # don't deploy known-broken parsers
+[Bucket C] ──independent──> all other buckets  # paperwork can be parallel
 ```
 
 ### Dependency Notes
 
-- **Goldapple crawl requires viled brand list:** the brand-scoping decision in PROJECT.md means viled.kz must be parsed first within each weekly run. Sequence within the run, not just within the roadmap.
-- **All reports require snapshot storage:** the schema design is upstream of every reporting feature; getting it right early avoids painful rewrites once history accumulates.
-- **Normalization is upstream of matching, not bundled with it:** a matching bug is usually a normalization bug. Build normalization as a separately testable layer with its own unit tests so the brand/volume dictionaries can grow without breaking matching.
-- **Promo detection requires capturing strike-through during parsing, not derived later:** if v1 only stores `current_price`, the team will ask for promo detection in v1.1 and the only way to backfill is re-crawl. Capture both prices in the v1 schema even if the v1 report doesn't surface them.
-- **Match-rate alerts depend on history:** these can't run on the first crawl; they activate from week 2 onward.
-- **Per-SKU failure isolation is a precondition for retry logic being useful:** without isolation, the retry just re-fails the whole batch.
+- **Bucket A is the only blocker for Bucket D.** Operator deploy a broken parser would just produce more empty Excels on the new VPS. A1–A4 must land before D4 (first cron tick), and ideally before D3 (smoke) so smoke covers the real fixed parser path.
+- **Bucket B is not on the deploy critical path** but should land in the same milestone — it's the methodology fix for "why didn't v1.0 catch this?" Skipping B means v1.2 risks another silent-failure incident.
+- **Bucket C is fully independent.** Could be done in parallel by a separate workstream or sequentially after Bucket A. No code coupling.
+- **Within Bucket B: B1 → B2 → B3 → {B4, B5}** is the strict ordering. B6 is independent (different code path — Pydantic at the writer, not at the parser test) and can land at any time.
+- **D4 (first cron tick) is calendar-bound.** Once D1–D3 land mid-week, D4 happens on the next Sunday. Plan v1.1 close to land at a Sunday boundary.
+- **A4 (null-rate gate validation) and B6 (Pydantic validation) are partial duplicates by design.** A4 is a sanity check on the run pipeline; B6 is a schema check at the DB boundary. Defense-in-depth — both wanted, neither replaces the other.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v1) — The Smallest Useful Monday Report
+### v1.1 Minimum Viable Milestone
 
-A v1 the team will actually open every Monday:
+What's required to call v1.1 "shipped" and flip v1.0 audit from `tech_debt` to `clean`:
 
-- [ ] **viled.kz full catalogue parser** — denominator of every comparison
-- [ ] **goldapple.kz brand-scoped catalogue parser** — competitor side of comparison
-- [ ] **Field extraction with strike-through and stock** — even if v1 reports don't use them, capture in schema
-- [ ] **Brand + volume normalization tables** — seeded by hand from the viled.kz catalogue
-- [ ] **Strict-key matching (`brand+name+volume`)** — locked in PROJECT.md
-- [ ] **Snapshot storage in SQLite, keyed by `(week_iso, retailer, sku)`** — idempotent
-- [ ] **Excel report with sheets: Summary, Per-SKU deltas, Assortment gaps, Goldapple promos**
-- [ ] **Telegram delivery: text headline (counts, match rate, top movers) + xlsx attachment**
-- [ ] **Weekly cron, Sunday night**
-- [ ] **Run logs + parser-failure Telegram alert** — silent-failure prevention
-- [ ] **Retry with backoff + per-SKU failure isolation**
-- [ ] **Match rate printed in the headline** — visibility into matching health from week 1
+- [ ] **A1 + A2 + A3** — three parser bugs fixed, snapshot table produces non-NULL volumes and separated brand/name for ≥95% of SKUs.
+- [ ] **A4** — sanity gate (or equivalent) refuses to mark a run `success` when match-rate is zero or null-rate exceeds threshold (already-documented D-218 behavior, just validated against the run #13 regression).
+- [ ] **A5** — Telegram business message tags match-rate-floor breaches (low cost, high signal).
+- [ ] **B1 + B2 + B3** — cassettes capture/replay infrastructure + metadata + assertion API land in `tests/`. At minimum: a regression test that loads the run #13 Armani PDP cassette and asserts the fixed parser produces correct brand/name/volume. (This is the "would have caught it" test.)
+- [ ] **B6** — Pydantic validation at `SqliteSnapshotWriter` boundary. Rejects empty volumes for non-volumeless categories.
+- [ ] **C1 + C2 + C3 + C4 + C5** — audit paperwork lands, v1.0 audit flips to `clean`.
+- [ ] **D1 → D8** — VPS provisioned, deploy completed, first Sunday cron tick produces non-empty Excel, all 4 `blocked` UAT items flipped to `pass`.
 
-That's it. No charts, no dashboard, no fuzzy matching, no extra channels.
+That's the milestone. No discretionary differentiators.
 
-### Add After Validation (v1.x) — Cheap Wins Once v1 Works
+### Add If Cheap During v1.1 (No Roadmap Slot Yet)
 
-- [ ] **Week-over-week price delta column in per-SKU sheet** — trigger: history has 2+ weeks
-- [ ] **New / disappeared SKU sheet** — trigger: team asks "what's new?"
-- [ ] **Brand-level aggregate sheet** — trigger: team filters Excel by brand every Monday
-- [ ] **Match-rate degradation alert** — trigger: a parser break ships an under-counted report
-- [ ] **Promo-frequency / promo-history view** — trigger: team wants to predict goldapple campaigns
-- [ ] **Per-SKU price history mini-chart** — trigger: team explicitly asks for trends
-- [ ] **Configurable brand-of-interest filter** — trigger: team is repricing a specific category that week
+- [ ] **B4 brand-coverage quota** — high value if the v1.1 spike for B1–B3 lands quickly; can be skipped if time-pressured (B5 partially covers via re-fetch).
+- [ ] **B5 fixtures-refresh CLI** — high value but adds a 6th CLI subcommand (touches v1.0's source-locked canary). Worth doing in v1.1 to close the methodology gap fully; skip only if time forces.
+- [ ] **VPS hardening doc + HC.io status URL** — bundle into D2 if time permits.
 
-### Future Consideration (v2+) — Only If Justified By v1 Pain
+### Defer To v1.2 / v2
 
-- [ ] **Deterministic fuzzy matching (token-set ratio + manual review queue)** — trigger: v1 strict-key match rate falls below acceptable threshold (PROJECT.md already names this)
-- [ ] **Migration to Postgres** — trigger: SQLite hits performance/concurrency limits (unlikely at this scale)
-- [ ] **Second competitor** — trigger: team explicitly requests after using v1 for a quarter
-- [ ] **Web dashboard** — trigger: report consumers expand beyond the current Telegram chat
-- [ ] **Email or Google Sheets channel** — trigger: archival or external-stakeholder requirement
-- [ ] **Currency / FX-aware columns** — trigger: actual currency mismatch observed in data
+- [ ] **Differentiators table** — all rows that aren't bumped to "Add If Cheap" above.
+- [ ] **All v1.0 carryover items not in scope** — viled pagination, Docker, KZ-legal review, Postgres migration.
+- [ ] **Fuzzy matching** — only revisit if v1.1 strict-key match-rate (post-fix) is empirically below acceptable.
 
 ---
 
@@ -201,127 +189,89 @@ That's it. No charts, no dashboard, no fuzzy matching, no extra channels.
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| viled.kz catalogue parser | HIGH | MEDIUM | P1 |
-| goldapple.kz brand-scoped parser | HIGH | HIGH | P1 |
-| Strike-through / promo price capture | HIGH | LOW | P1 |
-| In-stock flag capture | MEDIUM | LOW | P1 |
-| Brand + volume normalization | HIGH | MEDIUM | P1 |
-| Strict-key matching | HIGH | MEDIUM | P1 |
-| Snapshot history schema | HIGH | LOW | P1 |
-| Excel report (per-SKU, gaps, promos, summary) | HIGH | LOW | P1 |
-| Telegram delivery | HIGH | LOW | P1 |
-| Weekly cron | HIGH | LOW | P1 |
-| Run logs + failure alert | HIGH | MEDIUM | P1 |
-| Retry/backoff + per-SKU isolation | HIGH | LOW | P1 |
-| Match-rate visibility in summary | HIGH | LOW | P1 |
-| Week-over-week delta column | HIGH | LOW | P2 |
-| New/disappeared SKU sheet | MEDIUM | LOW | P2 |
-| Brand-level aggregate sheet | MEDIUM | LOW | P2 |
-| Match-rate degradation alert | MEDIUM | LOW | P2 |
-| Promo-history / promo-frequency view | MEDIUM | MEDIUM | P2 |
-| Per-SKU price history chart | MEDIUM | MEDIUM | P2 |
-| Brand-of-interest filter | LOW–MEDIUM | LOW | P2 |
-| Currency/FX sanity column | LOW | LOW | P2 |
-| Fuzzy matching + review queue | MEDIUM (if strict matching is weak) | HIGH | P3 |
-| Postgres migration | LOW (until forced) | MEDIUM | P3 |
-| Second competitor | MEDIUM (case-by-case) | HIGH | P3 |
-| Email / Google Sheets channel | LOW | LOW–MEDIUM | P3 |
-| Web dashboard | LOW | HIGH | P3 |
-| Image/description scraping | LOW (anti-feature) | HIGH | P3 (avoid) |
-| Real-time alerts | NEGATIVE | MEDIUM | Anti-feature |
-| ML matching / forecasting | NEGATIVE for this scope | HIGH | Anti-feature |
-| Dynamic repricing | OUT OF SCOPE | HIGH | Anti-feature |
+| A1 Goldapple volume extraction | HIGH (unblocks matcher) | MEDIUM | P1 |
+| A2 Goldapple brand/name separation | HIGH (unblocks matcher) | MEDIUM | P1 |
+| A3 Viled volume_raw distinct | HIGH (improves match-rate) | LOW–MEDIUM | P1 |
+| A4 null-rate gate validation | HIGH (silent-failure prevention) | LOW | P1 |
+| A5 match-rate floor alert | MEDIUM (early-warning) | LOW | P1 |
+| B1 Cassette infra | HIGH (foundation) | MEDIUM | P1 |
+| B2 Cassette metadata schema | HIGH (B3/B4 prerequisite) | LOW | P1 |
+| B3 Assertion API (syrupy) | HIGH (the regression test) | LOW | P1 |
+| B4 Brand-coverage quota | MEDIUM (prevents future Armani-class gaps) | MEDIUM | P2 |
+| B5 fixtures-refresh CLI | MEDIUM (drift detection) | MEDIUM | P2 |
+| B6 Pydantic at DB boundary | HIGH (defense-in-depth) | LOW | P1 |
+| C1–C5 Audit paperwork | MEDIUM (closes v1.0 audit) | LOW × 5 | P1 |
+| D1 VPS provisioned | HIGH (deploy prerequisite) | LOW | P1 |
+| D2 Deploy per README §2 | HIGH (deploy) | MEDIUM | P1 |
+| D3 Smoke gate | HIGH (UAT) | LOW | P1 |
+| D4 First production cron tick | HIGH (the actual milestone goal) | LOW (calendar) | P1 |
+| D5 Deliberate-failure verify | MEDIUM (UAT closure) | LOW | P1 |
+| D6 HC↔Telegram integration | MEDIUM (UAT closure) | LOW | P1 |
+| D7 Backup verification | MEDIUM (operational hygiene) | LOW | P1 |
+| D8 Verify-work flip 4 UAT | MEDIUM (mechanical closure) | LOW | P1 |
+| Random live-URL sampling | LOW–MEDIUM (B5 partly covers) | MEDIUM | P3 |
+| Cassette diff in PR | LOW (syrupy diff is enough) | MEDIUM | P3 |
+| Match-rate trend chart | MEDIUM (post-v1.1 nice-to-have) | MEDIUM | P3 |
+| VPS hardening doc | LOW (cheap to add) | LOW | P2 |
+| HC.io status URL | LOW | LOW (ops) | P2 |
 
 **Priority key:**
-- P1: Required for v1 — Monday report cannot exist without it
-- P2: Add post-v1 once usage validates the report itself
-- P3: Defer indefinitely until concrete pain or explicit team request
+- P1: Required for v1.1 — milestone cannot close without it
+- P2: Bundle into v1.1 if time permits, otherwise defer to v1.2
+- P3: Out of v1.1 scope, revisit only if explicitly justified
 
 ---
 
-## Competitor Feature Analysis
+## Mapping to PROJECT.md Active Requirements
 
-How leading SaaS handle each capability and what we adopt vs reject.
+| PROJECT.md Active Requirement | Mapped v1.1 Features |
+|-------------------------------|----------------------|
+| "Goldapple parser: извлекать volume из structured-блока PDP" | **A1** |
+| "Goldapple parser: разделять brand и name из title" | **A2** |
+| "Viled parser: extract volume как отдельное поле" | **A3** |
+| "Live HTML fixture harness в тестах" | **B1 + B2 + B3 + B4 + B5 + B6** (B6 is the defense-in-depth complement) |
+| "Audit paperwork debt: SECURITY.md для phases 2/4/6 + VALIDATION.md для phase 4" | **C1 + C2 + C3 + C4 (+ C5 record)** |
+| "Operator deploy: VPS + первый live Sunday cron tick + UAT closure" | **D1 → D8** |
 
-| Feature | Prisync | Skuuudle | Competera | Our Approach |
-|---------|---------|----------|-----------|--------------|
-| Crawling cadence | Daily, sometimes 3x/day | Daily managed | Continuous + on-demand | **Weekly** — business cycle, lower anti-bot risk |
-| Product matching | URL-based + AI variant matching | Human QA, named analysts sign off | AI matching, 99% SLA | **Strict normalized key**; revisit only if coverage poor |
-| Stock tracking | Yes | Yes | Yes | **Yes** — captured in schema, surfaced in promo sheet |
-| Promo / strike-through capture | Yes | Yes (RRP/MAP/promo) | Yes | **Yes** — explicit use case |
-| MAP monitoring | Yes | Yes | Yes | **No** — viled.kz is a retailer, not a brand owner |
-| Repricing automation | Rule-based | No (intel-only) | AI-driven | **No** — human pricing decisions only |
-| Alerting | Real-time per-SKU | Quality-control sign-off | AI Assistant + dashboards | **Weekly digest + parser-failure alerts only** |
-| Reporting surface | Web dashboard + email | Delivered reports + portal | Dashboard + AI Assistant | **Telegram text + Excel** — matches team workflow |
-| History / trend | Yes, in dashboard | Yes | Yes, AI-summarized | **Yes** — full snapshot history in DB, week-over-week column post-v1 |
-| Multi-competitor scaling | Unlimited | Hundreds of sites | Enterprise scale | **Two retailers** — explicit scope |
-| Operations / observability | Internal | Three-pronged QA | SLA-backed | **Run logs + alert on failure or count drop** — minimum viable observability |
-| Image / description capture | Variants | Yes | Yes | **No** — pricing-only |
-
-The pattern: SaaS features either (a) exist to make a *platform* sellable to many retailers (dashboards, integrations, multi-tenant, automation), or (b) provide marginal lift via heavy infrastructure (ML matching, image recognition, real-time pipelines). For a single team with a weekly Excel, neither category pays off.
-
----
-
-## Cross-Reference Against PROJECT.md
-
-| PROJECT.md Active Requirement | Mapped Feature |
-|-------------------------------|----------------|
-| "Полный парсинг каталога viled.kz (название, бренд, объём/вес, цена, цена до скидки, ссылка, наличие)" | Table stakes — Crawling: viled full catalogue + field extraction + strike-through + stock |
-| "Парсинг goldapple.kz, ограниченный брендами viled.kz" | Table stakes — Crawling: goldapple brand-scoped |
-| "Нормализация и сопоставление по `brand + название + объём`" | Table stakes — Matching: strict-key + brand + volume normalization |
-| "База данных с историей всех еженедельных срезов" | Table stakes — History: snapshot storage; enables WoW deltas (P2) |
-| "Сводный отчёт: размер ассортимента, пересечения, дельты цен" | Table stakes — Reporting: assortment summary + per-SKU delta + gap list |
-| "Доставка отчёта в Telegram (текст + Excel/CSV)" | Table stakes — Delivery: Telegram bot + xlsx |
-| "Еженедельный автозапуск (cron, ночь воскресенья)" | Table stakes — Delivery: weekly cron |
-| "Устойчивость к anti-bot-защите" | Table stakes — Crawling: anti-bot resilience (stack research details how) |
-| "Логи запуска и ошибок" | Table stakes — Operations: run logs + parser-failure alert |
-
-| PROJECT.md Out-of-Scope | Confirmed As Anti-Feature |
-|-------------------------|---------------------------|
-| Gold Card / залогиненные цены | Anti-feature: login-gated pricing |
-| Полный парсинг goldapple.kz | Anti-feature: implicit — brand scoping is the alternative |
-| Real-time / ежедневный мониторинг | Anti-feature: real-time monitoring |
-| Алерты на скидки в реальном времени | Anti-feature: real-time alerts |
-| Веб-дашборд / UI | Anti-feature: web dashboard |
-| Прочие маркетплейсы / другие конкуренты | Anti-feature: multi-competitor expansion |
-| Картинки и описания | Anti-feature: image/description scraping |
-| ML / fuzzy-сопоставление | Anti-feature for v1; explicit v2 candidate (P3) |
-
-Every PROJECT.md item maps cleanly. Two implicit additions worth flagging that aren't yet in PROJECT.md but are strongly recommended:
-
-1. **Capture promo / strike-through fields in v1 schema even if not surfaced in the v1 report.** Otherwise promo-history (P2) requires a re-crawl backfill, which on goldapple is expensive and risky. PROJECT.md already lists "цена до скидки" — this is consistent, but worth highlighting that schema must include it from week 1.
-2. **"Match rate" as a tracked KPI from day one.** It's the canary for silent matching failure and silent parser failure. Cheap to compute, expensive to add later because it has no historical baseline.
+Every active requirement maps to a P1 feature. No active requirement is unmapped, and no P1 feature is unjustified by an active requirement.
 
 ---
 
 ## Sources
 
-- [Prisync — Competitor Price Tracking](https://prisync.com/) — feature taxonomy for SaaS price intelligence (variant matching, stock, alerts, repricing)
-- [Prisync — Price Intelligence Software](https://prisync.com/price-intelligence-software/)
-- [Skuuudle — Competitive Pricing Intelligence](https://skuuudle.com/) — managed-service feature set: base/shelf/promo/RRP/MAP, named QA analysts
-- [Skuuudle — Price Monitoring](https://skuuudle.com/price-monitoring) — quality-control three-pronged approach (preventative, active, post-collection)
-- [Price2Spy](https://www.price2spy.com/) — alerting + repricing model
-- [Competera — Competitive Intelligence](https://competera.ai/solutions/by-need/competitive-intelligence) — MAP, promo, stock, AI matching, AI Assistant features
-- [Competera — Competitive Data Platform](https://competera.ai/products/competitive-data) — 99% match SLA, data-quality program
-- [Wiser — Pricing Intelligence](https://www.wiser.com/pricing-intelligence-wiser-solutions/) — execution-oriented framing
-- [Wiser — Top Pricing Intelligence Platforms Compared](https://www.wiser.com/blog/top-pricing-intelligence-platforms-compared) — vendor landscape
-- [Intelligence Node — Product Matching](https://www.intelligencenode.com/solutions/by-need/product-matching/) — brand and attribute normalization patterns
-- [42signals — Product Matching in E-commerce](https://www.42signals.com/blog/product-matching-ecommerce-benefits/) — normalization examples (HP/Hewlett-Packard, units)
-- [DataWeave — AI-powered Product Matching](https://dataweave.com/blog/ai-powered-product-matching-the-key-to-competitive-pricing-intelligence-in-ecommerce) — ML matching upper bound (rejected for this scope)
-- [ClearDemand — Assortment Gap Management](https://cleardemand.com/create-conversions-with-effective-assortment-gap-management/) — assortment-gap framing
-- [Particl](https://www.particl.com/) — share-of-shelf / digital-shelf framing (rejected)
-- [PromptCloud — 10 Web Scraping Monitoring and Observability Challenges](https://www.promptcloud.com/blog/web-scraping-monitoring-challenges/) — silent-failure detection, observability vs monitoring
-- [Ficstar — How to Detect Scraper Failures](https://www.ficstar.com/how-to-detect-scraper-failures) — failure-categorization patterns
-- [ScrapingAnt — Exception Handling Strategies for Robust Web Scraping](https://scrapingant.com/blog/python-exception-handling) — try/except + dead-letter patterns
-- [Scrape.do — 6 Key Steps to Large Scale Web Scraping](https://scrape.do/blog/large-scale-web-scraping/) — retry queues, backoff
-- [Firecrawl — Web Scraping Mistakes and Fixes](https://www.firecrawl.dev/blog/web-scraping-mistakes-and-fixes) — common pitfalls
+### Live-HTML / cassette harness pattern (Bucket B)
+- [kiwicom/pytest-recording — VCR.py-powered pytest plugin](https://github.com/kiwicom/pytest-recording) — record/replay HTTP traffic in pytest; foundation for B1 (curl_cffi path)
+- [VCR.py — Usage docs](https://vcrpy.readthedocs.io/en/latest/usage.html) — `once` / `new_episodes` / `all` record modes; cassette YAML format
+- [Test a Web Scraper using VCR — datawookie](https://datawookie.dev/blog/2025-01-28-test-a-web-scraper-using-vcr/) — concrete pytest+VCR pattern; gap noted: article does NOT cover drift detection or cassette refresh, confirming this is a known weakness we must address explicitly (B5)
+- [Scrapy-Testmaster (ThomasAitken)](https://github.com/ThomasAitken/Scrapy-Testmaster) — static-vs-dynamic validation pattern; `testmaster update --dynamic` is the inspiration for B5 `fixtures-refresh`
+- [syrupy — pytest snapshot plugin](https://github.com/syrupy-project/syrupy) — assertion API for B3; `pytest --snapshot-update` workflow
+- [Snapshot Testing — Jest docs](https://jestjs.io/docs/snapshot-testing) — conceptual reference for snapshot-based regression testing
+- [Stop Silent Scraper Failures: Using Pydantic for Instant Layout Change Detection](https://dev.to/withatte/stop-silent-scraper-failures-using-pydantic-for-instant-layout-change-detection-4p1k) — B6 design pattern; Pydantic at the parse/write boundary detects layout shifts instantly
+- [Data Quality at Scale: Validating Scrapes with Pydantic](https://dev.to/deepak_mishra_35863517037/data-quality-at-scale-validating-scrapes-with-pydantic-2gf0) — schema-validation framing for scraper pipelines
+- [Bulletproof Data Pipelines: Adding Schema Validation to Nike Scrapers](https://dev.to/withatte/bulletproof-data-pipelines-adding-schema-validation-to-nike-scrapers-3p10) — concrete example of Pydantic-on-scraper-output pattern
+- [Scrapy Spider Contracts docs](https://docs.scrapy.org/en/latest/topics/contracts.html) — `@url`, `@returns`, `@scrapes` contract idea; informed B4 brand-coverage thinking (we don't use Scrapy, but the contract concept maps cleanly to "every brand has a fixture")
+
+### Operator deploy (Bucket D)
+- v1.0 `.planning/README.md` §2 — 8-step Russian operator runbook (Phase 7 D-707)
+- v1.0 `.planning/07-HUMAN-UAT.md` — 4 `blocked` UAT items map directly to D3–D6
+- v1.0 STACK.md "Deployment / Hosting" — Hetzner CX22 €4.50–€8/month rationale
+- `MILESTONES.md` § v1.0 "Next Milestone Operator Path" — 6-step deploy plan (D1–D8 expand on this)
+
+### Parser bugs evidence (Bucket A)
+- `.planning/research/v1.1-PARSER-BUG-FINDINGS.md` — three bug reports + DB samples + live PDP screenshot
+- v1.0 `.planning/research/PITFALLS.md` Pitfall #2 ("silent parser drift") — exactly predicted run #13 failure mode
+
+### Audit framework (Bucket C)
+- v1.0 `milestones/v1.0-MILESTONE-AUDIT.md` — `tech_debt` verdict, paperwork-only findings
+- v1.0 MILESTONES.md § "Tech Debt Carried Forward" — enumerates C1–C4 items
 
 **Confidence notes:**
-- Feature taxonomy across SaaS pricing tools — **HIGH** (corroborated across Prisync, Skuuudle, Price2Spy, Competera, Wiser, Intelligence Node, DataWeave)
-- Operations / observability practices — **HIGH** (corroborated across multiple scraping-engineering sources)
-- Beauty-vertical specifics (volume parsing, brand transliteration RU↔EN) — **MEDIUM**, derived from general normalization principles plus the .kz / RU-language context in PROJECT.md; concrete edge cases will only surface during v1 parser implementation
-- Match-rate threshold for triggering v2 fuzzy matching — **LOW**, no public data on strict-key match rates for cosmetics in RU/KZ markets; will need to be observed empirically
+- Parser-bug evidence — **HIGH** (DB samples + live PDP screenshot in v1.1-PARSER-BUG-FINDINGS.md)
+- Cassette/harness pattern — **HIGH** (multiple corroborating sources: VCR.py, syrupy, Pydantic, Scrapy-Testmaster all converge on the same shape)
+- B5 re-capture CLI specifics — **MEDIUM** (pattern is well-established but our concrete implementation depends on Camoufox session reuse semantics; spike likely in plan execution)
+- D1 Hetzner-vs-Yandex Cloud decision — **MEDIUM** (default is Hetzner EU per v1.0 STACK.md, but EU IP geofencing on goldapple is empirically unverified from Hetzner specifically; first smoke is the test)
+- v1.1 milestone completing in single calendar window — **MEDIUM** (D4 is Sunday-gated; depending on when A+B+C+D1–D3 land, milestone close could slip by up to 6 calendar days)
 
 ---
-*Feature research for: competitive e-commerce price intelligence (internal beauty-retail tool)*
-*Researched: 2026-05-05*
+*Feature research for: ga_crawler v1.1 (parser fixes + live-HTML harness + audit paperwork + operator deploy)*
+*Researched: 2026-05-13*

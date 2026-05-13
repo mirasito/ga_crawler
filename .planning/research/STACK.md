@@ -1,418 +1,269 @@
-# Stack Research
+# Stack Research — v1.1 (Parser bug fixes + live HTML harness + operator deploy)
 
-**Project:** GA Crawler — Competitive Pricing Intelligence (viled.kz vs goldapple.kz)
-**Domain:** Weekly competitor price-monitoring scraper (Python, greenfield)
-**Researched:** 2026-05-05
-**Overall confidence:** HIGH (core stack), MEDIUM (anti-bot specifics for goldapple.kz — needs spike validation)
+**Domain:** Python web-scraper, ecommerce competitive-pricing intelligence (KZ market)
+**Researched:** 2026-05-13
+**Confidence:** HIGH (selectolax + syrupy validated against Context7; Yandex Cloud answer validated against vendor docs; viled volume path verified against in-repo fixture)
+
+> v1.0 stack (Python 3.12 + uv + Camoufox 0.4.11 + curl_cffi 0.15 + SQLModel 0.0.24 + pandas 2.2 + xlsxwriter 3.2 + aiogram 3.27 + structlog 25 + tenacity 9 + pytest 8 + respx 0.21) is LOCKED. This document only covers v1.1 ADDITIONS / UPGRADES. Inherited rationale lives in `CLAUDE.md § Technology Stack`.
 
 ## TL;DR
 
-> Python 3.12 + uv + Playwright 1.57 (for goldapple) + curl_cffi 0.15 (for viled) + selectolax (HTML parsing) + SQLite/SQLModel (storage) + pandas 2.x + xlsxwriter (Excel) + aiogram 3.27 (Telegram) + system cron on Hetzner CX22 (deployment). Wrap goldapple crawl in **Patchright** if Playwright vanilla fails. Add **Decodo** or **IPRoyal** residential proxies on a metered budget only if the IP is blocked.
+v1.1 needs **two small library changes** (selectolax upgrade 0.3 → 0.4 for the Lexbor backend, syrupy as a dev dep for HTML fixture snapshot replay) and **zero infrastructure changes**. No new SDKs for either Hetzner CX22 or Yandex Cloud kz1.
 
-The stack is intentionally boring everywhere except anti-bot, where `goldapple.kz` may force a tooling escalation (vanilla Playwright -> Patchright -> Camoufox/Scrapling). Single-process, single-VPS, no Celery, no Docker Swarm, no orchestrators.
+- **Bug #1 (goldapple volume):** Solvable inside selectolax 0.4 via `:lexbor-contains("ОБЪЁМ" i)` pseudo-class. No library swap.
+- **Bug #2 (goldapple brand/name):** Solvable using microdata already emitted by goldapple (`<span itemprop="brand"><meta itemprop="name" content="Givenchy ">` + product-level `<meta itemprop="name">`). Pure code fix; no library change. **Fixture-verified.**
+- **Bug #3 (viled volume_raw):** Solvable from `__NEXT_DATA__.props.pageProps.attributes[].name == "Размер"`. No library change. **Fixture-verified.**
+- **Live HTML harness:** syrupy + `SingleFileSnapshotExtension` (subclassed with `file_extension = "html"`, `WriteMode.TEXT`).
+- **Operator deploy:** Hetzner CX22 (default) OR Yandex Cloud kz1 — both are vanilla Ubuntu over SSH. Same `uv` + Camoufox + cron procedure. Choice is legal/network, not technical.
 
----
+## Recommended Additions / Changes to LOCKED v1.0 Stack
 
-## Recommended Stack
+### Core (additions or upgrades)
 
-### Core Technologies
+| Technology | Version | Purpose | Why Recommended | Integration with v1.0 |
+|------------|---------|---------|-----------------|------------------------|
+| **selectolax** | upgrade `>=0.3,<0.4` → `>=0.4.7,<0.5` | HTML5 parser; unlocks the **Lexbor backend** with `:lexbor-contains()` pseudo-class and `LexborSelector.text_contains()` | The 0.4 line ships `LexborHTMLParser` with `:lexbor-contains("text" i)` pseudo-selector and `text_contains(..., deep=True, strip=False)` Selector filter. These are exactly the primitives missing in 0.3.x for **finding a label node by visible Russian text and walking to its sibling/parent** — the shape of the goldapple PDP volume block (`<div>78</div><div>ОБЪЁМ / МЛ</div>`). Latest 0.4.8 = May 4 2026; actively maintained. | Drop-in. `from selectolax.parser import HTMLParser` (Modest backend) still works unchanged. New code adds `from selectolax.lexbor import LexborHTMLParser` only in `goldapple_microdata.py`. viled parser unchanged. |
+| **syrupy** | new dev-only dep, `>=4.7,<5.0` | pytest snapshot plugin; provides `SingleFileSnapshotExtension` → one HTML fixture file per test | Right primitive for "captured live PDP HTML → frozen test fixture, with `--snapshot-update` re-record." Subclass `SingleFileSnapshotExtension` with `file_extension = "html"`, `_write_mode = WriteMode.TEXT` to store each captured PDP as readable `.html` next to the test. **Soundness rule:** Syrupy fails the test if a snapshot is MISSING, not just on diff — directly addresses live-run #13 root cause (parsers tested only against frozen fixtures that didn't cover Armani / Contre-Jour shapes). Idiomatic pytest syntax (`assert html == snapshot`). | Dev-only. Lives in `[dependency-groups] dev`. Snapshot files in `tests/fixtures/<retailer>/snapshots/`. Existing 803 unit tests untouched — new live-capture tests are ADDITIVE (marked `@pytest.mark.live`, deselected by default). |
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| **Python** | 3.12.x | Runtime | Stable, broadly supported by every library below. 3.13 still has a few rough edges with C-ext libs (lxml, curl_cffi); 3.11 is fine but missing perf wins. Avoid 3.13 as default. |
-| **uv** | 0.10.x+ | Project + dependency manager | 2026 default for new Python projects. Replaces pip/poetry/pyenv. 10–100x faster, lockfile native, ships Python toolchains. Drastically cleaner than `requirements.txt`. |
-| **Playwright (Python)** | 1.57.0 | Headless browser orchestration | Industry-standard headless automation in 2026. Better than Selenium (faster, cleaner API, native async, auto-wait), better than puppeteer-py (unmaintained). Required for goldapple.kz (JS-rendered + anti-bot). |
-| **curl_cffi** | 0.15.x | HTTP client with browser TLS fingerprinting | The killer library for scraping in 2026. Drop-in replacement for `requests`, but impersonates Chrome/Safari TLS+JA3+HTTP/2 fingerprints. 10–100x faster than launching a browser. Use for viled.kz and any goldapple endpoints that don't strictly need JS. |
-| **selectolax** | 0.3.x | HTML parsing (CSS selectors) | Up to 30x faster than BeautifulSoup, simpler than raw lxml. Enough for product-card extraction. BS4 only if you need exotic malformed-HTML tolerance. |
-| **SQLModel** | 0.0.24+ | ORM (SQLAlchemy + Pydantic) | Best DX for small Python projects in 2026. Same models work for DB schema and validation. SQLAlchemy 2.x under the hood — no rewrite if we outgrow it. |
-| **SQLite** | 3.45+ (bundled) | Storage (v1) | Right tool for "weekly snapshot, single-writer, single-reader, archival." Zero ops. Migrate to Postgres only when concurrency or remote access demands it (see "Stack Patterns by Variant"). |
-| **pandas** | 2.2.x | Data wrangling + Excel export | For our scale (~tens of thousands of rows weekly), pandas is the right call. Polars wins at >1GB; we have <100MB. `df.to_excel()` ecosystem is unmatched. |
-| **xlsxwriter** | 3.2.x | Excel writer (formatted) | Pandas' default Excel engine in 2026. Supports conditional formatting, freeze panes, autofilter, column widths — all things commercial users expect. openpyxl can read+write but is slower and less polished for write-only workflows. |
-| **aiogram** | 3.27.x | Telegram Bot SDK | Modern async-native Python Telegram framework. Cleanest API for `send_document` with files. Active maintenance, rich type hints, FSM if we ever add chat commands. |
-| **APScheduler** | 4.0.x (or system cron) | Scheduling | For v1: just use **system cron** on the VPS. APScheduler 4 is excellent if we want in-process Python scheduling with persistence, but cron is simpler for one weekly job. Pick cron unless a reason emerges. |
+### Supporting (no new library — uses what's already locked)
 
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| **Patchright** | 1.55+ | Drop-in patched Playwright with stealth | Use only if vanilla Playwright is detected by goldapple. Drop-in API replacement; passes Cloudflare Turnstile, DataDome, Akamai. Switch with one import line. |
-| **playwright-stealth (v2.x)** | 2.0.2 | Lightweight stealth patches for Playwright | Lighter alternative to Patchright. Try first if goldapple uses only basic detection. Actively maintained again in 2026 (v2 fork). |
-| **Camoufox** | latest fork (`coryking/camoufox` Firefox 142) | Anti-detect Firefox-based browser | Escalation path beyond Patchright. C++-level fingerprint spoofing. Used only if Patchright fails. Note: original `daijro/camoufox` is unmaintained as of 2025; use the maintained fork. |
-| **Scrapling** | 0.2.x | Adaptive scraping with built-in StealthyFetcher | Alternative escalation path: handles selector drift + Cloudflare Turnstile bypass in one library. Worth a spike if Patchright + curl_cffi both fail. |
-| **tenacity** | 9.x | Retry decorator with backoff | Wrap every network call. Exponential backoff + jitter, declarative, battle-tested. |
-| **pydantic** | 2.10+ | Data validation | Validate scraped product records before DB insert. Catches schema drift early (renamed fields = exception, not silent corruption). |
-| **structlog** | 25.x | Structured logging | Better than `logging` for scrapers: JSON output, contextual binding (URL, page, attempt). Easy to grep run logs and ship to a file. |
-| **alembic** | 1.14+ | DB migrations | Add when schema changes after first deploy. SQLModel ships SQLAlchemy 2.x, alembic integrates cleanly. Skip on day 1, add at first migration. |
-| **python-dotenv** | 1.0.x | Load `.env` for tokens/proxies | Trivial, ubiquitous; keeps Telegram bot token & proxy creds out of git. |
-| **httpx** | 0.28.x | Plain async HTTP (alternative to curl_cffi) | Use if site has no anti-bot at all (likely viled). curl_cffi handles both, so httpx is optional. |
-
-### Development Tools
-
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| **uv** | Project + dep manager | `uv init`, `uv add`, `uv run` — replaces pip, virtualenv, poetry. |
-| **ruff** | Linter + formatter | Replaces flake8 + black + isort. Ships with uv toolchain. Configure `line-length=100`, target `py312`. |
-| **pytest** | Test runner | For unit tests on parsers and matchers. Mock HTTP with `respx` (curl_cffi) or fixtures. |
-| **mypy** or **pyright** | Static type-checking | Optional but recommended given Pydantic + SQLModel are typed end-to-end. Pyright is faster. |
-
----
+| Capability | Existing library | Use |
+|------------|------------------|-----|
+| Live PDP capture via Camoufox `page.content()` | `camoufox==0.4.11` (LOCKED) | Captures HTML into syrupy snapshot via `assert html == html_snapshot` inside a `@pytest.mark.live` async test |
+| New parser observability events (`parser.field_missing`, `parser.volume_label_match`) | `structlog>=25` (LOCKED) | Pure code change in parser files |
+| Async test runtime | `pytest-asyncio>=0.24` (LOCKED) | Hosts the live-capture tests |
 
 ## Installation
 
 ```bash
-# Install uv (one-time, on dev machine and on VPS)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Bump selectolax in pyproject.toml [project].dependencies:
+#   "selectolax>=0.4.7,<0.5"      (was "selectolax>=0.3,<0.4")
+uv lock --upgrade-package selectolax
+uv sync
 
-# Initialize project
-uv init ga_crawler --python 3.12
-cd ga_crawler
+# Add syrupy to [dependency-groups].dev
+uv add --dev "syrupy>=4.7,<5.0"
 
-# Core scraping
-uv add playwright curl_cffi selectolax pydantic tenacity structlog python-dotenv
-
-# Storage
-uv add sqlmodel alembic
-
-# Data + Excel
-uv add pandas xlsxwriter openpyxl   # openpyxl as fallback reader
-
-# Telegram delivery
-uv add aiogram
-
-# Anti-bot escalation (install only if needed; pin lazily)
-uv add patchright             # tier 1 escalation
-# uv add scrapling            # tier 2 escalation (only if Patchright fails)
-# uv add camoufox             # tier 3 escalation
-
-# Dev
-uv add --dev ruff pytest pyright
-
-# Install browser binary (after `uv add playwright`)
-uv run playwright install chromium
-
-# (If using Patchright instead)
-uv run patchright install chromium
+# Confirm Camoufox stays locked at exactly 0.4.11 (Phase 3 D-313)
+# No action needed; pyproject.toml already pins this.
 ```
 
----
+## Library-Specific Answers to the Four Open Questions
 
-## Anti-Bot Strategy (concrete, tiered)
+### A) Better HTML parsing options than selectolax + microdata for goldapple's flexbox PDP?
 
-We do not know yet which tier goldapple.kz needs. Architect for escalation.
+**Recommendation: Stay on selectolax. Upgrade to 0.4.x and use the Lexbor backend.**
 
-### Tier 0 — viled.kz
-- **Tool:** `curl_cffi` with `impersonate="chrome"`.
-- **Proxy:** None (likely not needed; site is small, not under Cloudflare).
-- **Fallback:** Plain Playwright if HTML is JS-rendered.
-- **Confidence:** HIGH.
+1. **The flexbox PDP is solvable with selectolax 0.4 — no library swap.** The Lexbor backend supports `:lexbor-contains("текст" i)` (case-insensitive substring) and `LexborSelector.text_contains(...)` filtering, which lets us find the cell whose text contains "ОБЪЁМ" and walk to its sibling holding the numeric value. ([Context7: selectolax LexborSelector.text_contains](https://selectolax.readthedocs.io/en/latest/lexbor.html))
 
-### Tier 1 — goldapple.kz, optimistic case
-- **Tool:** Vanilla Playwright Chromium (headless), realistic viewport, real `User-Agent`, slow throttled crawl (2–5 req/min), respect `robots.txt` semantics in spirit.
-- **Cookies:** Reuse session cookies across runs.
-- **Proxy:** None initially. Local KZ-region IP from VPS would be ideal but Hetzner is EU; **expect this to fail eventually**.
-- **Confidence:** MEDIUM — goldapple.kz is operated by a major retailer, almost certainly behind Cloudflare or DataDome.
+   ```python
+   from selectolax.lexbor import LexborHTMLParser
+   tree = LexborHTMLParser(html)
+   # Find the label cell whose text contains "ОБЪЁМ"
+   label_nodes = tree.css('div:lexbor-contains("ОБЪЁМ" i)')
+   # Walk to adjacent sibling holding the numeric value (e.g. "78")
+   ```
 
-### Tier 2 — vanilla Playwright detected
-- **Tool:** Swap to **Patchright** (`from patchright.async_api import async_playwright`). One-line code change.
-- **Why:** Patchright passes Cloudflare, DataDome, Akamai, Kasada, Bet365, Sannysoft, CreepJS as of 2026 with default settings. Drop-in for Playwright.
-- **Confidence:** HIGH that this is the right next step.
+2. **XPath / parsel NOT recommended.** Would add lxml + parsel (~5 MB native dep), give us tree-traversal we don't need (the volume block is shallow), and force a partial rewrite. selectolax+Lexbor has all the bidirectional traversal we need (`Node.parent`, `Node.iter()` already shipped in 0.3 and continue in 0.4).
 
-### Tier 3 — Patchright detected or rate-limited by IP
-- **Add residential proxies.** Recommendation in priority order:
-  1. **Decodo** (formerly Smartproxy) — best quality/price in 2026. ~$3.50/GB pay-as-you-go. KZ/RU geos available.
-  2. **IPRoyal** — pay-as-you-go, traffic never expires; smallest minimum spend. Good for low-volume weekly use (~$1–5/run).
-  3. **SOAX** — strong KZ/RU coverage, higher price.
-  4. **Bright Data / Oxylabs** — overkill at our scale; enterprise pricing. Skip.
-- **Budget guideline:** weekly run with subset of goldapple ≈ 100–500 MB → ~$0.50–$2/week with IPRoyal/Decodo.
-- **Confidence:** MEDIUM — provider quality changes, validate at spike time.
+3. **JSON-LD probing NOT viable.** Confirmed in v1.0 D-14 revision (2026-05-06): "goldapple.kz PDP emits ONLY OfferShippingDetails JSON-LD (shipping policy); there is NO Product schema JSON-LD." Re-verified during this research against the in-repo fixture `_debug-product-page.html` — exactly one `application/ld+json` block, shipping-only data.
 
-### Tier 4 — still failing
-- **Tool:** **Camoufox** (maintained fork) for Firefox-based fingerprint spoofing, OR **Scrapling.StealthyFetcher** for one-shot Cloudflare Turnstile bypass.
-- **Last resort:** managed scraping API (ZenRows, ScrapingBee, Bright Data Web Unlocker) — pay-per-page. Reframes the project: "we no longer scrape, we proxy through a paid bypass service." Acceptable but defer until justified by failure data.
-- **Confidence:** LOW — only if goldapple has aggressive bot mitigation. Worth measuring before paying.
+4. **`window.__NUXT__` SSR state — POSSIBLE but inferior.** Goldapple emits `window.__NUXT__ = {...}` inline JS. Requires regex extraction and brittle JSON-parse (JS object syntax is a superset of JSON — trailing commas, undefined). NOT primary path. **Acceptable as Tier-2 fallback** if Lexbor-contains fails on a future PDP shape variant. Do not implement on day 1 of v1.1.
 
-### What does NOT work in 2026 (do not waste time here)
-- **cloudscraper** / **cfscrape** — defeated by current Cloudflare. Abandoned approach.
-- **selenium-stealth** / vanilla Selenium — also detected.
-- **Original `playwright-stealth` (v1.x)** — unmaintained since 2023; only v2.x (April 2026 release) is viable.
-- Pure `requests` + custom headers — Cloudflare reads TLS, not headers. Useless.
+5. **Bug #2 (brand/name separation): NO library change at all.** The in-repo fixture `_debug-product-page.html` already shows clean structured separation:
+   ```html
+   <span itemprop="brand" itemtype="https://schema.org/Brand" itemscope>
+     <meta itemprop="name" content="Givenchy ">
+   </span>
+   ...
+   <meta itemprop="name" content="Pour Homme">  <!-- product-level name -->
+   ```
+   The current parser at `goldapple_microdata.py:328` reads `<h1>` text verbatim. **Fix: read the product-level `<meta itemprop="name">` (sibling of `[itemprop="brand"]` inside the product `itemscope`).** Pure code fix.
 
----
+   **Confidence: HIGH** — fixture-verified.
 
-## Storage: SQLite vs Postgres
+### B) Best-in-class library for "live HTML fixture capture + replay + drift detection" in Python (2026)?
 
-### v1: SQLite (recommended)
+**Recommendation: syrupy with custom `SingleFileSnapshotExtension`. Avoid VCR.py / pytest-recording.**
 
-**Schema (rough):**
-```
-products(id, retailer, brand, name, volume, normalized_key, url, first_seen)
-price_snapshots(id, product_id, run_id, price, sale_price, in_stock, captured_at)
-runs(id, started_at, finished_at, status, viled_count, goldapple_count)
-```
+Three candidates considered:
 
-**Why SQLite:**
-- Single writer, weekly batch — perfect concurrency profile.
-- Whole DB is one file; backups = `cp prices.db prices.db.bak`.
-- Zero ops on VPS (no Postgres install/config/upgrade).
-- For 5 years × 52 weeks × 50k SKUs = ~13M rows. SQLite handles this easily with proper indexes.
-- DuckDB is tempting for analytics but introduces a second engine. Skip for v1.
+1. **syrupy ✅ RECOMMENDED.** Latest 4.x. Per-test single-file snapshots with custom file extensions. `--snapshot-update` flow well-documented. **Soundness:** "missing snapshot = test failure, not just diff" — the exact discipline we need to force every new SKU/parser branch to be backed by a captured fixture. Zero runtime deps. ([Context7: /syrupy-project/syrupy](https://github.com/syrupy-project/syrupy))
 
-**Enable from day 1:**
-- `PRAGMA journal_mode=WAL` — concurrent reads, faster writes.
-- `PRAGMA synchronous=NORMAL` — fast and safe enough for batch jobs.
-- Index `(product_id, captured_at)` and `(retailer, normalized_key)`.
+2. **pytest-recording / VCR.py ❌ NOT VIABLE.** VCR.py hooks at the urllib3 client layer. **curl_cffi bypasses urllib3** (uses libcurl through CFFI) and **Camoufox bypasses Python HTTP entirely** (the browser process makes the requests, not Python). vcrpy has no hook for either of our two scrapers. curl_cffi GH issues confirm only `requests_mock` (a different library) was made to interop. pytest-recording last release 0.13.4 = May 2025; no curl_cffi support on roadmap. ([pytest-recording PyPI](https://pypi.org/project/pytest-recording/))
 
-### Migrate to Postgres when:
-- Need real-time read access from a dashboard or other process.
-- Multi-writer (multiple parallel scraper processes).
-- Want time-series extensions (TimescaleDB) for trend queries.
-- Outgrow ~10M rows with complex joins (still survivable in SQLite, but Postgres feels better).
-
-SQLModel makes the migration trivial: change connection string, run `alembic upgrade head` against new DB, copy data with `pgloader`.
-
----
-
-## Scheduling: cron vs APScheduler vs Celery vs Prefect
-
-| Option | Verdict | Reason |
-|--------|---------|--------|
-| **System cron** | RECOMMENDED for v1 | One job, weekly. cron works, has worked for 50 years, requires zero Python. `0 2 * * 0 cd /opt/ga_crawler && uv run python -m ga_crawler.run` |
-| **APScheduler 4** | Use if running as long-lived daemon | Reasonable if we add other periodic tasks (health checks, retries). Persistent SQLAlchemy data store works with our SQLite. |
-| **Celery + Redis** | NO | Overkill. Adds a broker, a worker, a result backend. Designed for distributed task queues, not weekly cron. |
-| **Prefect / Dagster** | NO | Pipeline orchestrators. Useful at 10+ pipelines or with a team. We have one weekly job. |
-| **systemd timer** | Reasonable alternative to cron | Slightly nicer logging/dependency management; identical conceptually. Pick cron OR systemd timer based on team preference. |
-
----
-
-## Deployment / Hosting
-
-### Recommended: Hetzner CX22 (or CPX22)
-
-| Spec | Value |
-|------|-------|
-| Cost | ~€4.50–€8/month |
-| Specs | 2 vCPU, 4 GB RAM, 40 GB SSD |
-| OS | Ubuntu 24.04 LTS |
-| Region | Falkenstein/Helsinki (EU); use Hetzner Cloud KZ if available, otherwise EU is fine |
-| Why | Cheapest reliable VPS with enough RAM for headless Chromium. ~5x cheaper than DO equivalent. |
-
-**Setup:**
-- Install `uv` and Python 3.12.
-- Install `playwright` system deps: `uv run playwright install-deps chromium`.
-- Clone repo to `/opt/ga_crawler`, run via `uv run`.
-- Cron entry runs the scraper, captures stderr to a file `structlog` writes JSON to `/var/log/ga_crawler/`.
-- Healthcheck: cron mailbox + Telegram bot self-message on failure.
-
-### Alternatives considered:
-
-| Option | Verdict | Why |
-|--------|---------|-----|
-| **DigitalOcean Droplet** | Acceptable, more expensive | $12+/month for 2GB. Better docs/community than Hetzner; pay 2x for that. |
-| **Fly.io** | NO | Edge-deployed containers, scale-to-zero, billed per-second. ~$40+/month for headless-Chromium-capable size. Wrong abstraction for weekly batch. |
-| **Render / Railway** | NO | PaaS pricing model designed for web apps; cron jobs are an afterthought and expensive. |
-| **AWS Lambda / GCP Cloud Functions** | NO | 15-min execution limit (Lambda) and headless-browser pain. Crawl will exceed time budget. |
-| **GitHub Actions** | Tempting but NO | 6-hour limit; cron schedules drift; sharing state across runs requires external storage. Acceptable as backup runner only. |
-| **Local machine + cron** | NO for production | Box must be on Sunday night; networking flakiness; no separation from dev work. |
-
-### Docker?
-- **Optional, recommended**. One Dockerfile based on `mcr.microsoft.com/playwright/python:v1.57.0-noble` (ships browsers + system deps preinstalled). Saves the `playwright install-deps` step.
-- Keeps the host clean and makes redeploys reproducible.
-- Compose unnecessary; one container, restart policy = `no` (cron starts it).
-- Skip Docker if team is unfamiliar — cron + uv on the VPS is fine.
-
----
-
-## Telegram Delivery
-
-**Library:** `aiogram` 3.27.x.
-
-**Why aiogram over python-telegram-bot:**
-- Pure async, idiomatic for the rest of the async stack (Playwright, httpx, curl_cffi async).
-- Cleaner API for our use case (send file + caption, not interactive bot).
-- Both are fine; this is preference. Pick aiogram for consistency with async scraper.
-
-**Why not raw HTTP:**
-- `requests.post('https://api.telegram.org/bot.../sendDocument', files=...)` works, but file upload form-data + retries + error parsing are tedious.
-- 30 LOC saved, real type hints, free retry & rate-limit handling.
-
-**Telegram limits to know:**
-- **Standard Bot API: 50 MB max file upload.** Our Excel will be ~1–10 MB. Fine.
-- If we ever exceed 50 MB, run a self-hosted Telegram Bot API server (raises to 2 GB).
-- Message rate limit: 30 messages/sec to different chats, 1 msg/sec to same chat. Trivially within limit.
+3. **snapshottest ❌ DEPRECATED.** Predecessor of syrupy. Migration path from syrupy docs: "delete snapshots, install syrupy, regenerate." Do not adopt.
 
 **Pattern:**
 ```python
-from aiogram import Bot
-from aiogram.types import FSInputFile
+# tests/parsers/test_goldapple_live.py
+from syrupy.extensions.single_file import SingleFileSnapshotExtension, WriteMode
 
-bot = Bot(token=os.environ["TG_BOT_TOKEN"])
-await bot.send_document(
-    chat_id=CHAT_ID,
-    document=FSInputFile("report_2026-W18.xlsx"),
-    caption=summary_text_markdown,
-    parse_mode="MarkdownV2",
-)
+class HTMLSnapshotExtension(SingleFileSnapshotExtension):
+    file_extension = "html"
+    _write_mode = WriteMode.TEXT
+
+@pytest.fixture
+def html_snapshot(snapshot):
+    return snapshot.with_defaults(extension_class=HTMLSnapshotExtension)
+
+@pytest.mark.live
+async def test_goldapple_armani_pdp_shape(html_snapshot):
+    # First run with --snapshot-update: captures live HTML
+    # Subsequent runs: compares live HTML to snapshot, fails on drift
+    html = await fetch_via_camoufox("https://goldapple.kz/.../armani")
+    assert html == html_snapshot
+    # Same snapshot then feeds parse_pdp(html) and its expected dict
 ```
 
----
+The `live` pytest marker is **already declared** in `pyproject.toml [tool.pytest.ini_options].markers`. CI runs `-m "not live"` by default; operator runs the live capture monthly or on PDP-shape suspicion.
+
+### C) Viled volume extraction — dedicated JSON field vs. regex on `name`?
+
+**Verified against repo fixtures: YES — use `props.pageProps.attributes[].name == "Размер"`, not regex on `name`.**
+
+Evidence from `tests/fixtures/viled/viled-pdp-multipack.html` (in-repo, captured Phase 2):
+```json
+"attributes":[
+  {"name":"Размер","value":"200мл + 200мл + 250мл","id":231977,"sort":0},
+  {"name":"пол","value":"унисекс","id":193008,"sort":0},
+  {"name":"Область применения","value":"Волосы","id":200503,"sort":0},
+  ...
+]
+```
+
+⚠️ **viled `__NEXT_DATA__` has TWO `attributes` arrays at different paths** — be careful not to confuse them:
+
+| JSON path | Role | What we already use |
+|-----------|------|--------------------|
+| `props.pageProps.attributes[0]` (or `[N]`) | **Price variant** — has `price`, `realPrice`, `currency`, `itemImages` | YES — `viled_nextdata.py:155` reads `a0.get("price")` |
+| `props.pageProps.item.attributes[]` (likely path; spike-confirm) OR a sibling under `props.pageProps` | **Descriptive attributes** — `[{name, value, id, sort}, ...]` including `Размер` (size/volume) | NO — this is the new path for v1.1 |
+
+Code shape (after v1.1 Phase 1 spike confirms exact path):
+```python
+# Inside viled_nextdata.parse_pdp, after existing price extraction:
+descriptive = item.get("attributes") or []  # confirm path via syrupy live capture
+raw_volume_text = next(
+    (a["value"] for a in descriptive
+     if a.get("name", "").strip().lower() in ("размер", "объем", "объём")),
+    None,
+)
+# Pass raw_volume_text into existing NORM-03 regex normalizer
+```
+
+**Confidence:**
+- Field EXISTS as `{name: "Размер", value: ...}`: HIGH (fixture-verified)
+- Exact JSON path on beauty PDPs (vs. clothing): MEDIUM — confirm with one syrupy live capture in v1.1 Phase 1 (≤15 min spike)
+
+### D) Yandex Cloud KZ vs Hetzner — does kz1 require a vendor SDK / agent?
+
+**Answer: NO. Yandex Cloud kz1 is vanilla Ubuntu over SSH. Same `uv` + Camoufox + cron deploy as Hetzner CX22. The choice is legal/network, not technical.**
+
+| Question | Hetzner CX22 (EU) | Yandex Cloud kz1 |
+|----------|-------------------|------------------|
+| Region | Falkenstein DE / Helsinki FI | Karaganda KZ (launched April 2024, region name `kz1`) |
+| IP geolocation | EU IP | KZ IP — material if goldapple geo-blocks or serves region-variant content |
+| OS images | Ubuntu 24.04 LTS official | Ubuntu 22.04 LTS confirmed on marketplace; 24.04 not confirmed in search results — verify in Yandex Cloud console at deploy time |
+| Access pattern | SSH + `apt install` | SSH + `apt install` — explicit in [Yandex Cloud compute docs](https://yandex.cloud/en/docs/compute/operations/vm-create/create-linux-vm): "Connect to VMs using SSH keys… Public images have SSH access enabled by default" |
+| Vendor SDK required for our app | No | **No** — verified per vendor docs |
+| Vendor agent required for our app | No | No (Cloud Backup agent exists but is optional, not required) |
+| Billing | EUR, EU credit card | **Requires Russian or Kazakhstan resident business** for billing account |
+| Pricing | ~€4.50–€8/month | Not retrieved in this research; expected same order of magnitude for comparable VPS class |
+
+Sources:
+- [Yandex Cloud Compute VM create-linux-vm](https://yandex.cloud/en/docs/compute/operations/vm-create/create-linux-vm) — vanilla SSH + apt is the explicit standard
+- [DCD: Yandex launches kz1 in Karaganda](https://www.datacenterdynamics.com/en/news/yandex-launches-new-cloud-region-in-kazakhstan/) — April 2024 launch confirmed
+- [Yandex Cloud KZ data-center access](https://yandex.cloud/en/docs/troubleshooting/business/how-to/accessing-data-centers-in-kazakhstan) — KZ-region procedures
+
+**Decision criterion for v1.1 deploy:**
+- **Default → Hetzner CX22.** Cheaper, faster signup (EU card, no KZ legal entity), zero KZ billing complications. Camoufox `geoip=true` + `locales=["ru-RU","kk-KZ","en-US"]` already lies about geo at the browser fingerprint level (already in `pyproject.toml [tool.ga_crawler.crawl.goldapple]`).
+- **Escalate → Yandex Cloud kz1** only if a v1.1 spike empirically shows goldapple serves materially-different HTML or rate-limits harder from EU IPs. Cost: ~1 week extra for KZ-resident business registration + Yandex billing setup.
+- **NOT for v1.1: managed unblocker API** (ZenRows / Bright Data Web Unlocker). Reframes the project; defer until empirical failure data justifies.
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
-| Playwright | **Scrapy + scrapy-playwright** | If we expand to 5+ retailers and need pipeline architecture, request scheduling, deduplication, retries built-in. Currently overkill for 2 sites. |
-| Playwright (vanilla) | **SeleniumBase UC Mode** | Strong undetected-chromedriver successor with active maintenance. Pick if we already use Selenium. We do not. |
-| curl_cffi | **httpx** | If both sites have zero anti-bot — but goldapple definitely has some. curl_cffi is a strict superset (impersonate flag is opt-in). |
-| selectolax | **parsel** (Scrapy's parser) | If we adopt Scrapy. Otherwise selectolax is faster for raw HTML. |
-| selectolax | **BeautifulSoup4** | If site HTML is severely malformed and tolerant parsing is required. Add `+ lxml` parser. |
-| SQLite | **DuckDB** | If we want analytical queries (window functions, percentiles) against snapshot history. Can run alongside SQLite (`ATTACH`). Add only when reporting demands it. |
-| SQLite | **Postgres** | Multi-writer, remote access, dashboard. See "Migrate when" above. |
-| pandas | **polars** | Datasets >1 GB. We are at ~10–50 MB. Polars overkill. |
-| xlsxwriter | **openpyxl** | If we need to *read* and modify existing Excel files. xlsxwriter is write-only. Pandas uses openpyxl by default for `read_excel`. |
-| aiogram | **python-telegram-bot 22** | If team is more familiar with PTB. Equivalent capability. |
-| aiogram | **raw `httpx.post(...)` to Bot API** | If we want zero dependencies for delivery. Saves ~5 MB but loses ergonomics. Not worth it. |
-| system cron | **APScheduler 4** | If scraper runs as a long-lived daemon (not the case here). |
-| Hetzner | **DigitalOcean** | Better docs, established managed Postgres, $12+/month vs Hetzner's $5. Pay 2x for ergonomics. |
-| Hetzner | **Self-hosted on existing infra** | If team has spare server already. |
-
----
+| selectolax 0.4 + Lexbor backend | `parsel` (Scrapy parser, XPath) | If we adopt Scrapy at 5+ retailers (v3 territory). selectolax+Lexbor covers all v1.1 needs without lxml. |
+| selectolax 0.4 + Lexbor backend | Regex on raw HTML | For single-shot edge extractions (we already do this for `sku_id` from URL). Not for structured blocks. |
+| selectolax 0.4 + Lexbor backend | `window.__NUXT__` JS-state regex parse | Only as Tier-2 fallback if a future PDP shape variant defeats Lexbor-contains. |
+| syrupy `SingleFileSnapshotExtension` | Hand-rolled golden-master (write `tests/fixtures/*.html` manually) | If team strongly prefers zero new deps. Loses `--snapshot-update` ergonomics and missing-snapshot enforcement. Acceptable backstop. |
+| syrupy `SingleFileSnapshotExtension` | pytest-recording / vcrpy | Never — doesn't intercept curl_cffi or Camoufox. |
+| Hetzner CX22 | Yandex Cloud kz1 | Only when EU IP causes empirical goldapple failures. KZ-resident business required. |
+| Hetzner CX22 | PS Cloud (ps.kz), DaintyCloud KZ, Serverspace KZ | If we need KZ IP but want to avoid Yandex's legal-entity friction. Smaller providers; less documented. Spike at deploy time only if needed. |
+| Camoufox 0.4.11 (LOCKED) | Patchright | LOCKED per Phase 3 D-313 spike sign-off; do not re-evaluate in v1.1. |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| **Selenium** | Slower, dated API, harder anti-bot story, no async. Selenium 4 is decent but Playwright wins on every axis for new projects. | Playwright (or Patchright) |
-| **requests** library | Cannot impersonate TLS/JA3. Cloudflare and DataDome detect the urllib3 fingerprint instantly. | curl_cffi (drop-in replacement with `impersonate=`) |
-| **cloudscraper / cfscrape** | Defeated by current Cloudflare. Will fail on goldapple. | Patchright + residential proxy |
-| **playwright-stealth v1.x** | Unmaintained since 2023. Patches written for Chrome 109 era; useless against modern fingerprinting. | Patchright OR playwright-stealth v2.x (April 2026 fork) |
-| **undetected-chromedriver** (Selenium) | Bound to Selenium ecosystem. Successor (`nodriver`) is newer but less mature than Patchright for our use case. | Patchright |
-| **BeautifulSoup4** as default parser | 10–30x slower than alternatives, fine for malformed HTML but our targets aren't broken. | selectolax (or lxml for XPath) |
-| **Polars for our scale** | Adds API to learn, brings tiny perf win on <100 MB data, slightly weaker Excel interop. | pandas 2.x |
-| **openpyxl** for write-heavy reports | Slower, less polished formatting API than xlsxwriter. | xlsxwriter (pandas default) |
-| **Celery / Prefect / Dagster** | Designed for distributed pipelines or 10+ DAGs. Single weekly job. | system cron |
-| **requirements.txt + pip + virtualenv** | Slow, no lockfile by default, manual venv management. | uv (project + deps + Python) |
-| **Heroku / Render / Railway / Fly.io** for batch cron | Pricing model wrong; $30+/month for what Hetzner does at $5. | Hetzner CX22 |
-| **Kubernetes** | One weekly cron job. | systemd unit / cron / Docker `restart: no` |
+| **pytest-recording / VCR.py for HTML capture** | Hooks at urllib3 layer; curl_cffi bypasses urllib3 (libcurl through CFFI), Camoufox bypasses Python HTTP entirely (browser process owns the requests). Will silently record nothing. | syrupy `SingleFileSnapshotExtension`; existing respx for any future httpx-shaped client |
+| **snapshottest** | Deprecated predecessor of syrupy; open bugs unresolved | syrupy |
+| **lxml + parsel (just for XPath)** | 5+ MB native dep, Windows wheel + glibc compat surface, no incremental capability over selectolax 0.4 Lexbor backend | selectolax 0.4 Lexbor backend |
+| **Bumping Camoufox above 0.4.11** | Phase 3 D-313 lock — smoke probe asserts `camoufox_version_expected == "135.0.1.beta24"`. Upgrade flow requires fresh goldapple spike (per CLAUDE.md L9-14). v1.1 is NOT the time to re-spike anti-bot. | Keep `camoufox[geoip]==0.4.11` |
+| **Yandex Cloud `yc` CLI / SDK for runtime** | Not needed. Only the operator's local machine needs `yc` (to create the VM); the VM runs vanilla Ubuntu. | Standard `ssh`, `uv`, `cron` on the VM |
+| **Cloud-init / Terraform / Ansible for v1.1** | One VM, one weekly cron — operator-grade IaC is over-engineering for current scale. Existing README §2 manual procedure already works. | README §2 + bin/weekly-run.sh |
+| **Postgres migration in v1.1** | Out of scope. SQLite continues to fit single-writer weekly batch shape. | Keep SQLite; revisit per v1.0 STACK.md "Migrate when" trigger list |
 
----
+## Stack Patterns by v1.1 Variant
 
-## Stack Patterns by Variant
+**If Bug #1 needs a fallback when Lexbor-contains misses:**
+- Add a Tier-2 extractor against `window.__NUXT__` JS-object state.
+- Pattern: `re.search(r'window\.__NUXT__\s*=\s*Object\.assign\(.+?,\s*({.+?})\);', html, re.DOTALL)` (Nuxt 3 inlines state via `Object.assign`).
+- Best-effort `json.loads`; on JS-only syntax failure (trailing commas) → return `None` + log `parser.nuxt_state_unparseable`.
 
-### If goldapple.kz uses Cloudflare basic + JS challenge:
-- Vanilla Playwright works. Add realistic UA, viewport, slow rate.
-- Skip proxies (use VPS IP).
+**If viled `props.pageProps.item.attributes` isn't where descriptive attrs live on beauty PDPs:**
+- v1.1 Phase 1 spike captures one beauty PDP via syrupy.
+- Walk captured JSON for any key matching `(?i)размер|объ[её]м|capacity|volume`.
+- Path discovery is mechanical (≤30 min).
 
-### If goldapple.kz uses Cloudflare Bot Management / Turnstile:
-- Patchright as drop-in for Playwright.
-- Add Decodo or IPRoyal residential proxy (KZ if available, else RU).
-- Cookie persistence between requests. Slow rate (1 req every 3–5 seconds).
+**If we need cross-IP-region empirical testing (Hetzner EU vs KZ-IP):**
+- Same code, same Docker image, different VPS.
+- Add `RETAILER_PROXY_URL` env var (already structured for it via `python-dotenv`); Camoufox `launch(proxy={"server": ...})` accepts it.
 
-### If goldapple.kz uses DataDome:
-- Patchright is documented to pass DataDome.
-- Almost certainly need residential proxy.
-- Monitor closely; DataDome rotates challenges.
-
-### If goldapple.kz aggressively blocks even Patchright:
-- Camoufox (maintained fork) or Scrapling StealthyFetcher.
-- If still failing, switch to a managed unblocker API (Bright Data Web Unlocker / ZenRows / ScrapingBee). Pay-per-page, ~$1–3/1000 pages. Reframes the project but unblocks delivery.
-
-### If we eventually need a dashboard (out of scope for v1):
-- Migrate SQLite -> Postgres.
-- FastAPI + HTMX or a Streamlit/Dash app pointed at the same DB.
-- Keep scraper unchanged.
-
-### If we expand to 5+ retailers:
-- Adopt Scrapy (with scrapy-playwright + scrapy-impersonate for curl_cffi integration).
-- Move scheduling into Scrapy CLI invocations.
-- Storage stays the same.
-
----
+**If we expand to a 3rd retailer in v2:**
+- Migrate to Scrapy + scrapy-playwright + parsel.
+- Until then, the parser-per-retailer module pattern in `src/ga_crawler/parsers/` scales fine to 3–4 retailers.
 
 ## Version Compatibility
 
 | Package | Compatible With | Notes |
 |---------|-----------------|-------|
-| `playwright==1.57.x` | Python 3.10–3.13 | Bundled Chromium auto-managed. Run `playwright install chromium` after upgrade. |
-| `patchright==1.55+` | Drop-in for Playwright same major | Pin together. After `pip install`, run `patchright install chromium` (separate browser install). |
-| `curl_cffi==0.15.x` | Python 3.10+ | v0.14 dropped Python 3.9. Wheels for Linux/macOS/Windows. Latest `impersonate="chrome"` tracks Chrome 136+. |
-| `aiogram==3.27.x` | Python 3.10+ | v3.x is async-native. Avoid v2.x docs (pre-2024 API). v4.x exists but not yet recommended for production. |
-| `sqlmodel==0.0.24+` | SQLAlchemy 2.x, Pydantic 2.x | Both must be v2. Upgrade SQLAlchemy/Pydantic together. |
-| `pandas==2.2.x` + `xlsxwriter==3.2.x` | Auto-detected by `df.to_excel(..., engine="xlsxwriter")` | Default engine in pandas 2.x. |
-| `apscheduler==4.0.x` | Python 3.9+ | v4 is async-first; v3.x API differs significantly. Read v4 docs only. |
-| `uv` | Manages own Python | `uv python install 3.12` + `uv sync` is reproducible across machines. |
-
-**Single binary trap:** Playwright/Patchright bundles its own Chromium. Don't rely on system Chrome. After every Playwright/Patchright upgrade, re-run `<tool> install chromium`.
-
----
-
-## Confidence Summary
-
-| Decision | Confidence | Reason |
-|----------|------------|--------|
-| Python 3.12 + uv | HIGH | Industry default in 2026; verified via PyPI / Astral docs. |
-| Playwright 1.57 for headless | HIGH | Verified via Context7 + recent uv setup tutorials (Jan 2026). |
-| curl_cffi for HTTP | HIGH | Verified via Context7 + curl_cffi docs (v0.11+ supports chrome136, safari184). |
-| selectolax for HTML | HIGH | Multiple 2026 benchmarks confirm 10–30x perf advantage. |
-| pandas (not Polars) at our scale | HIGH | Multiple 2026 sources agree polars below 1GB is no win. |
-| xlsxwriter for Excel write | HIGH | Pandas default engine, mature, conditional formatting verified via Context7. |
-| SQLite v1 + SQLModel | HIGH | Time-series price snapshots fit SQLite envelope; SQLModel gives painless Postgres migration. |
-| aiogram 3.27 for Telegram | HIGH | Verified via Context7 + PyPI release notes; matches async stack. |
-| system cron over APScheduler/Celery | HIGH | Single weekly job, no parallelism — cron is the right tool. |
-| Hetzner CX22 hosting | HIGH | Well-documented price/perf advantage in 2026. |
-| Patchright as Tier-2 anti-bot | MEDIUM-HIGH | Strong 2026 benchmark coverage; works for Cloudflare/DataDome per multiple sources. Validate at spike time. |
-| Decodo / IPRoyal proxies | MEDIUM | 2026 reviews positive but provider quality shifts; revisit at spike time. |
-| Camoufox / Scrapling as Tier-3/4 | MEDIUM | Original Camoufox unmaintained as of mid-2025; recommended fork (`coryking/camoufox`) tracks Firefox 142. Scrapling StealthyFetcher actively developed. Use only if needed. |
-| goldapple.kz needs Tier 2 specifically | LOW | Unverified empirically. Validate with spike in Phase 1. May need only Tier 1 or as much as Tier 3. |
-
----
-
-## Open Questions for Phase 1 Spike
-
-1. **Does vanilla Playwright pass goldapple.kz?** (binary: yes -> Tier 1, no -> Tier 2)
-2. **If Patchright is needed, is the Hetzner EU IP sufficient or do we need a KZ/RU residential IP?**
-3. **What is the actual product page volume for the cross-section of brands?** (informs proxy budget)
-4. **Does goldapple.kz expose a JSON catalog endpoint that bypasses the need for browser?** (would let us drop Playwright for goldapple entirely and use curl_cffi only)
-5. **Is `goldapple.kz` Cloudflare or DataDome or something else?** (changes Tier 3 tooling)
-
-These are scoped for the first phase, not blocking for project initialization.
-
----
+| `selectolax>=0.4.7,<0.5` | Python 3.10–3.13 | Drop-in for 0.3 (Modest backend still available). New imports: `selectolax.lexbor.LexborHTMLParser`. Wheels for Linux/macOS/Windows confirmed on PyPI. |
+| `syrupy>=4.7,<5.0` | pytest ≥7, Python 3.8–3.13 | Zero runtime deps. Snapshot files default to `tests/__snapshots__/`; we override to colocate next to fixtures. |
+| `syrupy` + `pytest-asyncio>=0.24` | Compatible | `assert == snapshot` works inside `async def test_*` when pytest-asyncio collects it. |
+| `selectolax 0.4` + `pydantic 2.10` + `sqlmodel 0.0.24` | No interaction | Parsers don't touch these libs at the boundary. |
+| `Camoufox==0.4.11` (LOCKED) | Firefox 135.0.1.beta24 | Pin intentional (D-313). Smoke probe must continue to pass `camoufox_version_expected`. No 0.4.12+ released as of May 2026. |
+| `curl_cffi>=0.15,<0.16` (LOCKED) | Python 3.10+ | No change in v1.1. Chrome impersonation continues to handle viled. |
+| Yandex Cloud kz1 + Ubuntu 24.04 | Verify at deploy time | Search did not find explicit kz1 + Ubuntu 24.04 marketplace listing. Ubuntu 22.04 is fine — uv installs Python 3.12 independent of system Python. |
 
 ## Sources
 
-**Authoritative (Context7):**
-- `/microsoft/playwright-python` — browser launch, async API, headless options.
-- `/lexiforest/curl_cffi` — `impersonate="chrome"` syntax, latest browser targets (chrome136, safari184).
-- `/aiogram/aiogram` — `send_document` API, `FSInputFile`, current version v3.27.0.
-- `/python-telegram-bot/python-telegram-bot` — `send_document` semantics, file size limits.
-- `/agronholm/apscheduler` — CronTrigger, SQLAlchemyDataStore for persistence.
-- `/jmcnamara/xlsxwriter` — conditional formatting, data bars, color scales.
-- `/scrapy/scrapy`, `/scrapy-plugins/scrapy-playwright`, `/jxlil/scrapy-impersonate` — confirmed for "if we scale" path.
+### Authoritative (HIGH confidence)
+- **Context7 `/syrupy-project/syrupy`** — `SingleFileSnapshotExtension` API, custom `file_extension`, `WriteMode.BINARY/TEXT`, missing-snapshot soundness rule
+- **Context7 `/websites/selectolax_readthedocs_io_en`** — `LexborSelector.text_contains`, `:lexbor-contains("text" i)` pseudo-class, `any_text_contains`
+- **PyPI release history** — selectolax 0.4.8 (May 4 2026), pytest-recording 0.13.4 (May 2025 — no 2026 release), syrupy 4.x current, camoufox 0.4.11 (Jan 2025, unchanged through May 2026)
+- **Yandex Cloud official docs** — [compute/vm-create/create-linux-vm](https://yandex.cloud/en/docs/compute/operations/vm-create/create-linux-vm) — confirms SSH + apt is standard, no proprietary agent
+- **In-repo fixture verification** — `tests/fixtures/goldapple/_debug-product-page.html` (microdata `<meta itemprop="name">` separation for Bug #2 fix); `tests/fixtures/viled/viled-pdp-multipack.html` (`{name: "Размер", value: "200мл + 200мл + 250мл"}` for Bug #3)
 
-**Official docs / PyPI (verified):**
-- [curl-cffi PyPI](https://pypi.org/project/curl-cffi/) — current version, Python 3.10+ requirement.
-- [curl_cffi Read the Docs (v0.11.4)](https://curl-cffi.readthedocs.io/en/v0.11.4/impersonate.html) — supported targets.
-- [python-telegram-bot 22.7](https://pypi.org/project/python-telegram-bot/) — March 2026 release.
-- [aiogram PyPI](https://pypi.org/project/aiogram/) — v3.27 current, v4.x preview.
-- [Patchright GitHub](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) — drop-in Playwright with Cloudflare/DataDome bypass.
-- [Patchright Python](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python) — Python distribution.
-- [Camoufox](https://github.com/daijro/camoufox) and [maintained fork](https://github.com/coryking/camoufox) — anti-detect Firefox.
-- [Scrapling StealthyFetcher docs](https://scrapling.readthedocs.io/en/latest/fetching/stealthy/) — Cloudflare Turnstile bypass.
-- [uv docs](https://docs.astral.sh/uv/guides/projects/) — project management.
+### Web research (MEDIUM confidence — corroborated by authoritative source)
+- [DCD: Yandex launches kz1 in Karaganda](https://www.datacenterdynamics.com/en/news/yandex-launches-new-cloud-region-in-kazakhstan/) — April 2024 region launch
+- [Telecompaper: Yandex Cloud starts services in Kazakhstan](https://www.telecompaper.com/news/yandex-cloud-starts-services-in-kazakhstan--1497253) — corroborates launch
+- [Bright Data: Web Scraping with curl_cffi (2026)](https://brightdata.com/blog/web-data/web-scraping-with-curl-cffi) — confirms curl_cffi bypasses urllib3 mocking layer
+- [pytest-recording GH](https://github.com/kiwicom/pytest-recording) — no curl_cffi support
+- [Simon Willison: Snapshot testing with Syrupy](https://til.simonwillison.net/pytest/syrupy) — idiomatic patterns
+- [Hetzner Cloud locations](https://docs.hetzner.com/cloud/general/locations/) — CX22 / CPX22 specs unchanged in 2026
 
-**Web (MEDIUM confidence; verified across multiple sources):**
-- [Web Scraping With curl_cffi (Bright Data, 2026)](https://brightdata.com/blog/web-data/web-scraping-with-curl-cffi)
-- [Playwright Stealth 2026 (scrapewise)](https://scrapewise.ai/blogs/playwright-stealth-2026)
-- [Patchright alternatives (Round Proxies, 2026)](https://roundproxies.com/blog/best-patchright-alternatives/)
-- [Anti-detect browser comparison (pim97 GitHub)](https://github.com/pim97/anti-detect-browser-tools-tech-comparison)
-- [Best residential proxies 2026 (aimultiple, Round Proxies, Proxyway)](https://roundproxies.com/blog/best-residential-proxies/)
-- [Hetzner vs DigitalOcean vs Fly.io 2026](https://1vps.com/hetzner-vs-digitalocean)
-- [Polars vs pandas 2026 benchmarks (TildAlice)](https://tildalice.io/polars-vs-pandas-2026-benchmarks/)
-- [SQLite for time-series (sqliteforum, MoldStud)](https://www.sqliteforum.com/p/sqlite-and-temporal-tables)
-- [Scrapling: Adaptive Web Scraping (ScrapingBee)](https://www.scrapingbee.com/blog/scrapling-adaptive-python-web-scraping/)
-- [Bypass Cloudflare 2026 (Scrapfly, ZenRows, AlterLab)](https://scrapfly.io/blog/posts/how-to-bypass-cloudflare-anti-scraping)
-- [selectolax vs lxml vs BeautifulSoup benchmarks](https://medium.com/@yahyamrafe202/in-depth-comparison-of-web-scraping-parsers-lxml-beautifulsoup-and-selectolax-4f268ddea8df)
+### Inherited from v1.0 (LOCKED — not re-debated)
+- Python 3.12, uv 0.11.x, Camoufox 0.4.11, curl_cffi 0.15, SQLModel 0.0.24, pandas 2.2, xlsxwriter 3.2, aiogram 3.27, structlog 25, tenacity 9, pydantic 2.10, pytest 8, respx 0.21 — see `CLAUDE.md § Technology Stack` and `pyproject.toml`
+
+## Open Questions Carried into v1.1 Phase Planning
+
+1. **viled descriptive-attributes JSON path** — `{name: "Размер", value: ...}` is fixture-confirmed for clothing PDPs (Размер = S/L). Beauty PDPs almost certainly follow the same shape (multipack fixture shows `"200мл + 200мл + 250мл"` value). Spike requires one live capture (15 minutes).
+2. **goldapple volume label exact string** — Bug #1 evidence shows `78 ОБЪЁМ / МЛ`. Exact whitespace and case in the live PDP need confirmation before pinning the `:lexbor-contains()` literal. Resolve by capturing one live PDP via syrupy.
+3. **Yandex Cloud kz1 Ubuntu 24.04 availability** — confirm in console at deploy time. Fallback is Ubuntu 22.04 (uv installs Python 3.12 either way; no functional impact).
+4. **goldapple geo-sensitivity** — empirical question: does goldapple.kz from a Hetzner EU IP serve the same HTML as from a KZ IP? Resolve with one Camoufox smoke probe from each before committing to deploy target. If identical → Hetzner wins on price + signup speed.
 
 ---
-*Stack research for: Weekly competitor pricing scraper (viled.kz vs goldapple.kz)*
-*Researched: 2026-05-05*
+*Stack research for: GA Crawler v1.1 (parser-fix milestone)*
+*Researched: 2026-05-13*
