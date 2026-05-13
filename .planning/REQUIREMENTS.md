@@ -1,7 +1,7 @@
 # Requirements — Milestone v1.1
 
 > **Milestone:** v1.1 Parser bug fixes + operator deploy unblock
-> **Status:** Roadmap approved — 4 phases (8-11), 24 requirements mapped 1:1
+> **Status:** Phase 8 complete (5/5 PARSE-FIX reqs Closed) — Phases 9-11 pending
 > **Started:** 2026-05-13
 
 ## Milestone Goal
@@ -12,11 +12,11 @@
 
 ### Bucket A — Parser Bug Fixes (must-have) → Phase 8
 
-- [ ] **PARSE-FIX-01**: Goldapple parser извлекает `volume_raw` из structured PDP-блока (`78 ОБЪЁМ / МЛ`) с selectolax 0.4 Lexbor `:contains` selector; ≥90% non-null rate на не-volumeless категориях
-- [ ] **PARSE-FIX-02**: Goldapple parser извлекает `brand` и `name` раздельно через `<meta itemprop="name">` микроразметку; invariant canary `brand.lower() not in name.lower()` проходит
-- [ ] **PARSE-FIX-03**: Viled parser извлекает `volume_raw` из `props.pageProps.attributes[].name == "Размер"` JSON-поля; fallback на regex по `name` только если отсутствует
-- [ ] **PARSE-FIX-04**: Sanity-gate null-rate fail: запуск с `goldapple_volume_norm` null rate >50% → run помечается `failed` с reason `parser_drift_null_volume_rate`
-- [ ] **PARSE-FIX-05**: Smoke-probe URL rotation: `runner/gates.py:36` SMOKE_URLS включает по 1 URL каждой найденной shape variant (STEREOTYPE-style + Armani-style + Givenchy-baseline)
+- [x] **PARSE-FIX-01**: Goldapple parser извлекает `volume_raw` из structured PDP-блока (`78 ОБЪЁМ / МЛ`) с selectolax 0.4 Lexbor `:contains` selector; ≥90% non-null rate на не-volumeless категориях — completed Plan 08-02 (2026-05-13)
+- [x] **PARSE-FIX-02**: Goldapple parser извлекает `brand` и `name` раздельно через h1 `.brand`/`.name` CSS-class spans (W0 pivot — `<meta itemprop="name">` premise invalidated per 08-01-SUMMARY); invariant canary `brand.lower() not in name.lower()` softened to log-only warning — completed Plan 08-03 (2026-05-13)
+- [x] **PARSE-FIX-03**: Viled parser извлекает `volume_raw` из `props.pageProps.attributes[0].attributes[].name == "Размер"` JSON-поля; fallback на regex по `name` только если отсутствует — completed Plan 08-04 (2026-05-13)
+- [x] **PARSE-FIX-04**: Sanity-gate null-rate fail: запуск с `goldapple_volume_norm` null rate >50% → run помечается `failed` с reason `parser_drift_null_volume_rate` — completed Plan 08-05 (2026-05-13)
+- [x] **PARSE-FIX-05**: Smoke-probe URL rotation: `runner/gates.py:36` SMOKE_URLS включает по 1 URL каждой найденной shape variant (STEREOTYPE-style + Armani-style + Givenchy-baseline) — completed Plan 08-05 (2026-05-13)
 
 ### Bucket B — Live-HTML Harness (must-have B1-B3, B6; should-have B4-B5) → Phase 9
 
@@ -73,21 +73,21 @@
 
 | Phase | REQ-IDs | Count | Status |
 |-------|---------|-------|--------|
-| Phase 8 — Parser Bug Fixes | PARSE-FIX-01, PARSE-FIX-02, PARSE-FIX-03, PARSE-FIX-04, PARSE-FIX-05 | 5 | Pending |
+| Phase 8 — Parser Bug Fixes | PARSE-FIX-01, PARSE-FIX-02, PARSE-FIX-03, PARSE-FIX-04, PARSE-FIX-05 | 5 | Complete (2026-05-13) |
 | Phase 9 — Live-HTML Harness | TEST-HARNESS-01, TEST-HARNESS-02, TEST-HARNESS-03, TEST-HARNESS-04, TEST-HARNESS-05, TEST-HARNESS-06 | 6 | Pending |
 | Phase 10 — Audit Paperwork Carryover | AUDIT-DEBT-01, AUDIT-DEBT-02, AUDIT-DEBT-03, AUDIT-DEBT-04, AUDIT-DEBT-05 | 5 | Pending |
 | Phase 11 — Operator Deploy на Yandex Cloud kz1 | DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05, DEPLOY-06, DEPLOY-07, DEPLOY-08 | 8 | Pending |
-| **Total** | — | **24/24** | All v1.1 reqs mapped 1:1 |
+| **Total** | — | **24/24** | All v1.1 reqs mapped 1:1; 5/24 Complete |
 
 ### Per-Requirement Mapping
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PARSE-FIX-01 | Phase 8 | Pending |
-| PARSE-FIX-02 | Phase 8 | Pending |
-| PARSE-FIX-03 | Phase 8 | Pending |
-| PARSE-FIX-04 | Phase 8 | Pending |
-| PARSE-FIX-05 | Phase 8 | Pending |
+| PARSE-FIX-01 | Phase 8 | Complete |
+| PARSE-FIX-02 | Phase 8 | Complete |
+| PARSE-FIX-03 | Phase 8 | Complete |
+| PARSE-FIX-04 | Phase 8 | Complete |
+| PARSE-FIX-05 | Phase 8 | Complete |
 | TEST-HARNESS-01 | Phase 9 | Pending |
 | TEST-HARNESS-02 | Phase 9 | Pending |
 | TEST-HARNESS-03 | Phase 9 | Pending |
@@ -108,7 +108,7 @@
 | DEPLOY-07 | Phase 11 | Pending |
 | DEPLOY-08 | Phase 11 | Pending |
 
-**Coverage:** 24/24 v1.1 requirements mapped to exactly one phase. No orphans, no duplicates.
+**Coverage:** 24/24 v1.1 requirements mapped to exactly one phase. No orphans, no duplicates. 5/24 Complete (Phase 8 closed); 19/24 Pending (Phases 9-11).
 
 ---
-*Last updated: 2026-05-13 — Traceability filled by `gsd-roadmapper` after v1.1 roadmap approval (4 phases, 24 reqs 1:1).*
+*Last updated: 2026-05-13 — Phase 8 closed via Plan 08-05 doc cascade (5/5 PARSE-FIX reqs Complete); Phases 9-11 remain Pending. Previously: traceability filled by `gsd-roadmapper` after v1.1 roadmap approval.*
