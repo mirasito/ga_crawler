@@ -9,7 +9,8 @@ date: 2026-05-14
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — Phase 8 W0 done, Wave 1-3 next]]** — что делать прямо сейчас (**Phase 8 W0 shipped 2026-05-14** — spike поймал load-bearing pivot (microdata invalid → h1-spans); waves 1-3 ready autonomous (~25-35 min); next command `/gsd-execute-phase 8 --wave 1`)
+- **[[Текущие приоритеты — Phase 8 W1 done, W2 next]]** — что делать прямо сейчас (**Phase 8 W1 GREEN shipped 2026-05-14** — oба parser fixes landed (08-02 goldapple volume + 08-04 viled volume); + **quick-task hotfix 43dbfd7 закрыл active data egress** в cli.py load_dotenv через test_cli_deliver subprocess тесты, отсылавшие fake-xlsx в operator's личный Telegram; suite 822/2-failed → **825/0-failed**; next command `/gsd-execute-phase 8 --wave 2`)
+- Phase 8 W0 trail: ~~[[Текущие приоритеты — Phase 8 W0 done, Wave 1-3 next]]~~ — superseded 2026-05-14 (W1 done + hotfix shipped)
 - Phase 8 planning trail: ~~[[Текущие приоритеты — Phase 8 planned, execute next]]~~ — superseded 2026-05-14 (W0 spike закрыт; Plan 08-03 microdata premise invalidated; downstream executors adapt через SKILL.md pivot)
 - Phase 8 discuss trail: ~~[[Текущие приоритеты — v1.1 milestone открыт, Phase 8 parser fix next]]~~ — superseded 2026-05-13 (Phase 8 planned end-to-end через `/gsd-plan-phase 8`; 5 PLAN.md committed; wave restructure caught real file-overlap)
 - ~~[[Текущие приоритеты — v1.0 milestone shipped, operator deploy next]]~~ — superseded 2026-05-13 (live-run #13 exposed 3 parser bugs → v1.1 milestone открыт через `/gsd-new-milestone` workflow вместо straight operator deploy)
