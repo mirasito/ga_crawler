@@ -111,6 +111,39 @@ def _map_stock_state(item: dict) -> str:
     return "IN_STOCK"
 
 
+def _extract_volume_from_nextdata(a0: dict) -> Optional[str]:
+    """Extract raw volume text from viled __NEXT_DATA__ price-variant attributes.
+
+    Reads the nested descriptive-attributes array at:
+        props.pageProps.attributes[0].attributes[]
+    and returns the first entry whose name matches Размер / объем / объём
+    (case-insensitive, whitespace-stripped).
+
+    Returns the raw value (e.g. "50 мл", "S") or None when absent. The
+    downstream NORM-03 normalizer (parse_volume) handles disambiguation
+    of clothing sizes ("S" → None) vs volumes ("50 мл" → Volume(50,ml,1)).
+
+    Source: 08-RESEARCH.md §"viled NextData attributes" (verified against
+    all 3 in-repo fixtures: viled-pdp-407682, multipack, discounted) plus
+    live Contre-Jour fixture from Plan 08-01 W0 spike.
+
+    PARSE-FIX-03 (Plan 08-04). Threat T-08-13 mitigation: isinstance guards
+    on `descriptive` (list) and `entry` (dict) per STRIDE register.
+    """
+    descriptive = a0.get("attributes")
+    if not isinstance(descriptive, list):
+        return None
+    for entry in descriptive:
+        if not isinstance(entry, dict):
+            continue
+        name = (entry.get("name") or "").strip().lower()
+        if name in ("размер", "объем", "объём"):
+            value = entry.get("value")
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return None
+
+
 def _coerce_int(v: Any) -> Optional[int]:
     """Best-effort int coercion. Returns None on failure (so callers can early-out)."""
     if v is None:
@@ -139,7 +172,10 @@ def parse_pdp(html: str, url: str = "") -> Optional[ViledRawProduct]:
       - was_price         ← realPrice if realPrice > price else None
       - currency          ← unconditional "KZT" (STATE.md plan 01-07 lock)
       - availability      ← _map_stock_state(item)  (D-217)
-      - raw_volume_text   ← name passthrough; NORM-03 extracts ml/g/oz
+      - raw_volume_text   ← _extract_volume_from_nextdata(a0) OR name fallback
+                            (PARSE-FIX-03; reads Размер attr first, falls back
+                            to full name for SKUs lacking the attr — Frederic
+                            Malle Contre-Jour case per D-814)
     """
     nd = _extract_next_data(html)
     if nd is None:
@@ -212,7 +248,7 @@ def parse_pdp(html: str, url: str = "") -> Optional[ViledRawProduct]:
         was_price=was_price,
         currency=currency,
         availability=availability,
-        raw_volume_text=name,  # NORM-03 extracts volume regex from full name
+        raw_volume_text=_extract_volume_from_nextdata(a0) or name,  # PARSE-FIX-03
     )
 
 
@@ -220,5 +256,6 @@ __all__ = [
     "ViledRawProduct",
     "parse_pdp",
     "_extract_next_data",
+    "_extract_volume_from_nextdata",
     "_map_stock_state",
 ]

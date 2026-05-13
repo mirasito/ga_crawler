@@ -318,9 +318,22 @@ def test_sku_id_fallback_last_path_segment():
     assert p.sku_id == "X9"
 
 
-def test_raw_volume_text_passthrough_is_name():
+def test_raw_volume_text_extraction_or_fallback():
+    """PARSE-FIX-03 (Plan 08-04): raw_volume_text is now extracted from the
+    Размер attr OR falls back to name. With no Размер attr in the synthetic
+    _base_nextdata (only price/realPrice/currency/enableDiscount), the
+    helper returns None and `or name` engages — yielding the full name.
+
+    This test was previously `assert p.raw_volume_text == p.name` (anchor on
+    pure name-passthrough); per CONTEXT.md D-812 it is flipped to flexibility
+    for both extraction and fallback paths.
+    """
     nd = _base_nextdata(name="Парфюмерная вода 100 мл")
     html = _make_html_with_nextdata(nd)
     p = parse_pdp(html, URL)
     assert p is not None
+    # Either extracted from Размер (not present in this synthetic fixture)
+    # OR fell back to name — both shapes are acceptable post-Plan-08-04.
+    assert p.raw_volume_text is not None
+    # In the synthetic _base_nextdata (no Размер attr), fallback runs → name.
     assert p.raw_volume_text == "Парфюмерная вода 100 мл"
