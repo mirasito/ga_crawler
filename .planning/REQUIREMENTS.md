@@ -29,11 +29,11 @@
 
 ### Bucket C — Audit Paperwork Carryover (must-have) → Phase 10
 
-- [ ] **AUDIT-DEBT-01**: `SECURITY.md` для Phase 2 (viled crawl + storage) — retroactive threat model + 6/6 mitigation evidence
-- [ ] **AUDIT-DEBT-02**: `SECURITY.md` для Phase 4 (matcher) — retroactive threat model + mitigation evidence
-- [ ] **AUDIT-DEBT-03**: `SECURITY.md` для Phase 6 (Telegram delivery) — retroactive threat model + mitigation evidence
-- [ ] **AUDIT-DEBT-04**: `VALIDATION.md` для Phase 4 (matcher) — Nyquist coverage matrix против 465+ matcher тестов
-- [ ] **AUDIT-DEBT-05**: Audit verdict flip — `milestones/v1.0-MILESTONE-AUDIT.md` обновлён `tech_debt` → `clean` после AUDIT-DEBT-01..04
+- [x] **AUDIT-DEBT-01**: `SECURITY.md` для Phase 2 (viled crawl + storage) — retroactive threat model + 6/6 mitigation evidence — completed Plan 10-01 Task 2 (2026-05-14) commit `05ad76f`; `## SECURED` 3/3 threats CLOSED
+- [x] **AUDIT-DEBT-02**: `SECURITY.md` для Phase 4 (matcher) — retroactive threat model + mitigation evidence — completed Plan 10-01 Task 3 (2026-05-14) commit `65897f8`; `## SECURED` 3/3 threats CLOSED
+- [x] **AUDIT-DEBT-03**: `SECURITY.md` для Phase 6 (Telegram delivery) — retroactive threat model + mitigation evidence — completed Plan 10-01 Task 4 (2026-05-14) commit `92b707f`; `## SECURED` 3/3 threats CLOSED (T-06-03 accept disposition preserved per D-1002 guard)
+- [x] **AUDIT-DEBT-04**: `VALIDATION.md` для Phase 4 (matcher) — Nyquist coverage matrix против 465+ matcher тестов — completed Plan 10-01 Task 5 (2026-05-14) commit `671593c`; `## GAPS FILLED` 4/4 MATCH reqs COVERED across 5 test files (52 tests green)
+- [x] **AUDIT-DEBT-05**: Audit verdict flip — `milestones/v1.0-MILESTONE-AUDIT.md` обновлён `tech_debt` → `clean` после AUDIT-DEBT-01..04 — completed Plan 10-01 Task 6 (2026-05-14); D-1002 auto-flip gate (all 4 skills PASS / 0 HIGH); D-1003 RECON-01 annotation in v1.0-REQUIREMENTS.md:13; D-1004 verbatim preservation of original Verdict line + new `## Verdict Flip — 2026-05-14` section
 
 ### Bucket D — Operator Deploy на Yandex Cloud kz1 (must-have) → Phase 11
 
@@ -75,7 +75,7 @@
 |-------|---------|-------|--------|
 | Phase 8 — Parser Bug Fixes | PARSE-FIX-01, PARSE-FIX-02, PARSE-FIX-03, PARSE-FIX-04, PARSE-FIX-05 | 5 | Complete (2026-05-13) |
 | Phase 9 — Live-HTML Harness | TEST-HARNESS-01, TEST-HARNESS-02, TEST-HARNESS-03, TEST-HARNESS-04, TEST-HARNESS-05, TEST-HARNESS-06 | 6 | **Complete (2026-05-14)** — all 6/6 closed (D-902 GO, Variant A) |
-| Phase 10 — Audit Paperwork Carryover | AUDIT-DEBT-01, AUDIT-DEBT-02, AUDIT-DEBT-03, AUDIT-DEBT-04, AUDIT-DEBT-05 | 5 | Pending |
+| Phase 10 — Audit Paperwork Carryover | AUDIT-DEBT-01, AUDIT-DEBT-02, AUDIT-DEBT-03, AUDIT-DEBT-04, AUDIT-DEBT-05 | 5 | Closed (2026-05-14) |
 | Phase 11 — Operator Deploy на Yandex Cloud kz1 | DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05, DEPLOY-06, DEPLOY-07, DEPLOY-08 | 8 | Pending |
 | **Total** | — | **24/24** | All v1.1 reqs mapped 1:1; 11/24 Complete (Phase 8 + Phase 9) |
 
@@ -94,11 +94,11 @@
 | TEST-HARNESS-04 | Phase 9 | Complete (2026-05-14; D-902 GO — elapsed 16m40s < 8h) |
 | TEST-HARNESS-05 | Phase 9 | Complete (2026-05-14; D-902 GO) |
 | TEST-HARNESS-06 | Phase 9 | Complete (2026-05-14) |
-| AUDIT-DEBT-01 | Phase 10 | Pending |
-| AUDIT-DEBT-02 | Phase 10 | Pending |
-| AUDIT-DEBT-03 | Phase 10 | Pending |
-| AUDIT-DEBT-04 | Phase 10 | Pending |
-| AUDIT-DEBT-05 | Phase 10 | Pending |
+| AUDIT-DEBT-01 | Phase 10 | Closed (2026-05-14) |
+| AUDIT-DEBT-02 | Phase 10 | Closed (2026-05-14) |
+| AUDIT-DEBT-03 | Phase 10 | Closed (2026-05-14) |
+| AUDIT-DEBT-04 | Phase 10 | Closed (2026-05-14) |
+| AUDIT-DEBT-05 | Phase 10 | Closed (2026-05-14) |
 | DEPLOY-01 | Phase 11 | Pending |
 | DEPLOY-02 | Phase 11 | Pending |
 | DEPLOY-03 | Phase 11 | Pending |

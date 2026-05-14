@@ -38,7 +38,7 @@
 
 - [x] **Phase 8: Parser Bug Fixes** — Complete 2026-05-13. Fixed 3 live-run #13 parser bugs (goldapple volume + brand/name; viled volume_raw) via selectolax 0.4 Lexbor `:contains` + h1 `.brand`/`.name` CSS-class spans (W0 pivot — `<meta itemprop="name">` premise invalidated per 08-01 spike) + `attributes[0].attributes[].name=="Размер"` JSON; added null-rate sanity gate + SMOKE rotation. 5/5 PARSE-FIX reqs closed.
 - [x] **Phase 9: Live-HTML Harness** — Complete 2026-05-14. syrupy 4.9.1 + HTMLSnapshotExtension + PII canary + FixtureMetadata + normalize_for_snapshot + two-mode drift harness (cassette-replay + --refresh-live) + Pydantic write-boundary (D-904 strict/relaxed split) + schema_rejected_rate_gate + TH-04 brand-coverage canary + TH-05 capture-fixtures CLI + README §8 operator runbook. 6/6 TEST-HARNESS reqs closed. D-902 GO (elapsed 16m40s < 8h gate).
-- [ ] **Phase 10: Audit Paperwork Carryover** — Retroactive SECURITY.md (phases 2/4/6) + VALIDATION.md (phase 4) + audit-verdict flip `tech_debt` → `clean`; parallel-safe with Phases 8-9
+- [x] **Phase 10: Audit Paperwork Carryover** — Retroactive SECURITY.md (phases 2/4/6) + VALIDATION.md (phase 4) + audit-verdict flip `tech_debt` → `clean`; parallel-safe with Phases 8-9 (completed 2026-05-14)
 - [ ] **Phase 11: Operator Deploy на Yandex Cloud kz1** — First production VPS deploy with `bin/setup-vps.sh`, `load_dotenv` fix, Asia/Almaty TZ, Camoufox×Yandex + egress smokes, first Sunday cron tick, `/gsd-verify-work 7` resume
 
 ## Phase Details
@@ -109,10 +109,10 @@
   3. `VALIDATION.md` exists for Phase 4 (matcher) with Nyquist-compliant coverage matrix against the 465+ existing matcher tests
   4. `milestones/v1.0-MILESTONE-AUDIT.md` carries an in-place verdict-flip annotation `tech_debt` → `clean` dated 2026-05-XX with citations to AUDIT-DEBT-01..04
   5. `/gsd-verify-work` re-run on v1.0 milestone artifacts transitions verdict to `clean` (or operator-equivalent confirmation logged)
-**Plans:** 1 plan in 1 wave (sequential inline per D-1001 — paperwork-only orchestration)
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 10-01-PLAN.md — Doc-skill orchestration (7 tasks): pre-create Phase 2/4/6 stubs → /gsd-secure-phase 2 → /gsd-secure-phase 4 → /gsd-secure-phase 6 → /gsd-validate-phase 4 → RECON-01 annotation + verdict-flip (D-1003 + D-1004) → live REQUIREMENTS.md AUDIT-DEBT-01..05 closure
+- [x] 10-01-PLAN.md — Doc-skill orchestration (7 tasks): pre-create Phase 2/4/6 stubs → /gsd-secure-phase 2 → /gsd-secure-phase 4 → /gsd-secure-phase 6 → /gsd-validate-phase 4 → RECON-01 annotation + verdict-flip (D-1003 + D-1004) → live REQUIREMENTS.md AUDIT-DEBT-01..05 closure
 
 **Pitfall mitigation**: Per PITFALLS.md #10, retroactive paperwork loses fidelity if treated as background work — Phase 10 is a distinct phase, not folded into Phases 8/9/11; existing `/gsd-secure-phase` and `/gsd-validate-phase` skill workflows reused verbatim.
 
@@ -142,7 +142,7 @@ Plans:
 | 7. Scheduler + Observability Hardening | v1.0 | 5/5 | Complete | 2026-05-12 |
 | 8. Parser Bug Fixes | v1.1 | 5/5 | Complete | 2026-05-13 |
 | 9. Live-HTML Harness | v1.1 | 4/4 | Complete | 2026-05-14 |
-| 10. Audit Paperwork Carryover | v1.1 | 0/1 | Pending (planned) | — |
+| 10. Audit Paperwork Carryover | v1.1 | 1/1 | Complete   | 2026-05-14 |
 | 11. Operator Deploy на Yandex Cloud kz1 | v1.1 | 0/? | Not started | — |
 
 **v1.0 totals:** 7/7 phases complete; 47 plans executed + 3 SKIPPED; 48/48 v1 requirements closed; 803 passing tests.
