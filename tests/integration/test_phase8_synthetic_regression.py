@@ -53,7 +53,11 @@ def _gold_snap(
         brand=brand,
         brand_norm=brand.lower() if brand else "",
         name_norm="test product",
-        volume_raw="50 мл" if volume_norm else None,
+        # Phase 9 TH-06c: goldapple strict schema requires NonEmptyStr volume_raw.
+        # volume_raw is the RAW scraped string; volume_norm=None simulates parse
+        # failure (CONTENT drift: scraping OK, normalization failed). Schema gate
+        # validates structural presence of volume_raw, not normalization success.
+        volume_raw="50 мл",  # always present — correct scraping; norm may fail
         volume_norm=volume_norm,
         multipack_flag=False,
         parse_error_flag=False,

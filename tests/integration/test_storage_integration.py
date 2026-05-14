@@ -44,7 +44,11 @@ def _setup(tmp_path: Path):
 
 
 def _row(sku_id: str, name: str = "X", price: int = 1000) -> dict:
-    """Minimal Snapshot dict with the production-shape keys (Plan 02-02)."""
+    """Minimal Snapshot dict with the production-shape keys (Plan 02-02).
+
+    Phase 9 TH-06c: volume_raw added so goldapple strict schema validation passes.
+    GoldappleRawProduct requires NonEmptyStr for volume_raw (D-904).
+    """
     return {
         "sku_id": sku_id,
         "url": f"https://example.com/{sku_id}",
@@ -55,6 +59,7 @@ def _row(sku_id: str, name: str = "X", price: int = 1000) -> dict:
         "current_price": price,
         "currency": "KZT",
         "stock_state": "IN_STOCK",
+        "volume_raw": "50 мл",  # Phase 9: goldapple strict schema requires NonEmptyStr (D-904)
     }
 
 
