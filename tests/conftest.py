@@ -772,3 +772,40 @@ def mock_tg_env(monkeypatch):
         "business_chat_id": "-100000001",
         "ops_chat_id": "-100000002",
     }
+
+
+# ============================================================================
+# Phase 9 Wave 0 — syrupy + custom CLI flag wiring (Task 4, D-906)
+# ============================================================================
+
+from tests._snapshot_extension import HTMLSnapshotExtension  # noqa: E402
+
+
+def pytest_addoption(parser):
+    """D-906 two-mode harness: --refresh-live opts into live re-fetch.
+
+    Verbatim adaptation of Context7-verified --runslow pattern from pytest 8
+    docs §"Control test skipping with custom CLI options".
+    """
+    parser.addoption(
+        "--refresh-live",
+        action="store_true",
+        default=False,
+        help=(
+            "Re-fetch live URLs via Camoufox/curl_cffi instead of replaying "
+            "cassettes. Operator-only; combine with --snapshot-update to "
+            "regenerate fixtures."
+        ),
+    )
+
+
+@pytest.fixture
+def refresh_live(request) -> bool:
+    return bool(request.config.getoption("--refresh-live"))
+
+
+@pytest.fixture
+def html_snapshot(snapshot):
+    """syrupy snapshot configured to write/read .html files via
+    HTMLSnapshotExtension. RESEARCH §3.1."""
+    return snapshot.with_defaults(extension_class=HTMLSnapshotExtension)
