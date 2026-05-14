@@ -50,6 +50,12 @@ Plan 06-04 additions:
     `dotenv.load_dotenv()` — keeps test runs from picking up a real
     on-disk `.env` (RESEARCH caveat #4). Structural canary
     `test_load_dotenv_only_in_cli` enforces this invariant.
+
+Phase 9 Plan 03 additions:
+  - ADDED: `capture-fixtures` subcommand + `_cmd_capture_fixtures` async handler (TH-05, D-907).
+  - ADDED: `_scrub_html_for_fixture` scrub-on-write helper (D-907 belt-and-suspenders).
+  - ADDED: `_camoufox_version_runtime` helper.
+  - Operator-only; NOT in cron. See README §8 «Live HTML harness» for runbook.
 """
 
 from __future__ import annotations
@@ -337,6 +343,112 @@ def _cmd_deliver(args) -> int:
     return 2  # undelivered_*
 
 
+async def _cmd_capture_fixtures(args) -> int:
+    """TH-05 (D-907 belt-and-suspenders): capture live HTML into tests/fixtures/<retailer>/
+    as _live-YYYY-MM-DD-<slug>.html with sidecar JSON. Scrub before write.
+
+    Phase 9 Plan 03 (Variant A only). See README §8 «Live HTML harness» for runbook.
+    """
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    try:
+        from tests._fixture_metadata import FixtureMetadata, write_sidecar
+    except ImportError as e:
+        log.error("test fixture helpers unavailable", error=str(e))
+        return 3
+
+    retailer = args.retailer
+    url = args.url
+    slug = args.slug
+    if retailer not in ("goldapple", "viled"):
+        log.error("invalid retailer", retailer=retailer, allowed=["goldapple", "viled"])
+        return 2
+
+    # --- Fetch ---
+    if retailer == "goldapple":
+        async with GoldappleFetcher(run_id=-1, headless=args.headless) as fetcher:
+            rec = await fetcher.fetch_one(fetcher._page, url)
+        if "html" not in rec or rec.get("block"):
+            log.error(
+                "capture_fixtures_fetch_blocked",
+                url=url,
+                block_reason=rec.get("block_reason"),
+                error=rec.get("error"),
+            )
+            return 1
+        title = rec.get("title", "") or ""
+        status = int(rec.get("status", 0) or 0)
+        html = rec["html"]
+    else:  # viled
+        from ga_crawler.fetchers.viled import ViledFetcher
+        rec = ViledFetcher(run_id=-1).fetch_one(url)
+        title = ""  # viled fetch_one does not return title
+        status = int(rec.get("status", 0) or 0)
+        html = rec["html"]
+
+    # --- Scrub (D-907 belt-and-suspenders; mirrors _PII_PATTERNS from conftest) ---
+    html = _scrub_html_for_fixture(html)
+
+    # --- Dry-run gate ---
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if args.dry_run:
+        fixture_name = f"_live-{today}-{slug}.html"
+        print(
+            f"[dry-run] would write tests/fixtures/{retailer}/{fixture_name} "
+            f"({len(html)} bytes)"
+        )
+        return 0
+
+    # --- Write fixture + sidecar ---
+    fixtures_dir = Path("tests") / "fixtures" / retailer
+    fixtures_dir.mkdir(parents=True, exist_ok=True)
+    fixture_path = fixtures_dir / f"_live-{today}-{slug}.html"
+    fixture_path.write_text(html, encoding="utf-8")
+
+    meta = FixtureMetadata(
+        date=datetime.now(timezone.utc).isoformat(),
+        url=url,
+        status=status,
+        html_size=len(html.encode("utf-8")),
+        title=title,
+        camoufox_version=_camoufox_version_runtime(),
+    )
+    sidecar = write_sidecar(fixture_path, meta)
+    print(f"[capture-fixtures] wrote {fixture_path} + {sidecar}")
+    return 0
+
+
+def _scrub_html_for_fixture(html: str) -> str:
+    """D-907 scrub-on-write: drop cf_clearance, Telegram bot tokens, UUID v4,
+    hc-ping paths from HTML before commit. Mirrors conftest._PII_PATTERNS.
+
+    Note: UUID v4 standalone pattern is NOT applied here (see 09-01-SUMMARY.md
+    deviation #2 — goldapple HTML legitimately contains UUID-format buildIds).
+    The hc-ping-specific pattern covers the actual operator healthcheck token threat.
+    """
+    import re
+
+    patterns = [
+        (re.compile(r"cf_clearance\s*=[^;\"\s]*", re.IGNORECASE), "cf_clearance=SCRUBBED"),
+        (re.compile(r"\bbot\d{9,10}:[A-Za-z0-9_\-]{30,}\b"), "botSCRUBBED:SCRUBBED"),
+        (re.compile(r"\bAuthorization:\s*Bearer\s+[A-Za-z0-9._\-]+", re.IGNORECASE), "Authorization: Bearer SCRUBBED"),
+        (re.compile(r"hc-ping\.com/[0-9a-f\-]{32,36}", re.IGNORECASE), "hc-ping.com/SCRUBBED"),
+    ]
+    for pat, repl in patterns:
+        html = pat.sub(repl, html)
+    return html
+
+
+def _camoufox_version_runtime() -> str:
+    """Return the installed camoufox version string, or 'unknown' if unavailable."""
+    try:
+        from importlib.metadata import version
+        return version("camoufox")
+    except Exception:
+        return "unknown"
+
+
 def _configure_logging() -> None:
     structlog.configure(
         processors=[
@@ -520,6 +632,40 @@ def main(argv: Optional[list[str]] = None) -> int:
              "skip Telegram API + skip patch_stats (D-608 read-only mode)",
     )
 
+    # ADDED Phase 9 Plan 03 (D-907 TH-05) — capture-fixtures standalone operator tool.
+    capture = sub.add_parser(
+        "capture-fixtures",
+        help="Capture a live HTML PDP into tests/fixtures/<retailer>/_live-DATE-<slug>.html "
+             "with sidecar JSON (TH-05; D-907 scrub-on-write). Operator-only — not in cron.",
+    )
+    capture.add_argument(
+        "--retailer",
+        required=True,
+        choices=["goldapple", "viled"],
+        help="Retailer to fetch from",
+    )
+    capture.add_argument(
+        "--url",
+        required=True,
+        help="Full PDP URL to capture",
+    )
+    capture.add_argument(
+        "--slug",
+        required=True,
+        help="Short kebab-case slug for the fixture filename (e.g. 'stereotype-sago')",
+    )
+    capture.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Inspect URL + compute scrubbed size but write no files",
+    )
+    capture.add_argument(
+        "--headless",
+        type=_parse_bool,
+        default=True,
+        help="Camoufox headless flag for goldapple fetch (default: True)",
+    )
+
     args = parser.parse_args(argv)
     if args.cmd == "goldapple-smoke":
         return asyncio.run(_cmd_smoke(args))
@@ -531,6 +677,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         return _cmd_report(args)
     if args.cmd == "deliver-run":
         return _cmd_deliver(args)
+    if args.cmd == "capture-fixtures":
+        return asyncio.run(_cmd_capture_fixtures(args))
     parser.print_help()
     return 2
 
