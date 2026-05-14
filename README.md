@@ -235,6 +235,72 @@ grep '"phase":"goldapple"' /var/log/ga_crawler/weekly-run-$(date +%F).log | jq .
 - 0-byte logs не ротируются (`notifempty`) — намеренно (нечего архивировать).
 - Если weekly run extends past Monday 06:25 UTC (когда `/etc/cron.daily/logrotate` запускается на Hetzner EU) → wrapper может писать в rotated inode → bytes окажутся в `.log.1` (RESEARCH §Open Q #3 — acceptable edge для weekly batch; T-07-05 `accept`).
 
+## Live HTML harness
+
+Phase 9 harness фиксирует Phase 8 parser-fix ретроактивно: ловит fixture-vs-live drift в parser shape (тип run #13 — Givenchy frozen fixture green, но STEREOTYPE/Armani/Contre-Jour shapes выдали null volume в проде). **D-905: operator-only opt-in, НЕ в cron.**
+
+### Когда запускать
+
+- **Pre-deploy** (после parser changes / SDK bump): убедиться что текущие Phase 8 fixtures parse без regression.
+- **Post-suspected-drift**: если weekly run #N показал низкий match-rate / NULL-rate spike — refresh live cassettes и сравнить с frozen.
+- **По запросу operator**: при routine quarterly check goldapple/viled HTML shape.
+
+### Cassette-replay (быстро, no network)
+
+```bash
+uv run pytest -m live -x
+```
+
+Парсит 3 frozen `_live-2026-05-13-*.html` fixtures, assert'ит brand / name / volume_raw invariants. ~10s wallclock. Не обращается ни к Camoufox, ни к curl_cffi.
+
+### Refresh (operator-only, hits Camoufox + curl_cffi)
+
+```bash
+uv run pytest -m live --refresh-live -x
+```
+
+Re-fetches SMOKE_URLs через Camoufox 0.4.11 (goldapple) и curl_cffi (viled). HTML нормализуется (strip cf_clearance / csrf-token / CSS build-hash / `__NEXT_DATA__.buildId`) перед syrupy diff vs frozen fixture. ~30+ s wallclock.
+
+Если drift detected → syrupy fails + пишет `.planning/research/parser-drift-YYYY-MM-DD.md` с per-fixture per-assertion verdict.
+
+### Принять drift (overwrite fixture)
+
+```bash
+uv run pytest -m live --refresh-live --snapshot-update -x
+```
+
+Перезаписывает `tests/fixtures/<retailer>/_live-YYYY-MM-DD-<slug>.html` + регенерирует sidecar JSON `{date, url, status, html_size, title, camoufox_version}`.
+
+### Capture новой fixture (для нового brand-shape)
+
+```bash
+uv run python -m ga_crawler capture-fixtures \
+  --retailer goldapple \
+  --url https://goldapple.kz/<sku-id>-<slug> \
+  --slug short-slug-here
+```
+
+Записывает `tests/fixtures/goldapple/_live-YYYY-MM-DD-<slug>.html` + сидекар JSON. **Auto-scrubs** cf_clearance / bot tokens / hc-ping paths перед записью (D-907 belt-and-suspenders). PII canary в `tests/test_live_fixtures_pii_canary.py` остаётся как safety net.
+
+Для viled:
+
+```bash
+uv run python -m ga_crawler capture-fixtures \
+  --retailer viled \
+  --url https://viled.kz/<sku-id>-<slug> \
+  --slug short-slug-here
+```
+
+### Stale-fixture warning (30 days)
+
+Если sidecar `date` > 30 дней, pytest emits `UserWarning` (не fail). Считается напоминанием — operator решает refresh или нет.
+
+### Что НЕ делает harness
+
+- **Не запускается из cron** — D-905 explicit operator-only opt-in (избегаем blast radius на production stability).
+- **Не пишет в business Telegram** — drift output только в `.planning/research/parser-drift-YYYY-MM-DD.md`.
+- **Не правит parsers** — Phase 8 уже закрыт; harness только тестирует.
+
 ## Dev setup
 
 ```bash
