@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: Ready to plan
-last_updated: "2026-05-13T22:39:43.987Z"
-last_activity: 2026-05-13
+status: Executing Phase 09
+last_updated: "2026-05-14T04:38:08.664Z"
+last_activity: 2026-05-14
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 5
+  total_plans: 9
   completed_plans: 5
-  percent: 100
+  percent: 56
 ---
 
 ## Deferred Items
@@ -39,7 +39,7 @@ Acknowledged and deferred at v1.0 milestone close on 2026-05-13:
 
 **Core value:** Команда viled.kz один раз в неделю получает детализированный, сопоставленный по позициям отчёт о ценах конкурента (goldapple.kz) и может корректировать собственное ценообразование, видеть ассортиментные разрывы и отслеживать чужие промо-акции.
 
-**Current focus:** Phase 9 — Live-HTML Harness (next v1.1 phase; TEST-HARNESS-01..06)
+**Current focus:** Phase 09 — live-html-harness
 
 ## Current Position — v1.1 (Active)
 
@@ -55,7 +55,7 @@ Phase 8 (Parser Bug Fixes): **COMPLETE 2026-05-13** — 5/5 plans shipped; PARSE
 Phase 9: **PENDING** — next executable phase. TEST-HARNESS-01..06: syrupy 4.7 + Pydantic write-boundary + brand-coverage canary + capture-fixtures CLI.
 Phase 10: PENDING (audit paperwork carryover; parallel-safe with Phase 9)
 Phase 11: PENDING (operator deploy on Yandex Cloud kz1 — depends on Phase 8 + Phase 9)
-Last activity: 2026-05-13
+Last activity: 2026-05-14
 
 ### Quick Tasks Completed
 
