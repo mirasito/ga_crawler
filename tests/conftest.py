@@ -15,12 +15,79 @@ Per 03-PATTERNS.md "Test files" table.
 from __future__ import annotations
 
 import json
+import re
+import warnings
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "goldapple"
+
+# ============================================================================
+# Phase 9 Wave 0: PII canary + fixture-loader integration (D-907)
+# ============================================================================
+
+_PII_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"cf_clearance\s*=", re.IGNORECASE),
+    re.compile(r"\bbot\d{9,10}:[A-Za-z0-9_\-]{30,}\b"),
+    re.compile(r"\bAuthorization:\s*Bearer\b", re.IGNORECASE),
+    # hc-ping paths embed UUID-shaped healthcheck IDs — PII-adjacent (operator token).
+    # Standalone UUID v4 is intentionally EXCLUDED: goldapple HTML legitimately embeds
+    # buildId values in UUID v4 format (e.g. Nuxt buildId in __NEXT_DATA__). The
+    # hc-ping-specific pattern below covers the actual hc-ping threat.
+    re.compile(r"hc-ping\.com/[0-9a-f-]{32,36}", re.IGNORECASE),
+)
+_MAX_FIXTURE_BYTES = 50 * 1024 * 1024  # 50 MB per file
+_MAX_AGGREGATE_BYTES = 200 * 1024 * 1024  # 200 MB aggregate
+
+
+def _assert_fixture_clean(path: Path) -> None:
+    """D-907 fail-fast canary: PII pattern + 50 MB size budget per fixture.
+
+    Fails with path + matched-pattern (NOT matched-text) so secrets don't
+    leak into pytest stdout if accidentally captured. T-09-PII + T-09-SIZE.
+    """
+    import pytest as _pytest  # local import: avoid top-of-file shuffle
+
+    size = path.stat().st_size
+    if size > _MAX_FIXTURE_BYTES:
+        _pytest.fail(
+            f"Fixture {path.name} is {size} bytes (>{_MAX_FIXTURE_BYTES}); "
+            f"refuse to load (50 MB per-file budget)."
+        )
+    content = path.read_text(encoding="utf-8", errors="replace")
+    for pat in _PII_PATTERNS:
+        m = pat.search(content)
+        if m:
+            _pytest.fail(
+                f"PII pattern matched in {path}: pattern={pat.pattern!r}. "
+                f"Scrub fixture and recapture (do NOT commit secret content)."
+            )
+
+
+def _check_fixture_age(sidecar_path: Path) -> None:
+    """Stale-fixture UserWarning at 30 days per D-906."""
+    if not sidecar_path.exists():
+        return
+    import json as _json
+    try:
+        meta = _json.loads(sidecar_path.read_text(encoding="utf-8"))
+        captured = datetime.fromisoformat(meta["date"])
+        if captured.tzinfo is None:
+            captured = captured.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - captured
+        if age > timedelta(days=30):
+            warnings.warn(
+                f"Live fixture {sidecar_path.stem} is {age.days}d old (>30d). "
+                f"Consider `pytest -m live --refresh-live --snapshot-update`.",
+                UserWarning,
+                stacklevel=2,
+            )
+    except (KeyError, ValueError, OSError):
+        # Sidecar absent or malformed — silent. Standalone canary covers shape.
+        pass
 
 
 # ---- HTML / sitemap fixtures ----
@@ -101,7 +168,10 @@ def goldapple_pdp_html_live_stereotype() -> str:
     Source: Plan 08-01 W0 spike (.planning/spikes/v1.1-brand-name-shapes/
     pdp-16-niche-stereotype-sago.html), Camoufox 0.4.11 fetch.
     """
-    return (FIXTURES_DIR / "_live-2026-05-13-stereotype.html").read_text(encoding="utf-8")
+    path = FIXTURES_DIR / "_live-2026-05-13-stereotype.html"
+    _assert_fixture_clean(path)                    # D-907 enforcement point #1
+    _check_fixture_age(path.with_suffix(".json"))  # D-906 stale-fixture warning
+    return path.read_text(encoding="utf-8")
 
 
 @pytest.fixture(scope="session")
@@ -112,7 +182,10 @@ def goldapple_pdp_html_live_armani() -> str:
     substring of name (data redundancy from upstream goldapple catalog).
     Source: Plan 08-01 W0 spike (pdp-07-mass-armani-code.html).
     """
-    return (FIXTURES_DIR / "_live-2026-05-13-armani-code.html").read_text(encoding="utf-8")
+    path = FIXTURES_DIR / "_live-2026-05-13-armani-code.html"
+    _assert_fixture_clean(path)                    # D-907 enforcement point #1
+    _check_fixture_age(path.with_suffix(".json"))  # D-906 stale-fixture warning
+    return path.read_text(encoding="utf-8")
 
 
 # ---- Phase 2 contract mocks ----
@@ -223,7 +296,10 @@ def viled_pdp_html_live_contre_jour() -> str:
     Source: Plan 08-01 W0 spike (.planning/spikes/v1.1-brand-name-shapes/
     viled-contre-jour-408872.html), curl_cffi fetch.
     """
-    return (VILED_FIXTURES_DIR / "_live-2026-05-13-contre-jour.html").read_text(encoding="utf-8")
+    path = VILED_FIXTURES_DIR / "_live-2026-05-13-contre-jour.html"
+    _assert_fixture_clean(path)                    # D-907 enforcement point #1
+    _check_fixture_age(path.with_suffix(".json"))  # D-906 stale-fixture warning
+    return path.read_text(encoding="utf-8")
 
 
 @pytest.fixture(scope="session")
