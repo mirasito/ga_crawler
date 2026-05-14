@@ -77,7 +77,7 @@
 | Phase 9 — Live-HTML Harness | TEST-HARNESS-01, TEST-HARNESS-02, TEST-HARNESS-03, TEST-HARNESS-04, TEST-HARNESS-05, TEST-HARNESS-06 | 6 | **Complete (2026-05-14)** — all 6/6 closed (D-902 GO, Variant A) |
 | Phase 10 — Audit Paperwork Carryover | AUDIT-DEBT-01, AUDIT-DEBT-02, AUDIT-DEBT-03, AUDIT-DEBT-04, AUDIT-DEBT-05 | 5 | Closed (2026-05-14) |
 | Phase 11 — Operator Deploy на Yandex Cloud kz1 | DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05, DEPLOY-06, DEPLOY-07, DEPLOY-08 | 8 | Pending |
-| **Total** | — | **24/24** | All v1.1 reqs mapped 1:1; 11/24 Complete (Phase 8 + Phase 9) |
+| **Total** | — | **24/24** | All v1.1 reqs mapped 1:1; 16/24 Complete (Phases 8 + 9 + 10) |
 
 ### Per-Requirement Mapping
 
@@ -108,7 +108,7 @@
 | DEPLOY-07 | Phase 11 | Pending |
 | DEPLOY-08 | Phase 11 | Pending |
 
-**Coverage:** 24/24 v1.1 requirements mapped to exactly one phase. No orphans, no duplicates. 11/24 Complete (Phases 8-9 closed 2026-05-14); 13/24 Pending (Phases 10-11).
+**Coverage:** 24/24 v1.1 requirements mapped to exactly one phase. No orphans, no duplicates. 16/24 Complete (Phases 8-10 closed 2026-05-14); 8/24 Pending (Phase 11).
 
 ---
-*Last updated: 2026-05-14 — Phase 9 closed via Plan 09-03 doc cascade (6/6 TEST-HARNESS reqs Complete; D-902 GO Variant A — elapsed 16m40s < 8h gate). Phases 10-11 remain Pending. Previously: Phase 8 closed 2026-05-13.*
+*Last updated: 2026-05-14 — Phase 10 closed via Plan 10-01 audit paperwork carryover (5/5 AUDIT-DEBT reqs Closed; D-1002 auto-flip gate PASS — all 4 doc-skills returned 0 HIGH findings; v1.0 milestone audit flipped tech_debt → clean per D-1004 verbatim preservation). Phase 11 (DEPLOY-01..08) remains Pending. Previously: Phase 9 closed 2026-05-14, Phase 8 closed 2026-05-13.*
