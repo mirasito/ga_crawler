@@ -40,7 +40,7 @@ from ga_crawler.interfaces import (
     RunWriterProtocol,
     SnapshotWriterProtocol,
 )
-from ga_crawler.normalizers.volume import detect_multipack
+from ga_crawler.normalizers.volume import detect_multipack, serialize_volume_norm
 from ga_crawler.parsers.dispatcher import ParseDispatcher
 from ga_crawler.runner.gates import (
     auto_suggest_threshold,
@@ -94,16 +94,14 @@ def _normalize_record(parsed: dict, normalizer: NormalizerProtocol) -> dict:
     canonical `"(amount, unit, count)"` form for the snapshot column
     (the SQLModel `volume_norm` field is `Optional[str]`).
     """
-    raw_volume_text = parsed.get("raw_volume_text") or parsed.get("name") or ""
+    raw_volume_text = parsed.get("raw_volume_text") or parsed.get("name") or None
     name_raw = parsed.get("name", "")
     brand_raw = parsed.get("brand_raw", "")
 
-    volume_norm_tuple = normalizer.volume(raw_volume_text)
-    volume_norm: Optional[str] = (
-        str(volume_norm_tuple) if volume_norm_tuple is not None else None
-    )
+    volume_norm_tuple = normalizer.volume(raw_volume_text or "")
+    volume_norm: Optional[str] = serialize_volume_norm(volume_norm_tuple)
 
-    multipack_flag = detect_multipack(raw_volume_text)
+    multipack_flag = detect_multipack(raw_volume_text or "")
 
     return {
         "sku_id": str(parsed.get("sku_id", "")),

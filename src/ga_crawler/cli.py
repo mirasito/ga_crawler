@@ -90,8 +90,21 @@ def _cmd_weekly(args) -> int:
     """ADDED Plan 02-05. Full weekly run via runners/main_run.run_weekly.
 
     Plan 04-05: pass through --sanity-gate-p to override matcher P-threshold.
+
+    CR-02 (code-review 2026-05-14): weekly-run integrates delivery_run via
+    run_weekly() composition; without dotenv loading here the integrated
+    delivery phase reads empty TG_BOT_TOKEN and emits
+    delivery_skipped_no_credentials despite valid .env. Mirrors _cmd_deliver
+    pattern (find_dotenv(usecwd=True) anchors at cwd, not __file__, per
+    quick-task 20260514-cli-dotenv-leak hazard).
     """
+    from dotenv import find_dotenv, load_dotenv
+
     from ga_crawler.runners.main_run import run_weekly
+
+    dotenv_path = find_dotenv(usecwd=True)
+    if dotenv_path:
+        load_dotenv(dotenv_path, override=False)
 
     repo_root = Path(args.repo_root).resolve()
     result = run_weekly(

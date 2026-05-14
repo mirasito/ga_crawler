@@ -103,6 +103,24 @@ def _to_decimal(s: str) -> Decimal:
     return Decimal(s.replace(",", "."))
 
 
+def serialize_volume_norm(v: Optional[tuple[Decimal, str, int]]) -> Optional[str]:
+    """Canonical string form for the snapshots.volume_norm column.
+
+    Why: SQL strict-key JOIN compares volume_norm strings byte-for-byte.
+    Python `str(tuple)` produces non-deterministic repr (e.g. Decimal('50')
+    vs Decimal('50.0')) which fails JOIN even when amount+unit+count match.
+    Format: `(amount,unit,count)` — amount is decimal with trailing zeros
+    and trailing dot stripped (50 not 50.0; 12.5 not 12.50).
+    """
+    if v is None:
+        return None
+    amount, unit, count = v
+    a = format(amount, "f")
+    if "." in a:
+        a = a.rstrip("0").rstrip(".")
+    return f"({a},{unit},{count})"
+
+
 def detect_multipack(raw: str) -> bool:
     """True if raw text contains multipack markers — independent of parse_volume.
 

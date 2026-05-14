@@ -56,6 +56,7 @@ from ga_crawler.runner.gates import (
     final_m_gate,
     smoke_probe,
 )
+from ga_crawler.normalizers.volume import serialize_volume_norm
 from ga_crawler.runner.stats import GoldappleStatsBuilder, compute_norm06_forward
 
 log = structlog.get_logger(__name__)
@@ -245,8 +246,10 @@ async def run_goldapple_phase(
                 "was_price": product.was_price,
                 "currency": product.currency,
                 "stock_state": product.availability,
-                "volume_norm": normalizer.volume(product.raw_volume_text or ""),
-                "raw_volume_text": product.raw_volume_text,
+                "volume_norm": serialize_volume_norm(
+                    normalizer.volume(product.raw_volume_text or "")
+                ),
+                "volume_raw": product.raw_volume_text,
             }
             final_records.append(normalized)
 
