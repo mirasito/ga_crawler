@@ -158,6 +158,18 @@ VILED_STATS_KEYS: tuple[str, ...] = (
     "viled.auto_suggest_n",
 )
 
+# ---- Phase 9 TH-06c schema.* namespace (run-level, NOT retailer-scoped) ----
+# Per RESEARCH §9 Q3: orchestrator calls patch_stats inline with these keys
+# after SqliteSnapshotWriter.append returns; NO SchemaStatsBuilder class
+# (single-source namespace; future run-level stats may warrant a builder).
+
+SCHEMA_STATS_KEYS: tuple[str, ...] = (
+    "schema.rejected_count",     # int — per-row Pydantic ValidationError catches
+    "schema.rejected_rate",      # float — rejected_count / total_attempted
+    "schema.rejected_reasons",   # list[{sku_id, errors:[{loc,type},...]}], cap 50
+)
+
+
 # Bare key name (without `viled.` prefix) → full namespaced key.
 _VILED_BARE_TO_NAMESPACED: dict[str, str] = {
     k.split(".", 1)[1]: k for k in VILED_STATS_KEYS
@@ -219,6 +231,7 @@ class ViledStatsBuilder:
 __all__ = [
     "GOLDAPPLE_STATS_KEYS",
     "VILED_STATS_KEYS",
+    "SCHEMA_STATS_KEYS",           # Phase 9 TH-06c run-level schema.* namespace
     "StatsNamespaceError",
     "GoldappleStatsBuilder",
     "ViledStatsBuilder",

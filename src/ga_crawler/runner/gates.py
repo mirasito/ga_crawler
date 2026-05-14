@@ -342,6 +342,71 @@ def parser_drift_null_rate_gate(
     )
 
 
+# ---- D-903 TEST-HARNESS-06 schema-rejected-rate sanity gate (Phase 9 Plan 09-02b) ----
+
+
+@dataclass(frozen=True)
+class SchemaRejectedGateResult:
+    """Result of the TEST-HARNESS-06 schema-rejection sanity gate.
+
+    Fields:
+      passed: True if rejected_rate is at-or-below threshold.
+      rejected_rate: float in [0, 1].
+      rejected_count: int — per-row Pydantic ValidationError catches.
+      total_attempted: int — products handed to SqliteSnapshotWriter.append.
+      failure_reason: None if passed; otherwise 'schema_validation_rejected_rate'.
+
+    Source: 09-CONTEXT.md D-903; 09-RESEARCH.md §6.3; mirrors
+    ParserDriftGateResult (Phase 8 D-815) shape verbatim.
+    """
+
+    passed: bool
+    rejected_rate: float
+    rejected_count: int
+    total_attempted: int
+    failure_reason: Optional[str]
+
+
+def schema_rejected_rate_gate(
+    rejected_count: int,
+    total_attempted: int,
+    *,
+    threshold: float = 0.05,
+) -> SchemaRejectedGateResult:
+    """D-903: TEST-HARNESS-06 schema-rejection sanity gate.
+
+    rejected_rate = rejected_count / total_attempted.
+
+    Threshold semantics: STRICT GREATER-THAN (`> 0.05` fails; exactly 0.05
+    passes). Matches Phase 8 parser_drift_null_rate_gate convention (D-815):
+    synthetic regression at rate == threshold passes cleanly, while
+    threshold + epsilon correctly fails.
+
+    Position in run pipeline: AFTER SqliteSnapshotWriter.append, BEFORE
+    Phase 8 parser_drift_null_rate_gate (cascade: structural drift catches
+    earlier than content drift).
+
+    Source: 09-CONTEXT.md D-903; 09-RESEARCH.md §6.3.
+    """
+    if total_attempted == 0:
+        return SchemaRejectedGateResult(
+            passed=True,
+            rejected_rate=0.0,
+            rejected_count=0,
+            total_attempted=0,
+            failure_reason=None,
+        )
+    rate = rejected_count / total_attempted
+    failed = rate > threshold
+    return SchemaRejectedGateResult(
+        passed=(not failed),
+        rejected_rate=rate,
+        rejected_count=rejected_count,
+        total_attempted=total_attempted,
+        failure_reason=("schema_validation_rejected_rate" if failed else None),
+    )
+
+
 # ---- Backward-compat shims (Phase 3 callers + Phase 2 viled-side seeds) ----
 
 
@@ -386,8 +451,10 @@ __all__ = [
     "auto_suggest_threshold",
     "final_threshold_gate",
     "parse_quality_gate",
-    "parser_drift_null_rate_gate",   # NEW Phase 8 PARSE-FIX-04
-    "ParserDriftGateResult",         # NEW Phase 8 PARSE-FIX-04
+    "parser_drift_null_rate_gate",   # Phase 8 PARSE-FIX-04
+    "ParserDriftGateResult",         # Phase 8 PARSE-FIX-04
+    "schema_rejected_rate_gate",     # Phase 9 TH-06d D-903
+    "SchemaRejectedGateResult",      # Phase 9 TH-06d D-903
     "final_m_gate",
     "final_n_gate",
     "auto_suggest_m",
