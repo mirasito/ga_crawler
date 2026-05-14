@@ -109,7 +109,11 @@
   3. `VALIDATION.md` exists for Phase 4 (matcher) with Nyquist-compliant coverage matrix against the 465+ existing matcher tests
   4. `milestones/v1.0-MILESTONE-AUDIT.md` carries an in-place verdict-flip annotation `tech_debt` → `clean` dated 2026-05-XX with citations to AUDIT-DEBT-01..04
   5. `/gsd-verify-work` re-run on v1.0 milestone artifacts transitions verdict to `clean` (or operator-equivalent confirmation logged)
-**Plans**: TBD
+**Plans:** 1 plan in 1 wave (sequential inline per D-1001 — paperwork-only orchestration)
+
+Plans:
+- [ ] 10-01-PLAN.md — Doc-skill orchestration (7 tasks): pre-create Phase 2/4/6 stubs → /gsd-secure-phase 2 → /gsd-secure-phase 4 → /gsd-secure-phase 6 → /gsd-validate-phase 4 → RECON-01 annotation + verdict-flip (D-1003 + D-1004) → live REQUIREMENTS.md AUDIT-DEBT-01..05 closure
+
 **Pitfall mitigation**: Per PITFALLS.md #10, retroactive paperwork loses fidelity if treated as background work — Phase 10 is a distinct phase, not folded into Phases 8/9/11; existing `/gsd-secure-phase` and `/gsd-validate-phase` skill workflows reused verbatim.
 
 ### Phase 11: Operator Deploy на Yandex Cloud kz1
@@ -138,7 +142,7 @@
 | 7. Scheduler + Observability Hardening | v1.0 | 5/5 | Complete | 2026-05-12 |
 | 8. Parser Bug Fixes | v1.1 | 5/5 | Complete | 2026-05-13 |
 | 9. Live-HTML Harness | v1.1 | 4/4 | Complete | 2026-05-14 |
-| 10. Audit Paperwork Carryover | v1.1 | 0/? | Not started | — |
+| 10. Audit Paperwork Carryover | v1.1 | 0/1 | Pending (planned) | — |
 | 11. Operator Deploy на Yandex Cloud kz1 | v1.1 | 0/? | Not started | — |
 
 **v1.0 totals:** 7/7 phases complete; 47 plans executed + 3 SKIPPED; 48/48 v1 requirements closed; 803 passing tests.
