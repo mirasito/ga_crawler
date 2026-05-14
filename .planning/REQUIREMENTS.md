@@ -20,12 +20,12 @@
 
 ### Bucket B — Live-HTML Harness (must-have B1-B3, B6; should-have B4-B5) → Phase 9
 
-- [ ] **TEST-HARNESS-01**: syrupy 4.7 добавлен как dev-dependency; `HTMLSnapshotExtension(SingleFileSnapshotExtension)` с `file_extension="html"` и `WriteMode.TEXT`
-- [ ] **TEST-HARNESS-02**: Captured HTML живёт в `tests/fixtures/<retailer>/_live-YYYY-MM-DD-<slug>.html` с sidecar JSON `{date, url, status, html_size, title, camoufox_version}`
-- [ ] **TEST-HARNESS-03**: `tests/live/test_parser_drift.py` с `@pytest.mark.live` маркером — re-fetches SMOKE_URLs, runs parsers, asserts invariants. Опт-ин через `pytest -m live`
-- [ ] **TEST-HARNESS-04** (P2 cheap-bundle): brand-coverage quota canary — `≥1 fixture per active brand` для брендов виденных в последние 4 weekly runs
-- [ ] **TEST-HARNESS-05** (P2 cheap-bundle): `python -m ga_crawler capture-fixtures` CLI subcommand (6-й — обновляет Phase 7 source-locked canary)
-- [ ] **TEST-HARNESS-06**: Pydantic validation at `SqliteSnapshotWriter` boundary — defense-in-depth: `RawProduct` model с `volume_raw: NonEmptyStr | None`, `brand: NonEmptyStr | None`, raise on write если schema violated
+- [x] **TEST-HARNESS-01**: syrupy 4.7 добавлен как dev-dependency; `HTMLSnapshotExtension(SingleFileSnapshotExtension)` с `file_extension="html"` и `WriteMode.TEXT` — completed Plan 09-01 (2026-05-14)
+- [x] **TEST-HARNESS-02**: Captured HTML живёт в `tests/fixtures/<retailer>/_live-YYYY-MM-DD-<slug>.html` с sidecar JSON `{date, url, status, html_size, title, camoufox_version}` — completed Plan 09-01 (2026-05-14)
+- [x] **TEST-HARNESS-03**: `tests/live/test_parser_drift.py` с `@pytest.mark.live` маркером — re-fetches SMOKE_URLs, runs parsers, asserts invariants. Опт-ин через `pytest -m live` — completed Plan 09-02a (2026-05-14)
+- [x] **TEST-HARNESS-04** (P2 cheap-bundle): brand-coverage quota canary — `≥1 fixture per active brand` для брендов виденных в последние 4 weekly runs — completed Plan 09-03 (2026-05-14; D-902 GO — elapsed 16m40s < 8h gate)
+- [x] **TEST-HARNESS-05** (P2 cheap-bundle): `python -m ga_crawler capture-fixtures` CLI subcommand — completed Plan 09-03 (2026-05-14; D-902 GO)
+- [x] **TEST-HARNESS-06**: Pydantic validation at `SqliteSnapshotWriter` boundary — defense-in-depth: `GoldappleRawProduct` (strict) / `ViledRawProduct` (relaxed) per D-904; `schema_rejected_rate_gate(threshold=0.05)` — completed Plan 09-02b (2026-05-14)
 
 ### Bucket C — Audit Paperwork Carryover (must-have) → Phase 10
 
@@ -74,10 +74,10 @@
 | Phase | REQ-IDs | Count | Status |
 |-------|---------|-------|--------|
 | Phase 8 — Parser Bug Fixes | PARSE-FIX-01, PARSE-FIX-02, PARSE-FIX-03, PARSE-FIX-04, PARSE-FIX-05 | 5 | Complete (2026-05-13) |
-| Phase 9 — Live-HTML Harness | TEST-HARNESS-01, TEST-HARNESS-02, TEST-HARNESS-03, TEST-HARNESS-04, TEST-HARNESS-05, TEST-HARNESS-06 | 6 | Pending |
+| Phase 9 — Live-HTML Harness | TEST-HARNESS-01, TEST-HARNESS-02, TEST-HARNESS-03, TEST-HARNESS-04, TEST-HARNESS-05, TEST-HARNESS-06 | 6 | **Complete (2026-05-14)** — all 6/6 closed (D-902 GO, Variant A) |
 | Phase 10 — Audit Paperwork Carryover | AUDIT-DEBT-01, AUDIT-DEBT-02, AUDIT-DEBT-03, AUDIT-DEBT-04, AUDIT-DEBT-05 | 5 | Pending |
 | Phase 11 — Operator Deploy на Yandex Cloud kz1 | DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05, DEPLOY-06, DEPLOY-07, DEPLOY-08 | 8 | Pending |
-| **Total** | — | **24/24** | All v1.1 reqs mapped 1:1; 5/24 Complete |
+| **Total** | — | **24/24** | All v1.1 reqs mapped 1:1; 11/24 Complete (Phase 8 + Phase 9) |
 
 ### Per-Requirement Mapping
 
@@ -88,12 +88,12 @@
 | PARSE-FIX-03 | Phase 8 | Complete |
 | PARSE-FIX-04 | Phase 8 | Complete |
 | PARSE-FIX-05 | Phase 8 | Complete |
-| TEST-HARNESS-01 | Phase 9 | Pending |
-| TEST-HARNESS-02 | Phase 9 | Pending |
-| TEST-HARNESS-03 | Phase 9 | Pending |
-| TEST-HARNESS-04 | Phase 9 | Pending (P2 cheap-bundle — bundle if quick, else defer to v1.2) |
-| TEST-HARNESS-05 | Phase 9 | Pending (P2 cheap-bundle — bundle if quick, else defer to v1.2) |
-| TEST-HARNESS-06 | Phase 9 | Pending |
+| TEST-HARNESS-01 | Phase 9 | Complete (2026-05-14) |
+| TEST-HARNESS-02 | Phase 9 | Complete (2026-05-14) |
+| TEST-HARNESS-03 | Phase 9 | Complete (2026-05-14) |
+| TEST-HARNESS-04 | Phase 9 | Complete (2026-05-14; D-902 GO — elapsed 16m40s < 8h) |
+| TEST-HARNESS-05 | Phase 9 | Complete (2026-05-14; D-902 GO) |
+| TEST-HARNESS-06 | Phase 9 | Complete (2026-05-14) |
 | AUDIT-DEBT-01 | Phase 10 | Pending |
 | AUDIT-DEBT-02 | Phase 10 | Pending |
 | AUDIT-DEBT-03 | Phase 10 | Pending |
@@ -108,7 +108,7 @@
 | DEPLOY-07 | Phase 11 | Pending |
 | DEPLOY-08 | Phase 11 | Pending |
 
-**Coverage:** 24/24 v1.1 requirements mapped to exactly one phase. No orphans, no duplicates. 5/24 Complete (Phase 8 closed); 19/24 Pending (Phases 9-11).
+**Coverage:** 24/24 v1.1 requirements mapped to exactly one phase. No orphans, no duplicates. 11/24 Complete (Phases 8-9 closed 2026-05-14); 13/24 Pending (Phases 10-11).
 
 ---
-*Last updated: 2026-05-13 — Phase 8 closed via Plan 08-05 doc cascade (5/5 PARSE-FIX reqs Complete); Phases 9-11 remain Pending. Previously: traceability filled by `gsd-roadmapper` after v1.1 roadmap approval.*
+*Last updated: 2026-05-14 — Phase 9 closed via Plan 09-03 doc cascade (6/6 TEST-HARNESS reqs Complete; D-902 GO Variant A — elapsed 16m40s < 8h gate). Phases 10-11 remain Pending. Previously: Phase 8 closed 2026-05-13.*

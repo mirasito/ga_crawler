@@ -37,7 +37,7 @@
 ### 🟢 v1.1 (Active)
 
 - [x] **Phase 8: Parser Bug Fixes** — Complete 2026-05-13. Fixed 3 live-run #13 parser bugs (goldapple volume + brand/name; viled volume_raw) via selectolax 0.4 Lexbor `:contains` + h1 `.brand`/`.name` CSS-class spans (W0 pivot — `<meta itemprop="name">` premise invalidated per 08-01 spike) + `attributes[0].attributes[].name=="Размер"` JSON; added null-rate sanity gate + SMOKE rotation. 5/5 PARSE-FIX reqs closed.
-- [ ] **Phase 9: Live-HTML Harness** — syrupy 4.7 HTML snapshot harness + Pydantic write-boundary validation; locks Phase 8 fix retroactively so drift never silently zeros the report again
+- [x] **Phase 9: Live-HTML Harness** — Complete 2026-05-14. syrupy 4.9.1 + HTMLSnapshotExtension + PII canary + FixtureMetadata + normalize_for_snapshot + two-mode drift harness (cassette-replay + --refresh-live) + Pydantic write-boundary (D-904 strict/relaxed split) + schema_rejected_rate_gate + TH-04 brand-coverage canary + TH-05 capture-fixtures CLI + README §8 operator runbook. 6/6 TEST-HARNESS reqs closed. D-902 GO (elapsed 16m40s < 8h gate).
 - [ ] **Phase 10: Audit Paperwork Carryover** — Retroactive SECURITY.md (phases 2/4/6) + VALIDATION.md (phase 4) + audit-verdict flip `tech_debt` → `clean`; parallel-safe with Phases 8-9
 - [ ] **Phase 11: Operator Deploy на Yandex Cloud kz1** — First production VPS deploy with `bin/setup-vps.sh`, `load_dotenv` fix, Asia/Almaty TZ, Camoufox×Yandex + egress smokes, first Sunday cron tick, `/gsd-verify-work 7` resume
 
@@ -95,7 +95,7 @@
 - [x] 09-02b-PLAN.md — TEST-HARNESS-06 Pydantic write-boundary at SqliteSnapshotWriter.append (per-retailer strict/relaxed split per D-904) + schema_rejected_rate_gate (threshold 0.05) + SCHEMA_STATS_KEYS namespace
 
 **Wave 2** *(blocked on Wave 1 a+b completion; sequential; **conditional** per D-902 P2 GO/NO-GO 8h elapsed gate; **autonomous: false** — requires user confirmation at decision-gate task)*
-- [ ] 09-03-PLAN.md — P2 GO/NO-GO checkpoint → Variant A (ship TH-04 brand-coverage canary + TH-05 capture-fixtures CLI) OR Variant B (defer TH-04/05 to v1.2 doc cascade). BOTH variants ship README §8 «Live HTML harness» RU-primary operator runbook (TH-03 docs cascade D-905 — mandatory).
+- [x] 09-03-PLAN.md — D-902 GO (elapsed 16m40s < 8h). Shipped: TH-04 brand-coverage canary + TH-05 capture-fixtures CLI + README §8 «Live HTML harness» RU-primary operator runbook. Phase 9 closed 2026-05-14 (6/6 TEST-HARNESS reqs). Variant A.
 
 **Pitfall mitigation**: snapshot-PII canary + size-budget canary (<50 MB) wired BEFORE first snapshot commit; missing-snapshot-fails-test soundness rule enforced via syrupy default fail-on-missing behavior (RESEARCH §3.2 — no --strict flag needed); HTML normalization helper (tests/_html_normalize.py) strips Camoufox non-determinism (csrf-token, cf_clearance echoes, CSS build-hash, __NEXT_DATA__.buildId) BEFORE syrupy diff to prevent false-positive drift (T-09-DRIFT landmine).
 
@@ -137,12 +137,12 @@
 | 6. Telegram Delivery + Ops/Business Split | v1.0 | 6/6 | Complete | 2026-05-12 |
 | 7. Scheduler + Observability Hardening | v1.0 | 5/5 | Complete | 2026-05-12 |
 | 8. Parser Bug Fixes | v1.1 | 5/5 | Complete | 2026-05-13 |
-| 9. Live-HTML Harness | v1.1 | 0/4 | Planned | — |
+| 9. Live-HTML Harness | v1.1 | 4/4 | Complete | 2026-05-14 |
 | 10. Audit Paperwork Carryover | v1.1 | 0/? | Not started | — |
 | 11. Operator Deploy на Yandex Cloud kz1 | v1.1 | 0/? | Not started | — |
 
 **v1.0 totals:** 7/7 phases complete; 47 plans executed + 3 SKIPPED; 48/48 v1 requirements closed; 803 passing tests.
-**v1.1 totals (in-progress):** 1/4 phases complete (Phase 8 closed 2026-05-13); 5/24 reqs closed (PARSE-FIX-01..05); ~830 passing tests after Phase 8 Plan 08-05 GREEN (+ ~12-15 from Plans 08-02/03/04/05 over the 803 v1.0 baseline).
+**v1.1 totals (in-progress):** 2/4 phases complete (Phase 8 closed 2026-05-13; Phase 9 closed 2026-05-14); 11/24 reqs closed (PARSE-FIX-01..05 + TEST-HARNESS-01..06); ~910 passing tests (897 after Phase 9 + 5 new TH-04/05 tests).
 
 ---
-*Last updated: 2026-05-13 — Phase 8 closed via Plan 08-05 doc cascade (5/5 PARSE-FIX reqs Complete; Phase 9-11 remain Pending). Previously: v1.0 milestone archived by `/gsd-complete-milestone v1`.*
+*Last updated: 2026-05-14 — Phase 9 closed via Plan 09-03 (6/6 TEST-HARNESS reqs Complete; D-902 GO Variant A — elapsed 16m40s < 8h gate). Phases 10-11 remain Pending. Previously: Phase 8 closed 2026-05-13.*

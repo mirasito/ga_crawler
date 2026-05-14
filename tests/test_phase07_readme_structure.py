@@ -1,9 +1,12 @@
-"""Wave 0 / Plan 07-01 — README.md 10-section structure canary (D-707).
+"""Wave 0 / Plan 07-01 — README.md section structure canary (D-707 + Phase 9 D-905).
 
 RED-gate stub: fails until Plan 07-04 ships the README.
-Covers SCHED-05 documentation requirement; D-707 mandates RU-primary 10 H2 sections in exact order.
+Covers SCHED-05 documentation requirement; D-707 mandates RU-primary sections in exact order.
 
-Source: 07-CONTEXT.md D-707 (lines 59-79).
+Phase 9 Plan 09-03 (D-905): added §8 «Live HTML harness» operator runbook between «Логи»
+and «Dev setup» — section count extended from 10 → 11.
+
+Source: 07-CONTEXT.md D-707 (lines 59-79); 09-CONTEXT.md D-905.
 """
 
 from __future__ import annotations
@@ -27,6 +30,7 @@ EXPECTED_HEADINGS = [
     "## Deliberate-failure test",
     "## Operations runbook",
     "## Логи",
+    "## Live HTML harness",   # Phase 9 D-905: operator runbook for live-HTML harness
     "## Dev setup",
 ]
 
@@ -47,8 +51,9 @@ def h2_headings(readme_text) -> list[str]:
 
 
 def test_readme_has_exactly_10_h2_sections(h2_headings):
-    assert len(h2_headings) == 10, (
-        f"README must have exactly 10 H2 sections per D-707; got {len(h2_headings)}: {h2_headings}"
+    # Phase 9 D-905 extended from 10 → 11 sections (added § «Live HTML harness»)
+    assert len(h2_headings) == 11, (
+        f"README must have exactly 11 H2 sections (D-707 + Phase 9 D-905); got {len(h2_headings)}: {h2_headings}"
     )
 
 
