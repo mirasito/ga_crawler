@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Optional
 
 import structlog
+from pydantic import ValidationError
 from sqlalchemy import event, text
 from sqlmodel import (
     Field,
@@ -38,6 +39,19 @@ from sqlmodel import (
     UniqueConstraint,
     create_engine,
 )
+
+from ga_crawler.storage.schemas import (
+    GoldappleRawProduct,
+    RawProductBase,
+    ViledRawProduct,
+)
+
+_SCHEMA_BY_RETAILER: dict[str, type[RawProductBase]] = {
+    "goldapple": GoldappleRawProduct,
+    "viled": ViledRawProduct,
+}
+
+_REJECTED_REASONS_CAP = 50  # RESEARCH §4.2 memory bound
 
 log = structlog.get_logger(__name__)
 
@@ -173,20 +187,39 @@ class SqliteSnapshotWriter:
     def __init__(self, engine, *, batch_size: int = 100):
         self.engine = engine
         self.batch_size = batch_size
+        self._last_rejected_reasons: list[dict] = []  # Phase 9 TH-06c (D-903)
 
     def append(self, run_id: int, retailer: str, products: list) -> int:
         if not products:
+            self._last_rejected_reasons = []
             return 0
         inserted = 0
+        rejected_reasons: list[dict] = []
         # Filter unknown keys so Phase 3 dict-shape (which lacks multipack_flag /
         # parse_error_flag / volume_raw) is accepted gracefully via defaults.
         valid_fields = set(Snapshot.model_fields.keys())
+        schema_cls = _SCHEMA_BY_RETAILER.get(retailer)  # Phase 9 D-903
         with Session(self.engine) as session:
             try:
                 for product in products:
                     payload = {k: v for k, v in product.items() if k in valid_fields}
                     payload["run_id"] = run_id
                     payload["retailer"] = retailer
+                    # Phase 9 TH-06c (D-903): per-row schema validation BEFORE INSERT.
+                    # RESEARCH §7.2: project errors() to {loc, type} only — never 'input'.
+                    if schema_cls is not None:
+                        try:
+                            schema_cls.model_validate(payload)
+                        except ValidationError as ve:
+                            if len(rejected_reasons) < _REJECTED_REASONS_CAP:
+                                rejected_reasons.append({
+                                    "sku_id": product.get("sku_id", "<unknown>"),
+                                    "errors": [
+                                        {"loc": list(err["loc"]), "type": err["type"]}
+                                        for err in ve.errors()
+                                    ],
+                                })
+                            continue  # skip INSERT for invalid row
                     row = Snapshot(**payload)
                     session.add(row)
                     inserted += 1
@@ -196,6 +229,7 @@ class SqliteSnapshotWriter:
             except Exception:
                 session.rollback()
                 raise
+        self._last_rejected_reasons = rejected_reasons
         return inserted
 
 

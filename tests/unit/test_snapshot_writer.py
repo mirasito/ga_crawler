@@ -49,6 +49,12 @@ def test_append_only_no_update(writer_setup):
 def test_append_accepts_phase3_dict_shape(writer_setup):
     """Pitfall 7: Phase 3 goldapple_run.py:237-250 dict shape lacks multipack_flag /
     parse_error_flag / volume_raw — Phase 2 writer must accept gracefully via defaults.
+
+    Phase 9 TH-06c update: goldapple strict schema (D-904) now REJECTS rows
+    without volume_raw. The row is silently skipped (no crash), reason captured
+    into writer._last_rejected_reasons. Pitfall 7 "no crash" contract still holds;
+    the count changes from 1 to 0. Orchestrator must supply volume_raw for
+    goldapple rows; old Phase 3 dict shape is schema-rejected as intended.
     """
     _, writer = writer_setup
     p3_shape = {
@@ -57,10 +63,13 @@ def test_append_accepts_phase3_dict_shape(writer_setup):
         "current_price": 999, "was_price": None, "currency": "KZT",
         "stock_state": "IN_STOCK",
         "volume_norm": None, "raw_volume_text": None,
-        # NOTE: no multipack_flag, parse_error_flag, volume_raw — must NOT crash
+        # NOTE: no multipack_flag, parse_error_flag, volume_raw — Phase 9: schema-rejected
     }
     n = writer.append(1, "goldapple", [p3_shape])
-    assert n == 1
+    # Phase 9 D-904: goldapple requires volume_raw; row rejected, no crash
+    assert n == 0
+    assert len(writer._last_rejected_reasons) == 1
+    assert writer._last_rejected_reasons[0]["sku_id"] == "P3"
 
 
 def test_append_empty_returns_zero(writer_setup):
