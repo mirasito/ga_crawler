@@ -125,6 +125,7 @@ def run_weekly(
     sanity_gate_p: Optional[int] = None,
     aliases_path: Optional[Path | str] = None,
     pyproject_path: Path | str = "pyproject.toml",
+    existing_run_id: Optional[int] = None,
 ) -> MainRunResult:
     """Execute the full weekly run.
 
@@ -159,12 +160,17 @@ def run_weekly(
     base_config = ViledConfig.from_pyproject(pyproject_path)
     config = _config_with_overrides(base_config, sanity_gate_n=sanity_gate_n)
 
-    run_id = run_writer.create()
+    if existing_run_id is not None:
+        run_id = existing_run_id
+        log.info("weekly_run_continuing_existing_run", run_id=run_id, source="operator chain-mode (e.g. bin/viled_fast_crawl.py)")
+    else:
+        run_id = run_writer.create()
     log.info(
         "weekly_run_started",
         run_id=run_id,
         viled_only=viled_only,
         goldapple_only=goldapple_only,
+        existing_run_id=existing_run_id,
         db_path=str(db_path),
     )
 

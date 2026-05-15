@@ -116,6 +116,7 @@ def _cmd_weekly(args) -> int:
         sanity_gate_n=args.sanity_gate_n,
         sanity_gate_m=args.sanity_gate_m,
         sanity_gate_p=args.sanity_gate_p,
+        existing_run_id=args.run_id,
     )
     print(
         json.dumps(
@@ -541,6 +542,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         "--goldapple-only",
         action="store_true",
         help="Run only the goldapple phase (skip viled)",
+    )
+    weekly.add_argument(
+        "--run-id",
+        type=int,
+        default=None,
+        help="Continue an existing run instead of creating a new one (operator chain-mode; "
+             "use with bin/viled_fast_crawl.py output)",
     )
 
     # ADDED Plan 04-05 (D-412) — matcher-run standalone recovery tool.
