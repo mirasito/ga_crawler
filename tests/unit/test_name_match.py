@@ -177,3 +177,57 @@ def test_rejects_no_token_overlap() -> None:
         goldapple_name_norm="lip pencil",
         brand_norm="clinique",
     )
+
+
+# ---- v2.6 false-positive defenses ----
+
+
+def test_rejects_kilian_refill_variant() -> None:
+    """Run-19 FP: viled `Good Girl Gone Bad By Kilian` (base) ↔ GA composed
+    name `Рефил парфюмерной воды Kilian Paris Good Girl Gone Bad`.
+
+    The slug `good-girl-gone-bad` IS shared (same product family) but the
+    `refill` token in GA name marks a different SKU. VARIANT_MARKERS veto
+    in Path 4 must reject.
+    """
+    assert not name_matches(
+        viled_name_norm="парфюмерная вода good girl gone bad by kilian",
+        goldapple_url="https://goldapple.kz/19000311845-good-girl-gone-bad",
+        goldapple_name_norm="рефил парфюмерной воды kilian paris good girl gone bad refill",
+        brand_norm="kilian_paris",
+    )
+
+
+def test_rejects_kilian_extreme_variant() -> None:
+    """Run-19 FP: viled `Good Girl Gone Bad By Kilian` (base) ↔ GA
+    `... Good Girl Gone Bad Extreme`. Same family, different SKU."""
+    assert not name_matches(
+        viled_name_norm="парфюмерная вода good girl gone bad by kilian",
+        goldapple_url="https://goldapple.kz/19000311846-good-girl-gone-bad",
+        goldapple_name_norm="парфюмерная вода kilian paris good girl gone bad extreme",
+        brand_norm="kilian_paris",
+    )
+
+
+def test_rejects_all_about_clean_vs_all_about_eyes() -> None:
+    """Run-19 FP: viled face-soap `All About Clean Oily Skin` ↔ GA
+    `All About Eyes` eye-cream. Body-part `eyes` is discriminative (not in
+    STOPWORDS) so Path-4 residual collapses to incompatible diffs."""
+    assert not name_matches(
+        viled_name_norm="жидкое мыло для лица all about clean oily skin travel format",
+        goldapple_url="https://goldapple.kz/19000035814-all-about-eyes",
+        goldapple_name_norm="клиник all about eyes",
+        brand_norm="clinique",
+    )
+
+
+def test_accepts_vitamin_enriched_subset() -> None:
+    """Regression check: viled `Deluxe Vitamin Enriched` should still match
+    GA `vitamin-enriched` slug (base moisturizer, same product family).
+    Path-4 one-side-empty relaxation handles the `deluxe` extra on viled."""
+    assert name_matches(
+        viled_name_norm="база под макияж deluxe vitamin enriched",
+        goldapple_url="https://goldapple.kz/19000140361-vitamin-enriched",
+        goldapple_name_norm="bobbi brown vitamin enriched",
+        brand_norm="bobbi-brown",
+    )

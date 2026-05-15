@@ -228,6 +228,199 @@ class BrandEnumerationResult:
     error: Optional[str] = None
 
 
+async def enumerate_brand_via_api(
+    fetcher: Any,
+    slug: str,
+    *,
+    max_pages: int = 30,
+    inter_page_delay_ms: int = 2_800,
+    post_goto_settle_ms: int = 5_000,
+) -> BrandEnumerationResult:
+    """API-driven enumeration: open brand page once, then loop cards-list
+    directly via ``page.evaluate('fetch(...)')`` for full pagination.
+
+    Why this exists alongside the scroll-based ``enumerate_brand``:
+    big brands (Clinique 220, MAC 176) didn't paginate via scroll because
+    the SPA's intersection observer doesn't fire reliably under fast
+    programmatic scrolling. Calling the API directly from the page's JS
+    context gets all cookies + the page's fetch fingerprint, so the API
+    server sees the same request shape as the SPA's own internal calls —
+    no HTTP 403, no scroll-pacing dependency.
+
+    Strategy
+    --------
+    1. ``page.goto('/brands/{slug}')`` once to settle session cookies and
+       extract ``categoryId`` from the page's ``og:image`` meta tag
+       (pattern: ``pcdn.goldapple.ru/p/c/{categoryId}/...``).
+    2. If ``og:image`` lacks a category-shaped id, the slug is invalid
+       (slug page falls through to the SPA shell). Return early with
+       empty raw_products + error.
+    3. Loop ``page.evaluate(fetch_cards_list_js)`` with paginating
+       ``pageNumber`` until ``pagination.nextPage`` is false or ``max_pages``
+       is reached. Pacing ``inter_page_delay_ms`` between calls keeps the
+       per-host rate-limit happy.
+    """
+    page = fetcher._page
+    cards_collected: list[dict] = []
+    cards_list_calls = 0
+
+    url = f"{GOLDAPPLE_HOST}/brands/{slug}"
+    log.info("brand_enum_api_start", slug=slug, url=url)
+
+    try:
+        await page.goto(url, wait_until="domcontentloaded", timeout=BRAND_PAGE_GOTO_TIMEOUT_MS)
+    except Exception as e:
+        log.warning("brand_enum_goto_failed", slug=slug, error=str(e))
+        return BrandEnumerationResult(
+            slug=slug, product_count_badge=None, cards_collected=0,
+            raw_products=[], cards_list_calls=0,
+            error=f"goto_failed: {e}",
+        )
+
+    # Tuned via matcher-review-2026-05-15 smoke run: 2.5s was insufficient for
+    # Clinique/Tom Ford/Givenchy — the og:image meta hadn't been injected yet
+    # so categoryId extraction returned None and we falsely flagged the slug
+    # as invalid. 5s settle reliably surfaces the meta tag.
+    await page.wait_for_timeout(post_goto_settle_ms)
+
+    # Extract categoryId from og:image meta. Pattern: pcdn.goldapple.ru/p/c/{id}/...
+    import re
+    try:
+        html = await page.content()
+    except Exception as e:
+        return BrandEnumerationResult(
+            slug=slug, product_count_badge=None, cards_collected=0,
+            raw_products=[], cards_list_calls=0,
+            error=f"content_read_failed: {e}",
+        )
+    cat_match = re.search(r'pcdn\.goldapple\.ru/p/c/(\d+)/', html)
+    if not cat_match:
+        log.warning("brand_enum_no_category_id", slug=slug,
+                    note="slug likely invalid — fell through to SPA shell")
+        return BrandEnumerationResult(
+            slug=slug, product_count_badge=None, cards_collected=0,
+            raw_products=[], cards_list_calls=0,
+            error="no_category_id_in_og_image",
+        )
+    category_id = cat_match.group(1)
+    badge_match = re.search(r"(\d+)\s*продукт", html, re.IGNORECASE)
+    badge = int(badge_match.group(1)) if badge_match else None
+    log.info("brand_enum_category_id_resolved", slug=slug,
+             category_id=category_id, badge=badge)
+
+    # Drive cards-list directly from JS context. Use the same request body the
+    # SPA emits (probe-captured in inbox/ga_cards_api/call_00_request.json).
+    fetch_js = """
+        async (args) => {
+            const body = {
+                categoryId: args.categoryId,
+                pageNumber: args.pageNumber,
+                pageSize: 20,
+                filters: [],
+                mode: "dynamic",
+                cityId: "4c26ad1c-ca49-4fc1-af64-f540c6a873e4",
+                cityDistrict: "Бостандыкский район",
+                geoPolygons: ["KAZ-000000010", "KAZ-000000014"],
+                regionId: "4da8e628-6856-4e32-95df-60fa493549b8"
+            };
+            const resp = await fetch("/front/api/catalog/cards-list?locale=ru", {
+                method: "POST",
+                headers: {"content-type": "application/json"},
+                body: JSON.stringify(body),
+                credentials: "include"
+            });
+            if (!resp.ok) return { error: `HTTP ${resp.status}`, status: resp.status };
+            return await resp.json();
+        }
+    """
+
+    consecutive_403 = 0
+    for page_num in range(1, max_pages + 1):
+        try:
+            result = await page.evaluate(fetch_js, {
+                "categoryId": category_id,
+                "pageNumber": page_num,
+            })
+        except Exception as e:
+            log.warning("brand_enum_fetch_failed",
+                        slug=slug, page=page_num, error=str(e))
+            break
+        cards_list_calls += 1
+        if not isinstance(result, dict):
+            break
+        if result.get("status") == 403:
+            # API rate-limit. Wait substantially longer + retry once before
+            # giving up. Empirically a 10s cooldown lets ~50% of brand
+            # enumerations recover at this stage.
+            consecutive_403 += 1
+            if consecutive_403 > 2:
+                log.warning("brand_enum_api_403_persistent",
+                            slug=slug, page=page_num)
+                break
+            log.info("brand_enum_api_403_retry",
+                     slug=slug, page=page_num, cooldown_ms=12_000)
+            await page.wait_for_timeout(12_000)
+            try:
+                result = await page.evaluate(fetch_js, {
+                    "categoryId": category_id,
+                    "pageNumber": page_num,
+                })
+            except Exception as e:
+                log.warning("brand_enum_fetch_retry_failed",
+                            slug=slug, page=page_num, error=str(e))
+                break
+            cards_list_calls += 1
+            if not isinstance(result, dict) or result.get("status") == 403:
+                log.warning("brand_enum_api_403_stuck", slug=slug, page=page_num)
+                break
+        if result.get("error"):
+            log.warning("brand_enum_api_error",
+                        slug=slug, page=page_num, error=result.get("error"))
+            break
+        consecutive_403 = 0
+        data = result.get("data") or {}
+        page_cards = data.get("cards") or []
+        cards_collected.extend(page_cards)
+        pag = data.get("pagination") or {}
+        if not pag.get("nextPage"):
+            break
+        await page.wait_for_timeout(inter_page_delay_ms)
+
+    # Deduplicate + convert.
+    seen: set[str] = set()
+    raw_products: list[GoldappleRawProduct] = []
+    slug_path_default = f"/-{slug}"
+    for card in cards_collected:
+        p = card.get("product") if isinstance(card, dict) else None
+        if not isinstance(p, dict):
+            continue
+        sku_id = p.get("itemId") or p.get("mainVariantItemId")
+        if not sku_id or sku_id in seen:
+            continue
+        seen.add(sku_id)
+        rp = card_to_raw_product(card, slug_path_default)
+        if rp is None:
+            continue
+        raw_products.append(rp)
+
+    log.info(
+        "brand_enum_api_complete",
+        slug=slug,
+        cards_collected=len(cards_collected),
+        distinct_raw_products=len(raw_products),
+        cards_list_calls=cards_list_calls,
+        badge=badge,
+        category_id=category_id,
+    )
+    return BrandEnumerationResult(
+        slug=slug,
+        product_count_badge=badge,
+        cards_collected=len(cards_collected),
+        raw_products=raw_products,
+        cards_list_calls=cards_list_calls,
+    )
+
+
 async def enumerate_brand(
     fetcher: Any,
     slug: str,
@@ -378,18 +571,73 @@ async def enumerate_brand(
     )
 
 
+async def enumerate_brand_hybrid(
+    fetcher: Any,
+    slug: str,
+) -> BrandEnumerationResult:
+    """Try scroll first, then top up via API pagination.
+
+    Scroll-based ``enumerate_brand`` reliably fires the SPA's natural
+    cards-list calls for ~30s and captures whatever the page paginates
+    on its own. For big brands (Clinique 220, MAC 176) the natural
+    pagination doesn't always reach the end. After scroll completes we
+    optionally invoke the API-pagination path for additional pages —
+    starting from ``floor(cards / 20) + 1`` so we don't refetch what
+    scroll already gave us.
+
+    Fall-through when scroll yields nothing: try API outright (the brand
+    page might exist but its lazy-load is broken in headless mode).
+    """
+    result = await enumerate_brand(fetcher, slug)
+    # If scroll captured >= 80% of the badge total, we're done.
+    if (
+        result.product_count_badge
+        and len(result.raw_products) >= int(result.product_count_badge * 0.8)
+    ):
+        return result
+    # Otherwise: try API top-up. enumerate_brand_via_api re-navigates and
+    # rebuilds; it will return its own set of cards. Take whichever set
+    # is larger.
+    api_result = await enumerate_brand_via_api(fetcher, slug)
+    if len(api_result.raw_products) > len(result.raw_products):
+        log.info("brand_enum_hybrid_api_wins",
+                 slug=slug,
+                 scroll_count=len(result.raw_products),
+                 api_count=len(api_result.raw_products))
+        return api_result
+    return result
+
+
 async def enumerate_brands(
     fetcher: Any,
     slugs: Iterable[str],
     *,
     inter_brand_pause_seconds: float = 3.0,
+    mode: str = "hybrid",
 ) -> list[BrandEnumerationResult]:
-    """Enumerate a list of GA brand slugs in series, with a pause between
-    brands to avoid stacking up against any per-host rate limits."""
+    """Enumerate a list of GA brand slugs.
+
+    Parameters
+    ----------
+    mode : {"api", "scroll"}
+        ``"api"`` (default) — uses ``enumerate_brand_via_api``, which opens
+        each brand page once to extract ``categoryId`` from ``og:image``
+        then drives ``cards-list`` directly from the page's JS context.
+        Fully paginates regardless of brand-page size.
+
+        ``"scroll"`` — legacy scroll + XHR-capture path
+        (``enumerate_brand``). Kept for tests / fallback; may miss pages
+        on big brands.
+    """
     results: list[BrandEnumerationResult] = []
     slugs_list = list(slugs)
     for i, slug in enumerate(slugs_list):
-        result = await enumerate_brand(fetcher, slug)
+        if mode == "hybrid":
+            result = await enumerate_brand_hybrid(fetcher, slug)
+        elif mode == "api":
+            result = await enumerate_brand_via_api(fetcher, slug)
+        else:
+            result = await enumerate_brand(fetcher, slug)
         results.append(result)
         if i + 1 < len(slugs_list):
             await asyncio.sleep(inter_brand_pause_seconds)
@@ -406,5 +654,7 @@ __all__ = [
     "SCROLL_STEP_PX",
     "card_to_raw_product",
     "enumerate_brand",
+    "enumerate_brand_hybrid",
+    "enumerate_brand_via_api",
     "enumerate_brands",
 ]

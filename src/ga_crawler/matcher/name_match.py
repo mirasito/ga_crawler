@@ -74,7 +74,9 @@ _SLUG_FROM_URL = re.compile(r"goldapple\.kz/\d+-([a-z0-9\-]+)")
 # "stronger with you powerfully" collapse to the same residual if "with"
 # and "you" are stripped — they are NOT stopwords for that reason).
 STOPWORDS: frozenset[str] = frozenset({
-    # Product types — English
+    # Product types — English. These categorize a SKU's form (cream / serum
+    # / gel / etc.) and are systematically dropped on the viled side because
+    # the Russian product-type prefix already conveys them. Safe to strip.
     "cream", "creme", "serum", "lotion", "toner", "cleanser", "wash", "gel",
     "milk", "foam", "mask", "oil", "water", "balm", "butter", "lipstick",
     "gloss", "lipglass", "liner", "pencil", "mascara", "foundation", "blush",
@@ -82,15 +84,29 @@ STOPWORDS: frozenset[str] = frozenset({
     "makeup", "treatment", "shampoo", "conditioner", "spray", "mist",
     "perfume", "parfum", "eau", "cologne", "fragrance", "deodorant",
     "antiperspirant", "moisturizer", "moisturizing", "moisturising",
-    # Generic packaging / variant words
-    "set", "kit", "collection", "duo", "trio", "combo", "refill", "edition",
-    "limited", "edp", "edt", "mini", "travel",
-    # Generic body-part / area markers — non-discriminative when present on
-    # only one side (e.g. GA slug "lip-pencil" vs viled "Карандаш для губ").
-    "face", "body", "hand", "foot", "eyes", "lips", "hair", "skin",
-    # Generic descriptors
+    # Generic packaging / size markers — also systematically asymmetric.
+    "set", "kit", "collection", "duo", "trio", "combo", "edition",
+    "edp", "edt", "mini", "travel",
+    # Generic descriptors with no product-distinguishing power.
     "spf", "men", "women", "homme", "femme", "pour", "jour", "nuit",
     "the", "with", "and", "for",
+})
+
+# Variant markers — words that distinguish DIFFERENT SKUs of the same
+# product family. If they appear in the GA-side residual (g_disc) but
+# NOT on the viled side, the pair is a Kilian "Good Girl Gone Bad" base
+# vs "Good Girl Gone Bad Extreme/Refill" variant mismatch — reject.
+#
+# These MUST NOT be in STOPWORDS (stripping would let variants collapse
+# onto the base SKU).
+#
+# Source: matcher-review-2026-05-15 run-19 false-positive audit.
+VARIANT_MARKERS: frozenset[str] = frozenset({
+    # English variant qualifiers
+    "extreme", "intense", "intensely", "original", "classic", "signature",
+    "oud", "fraiche", "sport", "drama", "prestige", "limited",
+    "refill", "concentrate", "essence", "elixir",
+    # Russian variant qualifiers (after _LATIN — empty; kept for documentation)
 })
 
 
@@ -167,7 +183,19 @@ def name_matches(
     See module docstring for the full v2 strategy.
     """
     v_tok = en_tokens(viled_name_norm)
-    g_tok = slug_tokens(goldapple_url) or en_tokens(goldapple_name_norm)
+    # GA-side token set is the UNION of slug + name_norm tokens.
+    #
+    # The URL slug is the canonical short marketing form (e.g.
+    # ``good-girl-gone-bad``). The name_norm carries the variant qualifier
+    # the slug drops (``Refil``, ``Extreme``, ``Eye Base``, ``Eau Fraiche``,
+    # ``Eye Treatment``). Using the union catches both:
+    #   * the legitimate `code` slug ⊆ `armani code` viled match (slug-only
+    #     tokens suffice)
+    #   * the false `good-girl-gone-bad` ↔ `good-girl-gone-bad-extreme`
+    #     variant mismatch — Refill / Extreme appears in name_norm even
+    #     when both share the slug; that distinct discriminative token
+    #     forces Path-4 rejection.
+    g_tok = slug_tokens(goldapple_url) | en_tokens(goldapple_name_norm)
 
     # Path 2: strict-equality fallback for synthetic / single-char names.
     if not v_tok and not g_tok:
@@ -178,23 +206,41 @@ def name_matches(
     if not inter:
         return False
 
-    # Path 3: subset (either direction).
+    # Path 3: GA-side ⊆ viled-side (one direction only).
+    #
+    # Bidirectional Path 3 was too loose: it accepted viled-base SKUs
+    # against GA-variant slugs (e.g. ``Hypnose`` ⊊ ``hypnose-drama``).
+    # The natural asymmetry is that viled names are LONGER (Russian
+    # product-type prefix + brand redundancy + size suffix) and GA
+    # marketing slugs are SHORTER. So if the GA token set IS a subset of
+    # viled's, that's the legitimate "slug fits inside viled" case.
     if g_tok and g_tok.issubset(v_tok):
         return True
-    if v_tok and v_tok.issubset(g_tok):
-        return True
 
-    # Path 4: discriminative-residual.  Both sides must share at least one
-    # discriminative token, AND their residuals must be subset-compatible
-    # (one side has no extras that contradict the other).
+    # Path 4: discriminative residual with variant-marker veto.
+    #
+    # Build residuals after stripping brand tokens + product-type
+    # stopwords + numeric tokens. Accept when:
+    #   * residuals share at least one discriminative token, AND
+    #   * at least one side has NO leftover discriminative tokens
+    #     (the other's extras are shade words, descriptive adjectives,
+    #     or other non-variant info that viled simply omits), AND
+    #   * the residual extras don't contain a VARIANT_MARKER — those
+    #     mean different SKUs (Kilian "Good Girl Gone Bad" base vs
+    #     "Good Girl Gone Bad Extreme/Refill") and must reject.
     v_disc = _discriminative(v_tok, brand_norm)
     g_disc = _discriminative(g_tok, brand_norm)
     if not (v_disc & g_disc):
         return False
     v_only = v_disc - g_disc
     g_only = g_disc - v_disc
-    # Reject "Azzaro Chrome Aqua" vs "Azzaro Chrome United" — both
-    # residuals have a distinct discriminative token the other lacks.
+    # Variant veto — if EITHER side's residual contains a variant marker
+    # AND the other side lacks it, the pair is a different SKU. Reject.
+    if (v_only & VARIANT_MARKERS) or (g_only & VARIANT_MARKERS):
+        return False
+    # Standard relaxation: accept if at least one side has no excess
+    # discriminative tokens. Both sides non-empty → competing
+    # distinguishers (Azzaro Chrome Aqua vs Chrome United) → reject.
     if v_only and g_only:
         return False
     return True
@@ -202,6 +248,7 @@ def name_matches(
 
 __all__ = [
     "STOPWORDS",
+    "VARIANT_MARKERS",
     "brand_tokens",
     "en_tokens",
     "name_matches",
