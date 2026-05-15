@@ -271,14 +271,11 @@ def _extract_strikethrough(tree: HTMLParser) -> Optional[int]:
 
 
 def _extract_volume_block(html: str) -> Optional[str]:
-    """Extract goldapple PDP structured volume block (e.g. '12объём / мл' or
-    'объём / мл5075125' for multi-variant SKUs).
+    """Extract goldapple PDP structured volume block (single-variant only).
 
     Uses selectolax 0.4 Lexbor backend (CONTEXT.md D-806 — Lexbor import is
     LOCAL to this helper, keeping module-top Modest-only per blast-radius
-    isolation D-807). Returns the composed text of the smallest ancestor node
-    that joins the `объём / мл` label with its numeric sibling(s), for
-    downstream NORM-03 parse_volume to consume.
+    isolation D-807).
 
     DOM shape variants observed in W0 spike (Plan 08-01 shape-table.md):
       - STEREOTYPE-style: parent `_ga-pdp-attribute-few` has child <div>12</div>
@@ -287,20 +284,25 @@ def _extract_volume_block(html: str) -> Optional[str]:
         + radio-group children "50", "75", "125" (label-before-number, multi)
       - Givenchy baseline: same Armani-style label-before-radio-group shape.
 
-    Strategy: locate the label via `:lexbor-contains("объём")` (lowercase —
-    Lexbor's `i` flag is byte-level for non-ASCII so case-insensitive match
-    is unreliable for Cyrillic; live HTML always emits lowercase per W0
-    spike). Walk up ancestor chain (max depth 3) until ancestor's
-    text(deep=True) contains a digit — that ancestor's composed text is the
-    answer. parse_volume regex handles the joined / multi-variant string.
+    PARSE-FIX-V2 (post-v1 review): the previous heuristic of "first digit-run in
+    ancestor text" silently concatenated multi-variant radio-button labels into
+    garbage values (e.g. `volume_raw='5075125 мл'` → `(5075125,ml,1)`). This
+    poisoned ~23% of GA snapshots and killed all matcher JOINs. The fix:
+      1. Find ALL digit-runs in the ancestor text.
+      2. If exactly ONE distinct digit-run → that's the volume (single-variant).
+      3. If MULTIPLE distinct digit-runs → return None (multi-variant ambiguous;
+         caller MUST NOT fall back to product name).
+    A future improvement can detect the selected radio-button to pick the active
+    variant; for v1 we conservatively reject multi-variant PDPs from matching.
 
     Returns None when:
       - the "объём" label is not found (volumeless category — 5/30 in W0)
       - no digit appears within depth-3 ancestor chain
+      - multiple distinct digit-runs exist (multi-variant — undecidable)
 
     Source: 08-RESEARCH.md § "selectolax 0.4 Lexbor" + § "Bug #1 (Volume Block)"
-    + empirical fixture probe (cc40621 + this commit) confirming both shapes
-    share parent class `_ga-pdp-attribute-few_`.
+    + matcher-review-2026-05-15 root-cause analysis showing 48/207 GA snapshots
+    were poisoned by multi-variant concatenation.
 
     PARSE-FIX-01 (Plan 08-02). Pitfall 1 (leading space before `i` flag)
     sidestepped by using lowercase literal directly. Pitfall 2 (Ё vs Е): W0
@@ -322,9 +324,12 @@ def _extract_volume_block(html: str) -> Optional[str]:
         if ancestor is None:
             return None
         composed = (ancestor.text(deep=True, strip=True) or "")
-        digit_match = re.search(r"\d+(?:[.,]\d+)?", composed)
-        if digit_match:
-            return f"{digit_match.group(0)} {unit}"
+        digits = re.findall(r"\d+(?:[.,]\d+)?", composed)
+        if digits:
+            distinct = set(digits)
+            if len(distinct) == 1:
+                return f"{digits[0]} {unit}"
+            return None  # multi-variant — undecidable, do NOT poison data
         ancestor = ancestor.parent
     return None
 
@@ -460,8 +465,17 @@ def parse_pdp(html: str, url: str) -> Optional[GoldappleRawProduct]:
     # Availability (PARSE-06)
     availability = _extract_availability(tree)
 
-    # Volume: structured flex-box (PARSE-FIX-01) with name fallback
-    raw_volume_text = _extract_volume_block(html) or name or None
+    # Volume: structured flex-box (PARSE-FIX-01).
+    #
+    # PARSE-FIX-V2 (post-v1 review): the original code fell back to `name` when
+    # `_extract_volume_block` returned None — this leaked product titles like
+    # `'Dazzlelips Crayon'` into `volume_raw`, which downstream `parse_volume`
+    # then either rejected (volume_norm=NULL) or worse, accidentally parsed
+    # numeric substrings as bogus volumes. Across run-18 this corrupted 30% of
+    # GA snapshots. Removed the fallback: volumeless categories yield None and
+    # are excluded from the matcher's comparable filter — correct behavior per
+    # D-402 (volume_norm IS NOT NULL gate).
+    raw_volume_text = _extract_volume_block(html)
 
     # Final required-fields check (PARSE-05): name must be non-empty
     if not name:
