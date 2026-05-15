@@ -307,7 +307,10 @@ def test_match_rate_formula_canary(engine):
       - round(3 * 100.0 / 5, 2) == 60.0 (formula derived by orchestrator)
 
     SQL source also locked: INSERT_MATCHES_SQL must contain ROUND and the
-    ``* 100.0 / v.current_price`` numerator. Any future change to the formula
+    ``* 100.0 /`` numerator. v2 of the matcher (matcher-review-2026-05-15)
+    moves from a JOIN-bound formula referencing ``v.current_price`` to a
+    per-row INSERT bound to ``:v_price``; the formula's intent is identical
+    and the canary now pins the new shape. Any future change to the formula
     must (a) update this canary, (b) update STATE.md accumulated decisions.
     """
     _plant(
@@ -337,10 +340,11 @@ def test_match_rate_formula_canary(engine):
     assert build_matches_for_run(engine, 1) == 3
     rate = round(3 * 100.0 / 5, 2)
     assert rate == 60.0
-    # Source-lock the SQL formula.
+    # Source-lock the SQL formula (post-v2 shape: per-row INSERT with bind
+    # params; substring assertion locks ROUND + the *100.0/ numerator).
     sql_text = str(INSERT_MATCHES_SQL).replace(" ", "").replace("\n", "")
     assert "ROUND(" in sql_text
-    assert "*100.0/v.current_price" in sql_text
+    assert "*100.0/:v_price" in sql_text
 
 
 def test_price_delta_sign(engine):
