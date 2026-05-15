@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>viled.kz — Anti-Bot: рекомендации и план</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --fg: #1d1d1b;
+    --muted: #5a5a55;
+    --accent: #2c5f2d;
+    --warn: #b8541a;
+    --danger: #a8261d;
+    --ok: #2c5f2d;
+    --line: #d9d9d3;
+    --code-bg: #f1f1ec;
+    --shade: #f6f6f1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.55;
+    max-width: 920px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    font-size: 16px;
+  }
+  h1, h2, h3, h4 { color: var(--fg); line-height: 1.25; margin-top: 2rem; }
+  h1 { font-size: 1.85rem; border-bottom: 2px solid var(--fg); padding-bottom: 0.4rem; }
+  h2 { font-size: 1.4rem; margin-top: 2.2rem; border-bottom: 1px solid var(--line); padding-bottom: 0.3rem; }
+  h3 { font-size: 1.15rem; margin-top: 1.6rem; }
+  h4 { font-size: 1.0rem; color: var(--muted); margin-top: 1.2rem; }
+  p, li { margin: 0.5rem 0; }
+  ul, ol { padding-left: 1.4rem; }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.92em;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 0.9rem 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.86em;
+    line-height: 1.45;
+    border-left: 3px solid var(--accent);
+  }
+  pre code { background: none; padding: 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8rem 0 1.2rem;
+    font-size: 0.93em;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 0.45rem 0.7rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--shade); font-weight: 600; }
+  tr:nth-child(even) td { background: rgba(0,0,0,0.015); }
+  .meta {
+    color: var(--muted);
+    font-size: 0.88em;
+    margin-bottom: 1.4rem;
+  }
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--shade);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .callout.warn { border-color: var(--warn); }
+  .callout.danger { border-color: var(--danger); background: #fdf3ee; }
+  .callout.ok { border-color: var(--ok); }
+  .callout strong { display: block; margin-bottom: 0.3rem; font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.04em; }
+  .tier-table th { background: #1d1d1b; color: #fafaf7; }
+  .tier-pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 0.78em;
+    font-weight: 600;
+    color: #fff;
+  }
+  .t0 { background: #2c5f2d; }
+  .t1 { background: #3a7a3c; }
+  .t2 { background: #b8541a; }
+  .t3 { background: #a8261d; }
+  .t4 { background: #5a3a8a; }
+  .verdict-pass { color: var(--ok); font-weight: 600; }
+  .verdict-fail { color: var(--danger); font-weight: 600; }
+  .verdict-mid { color: var(--warn); font-weight: 600; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 2rem 0; }
+  .footer { color: var(--muted); font-size: 0.85em; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<h1>viled.kz — Anti-Bot защита: что построить и в каком порядке</h1>
+
+<p class="meta">
+  Документ написан 2026-05-06 на основе практики Phase 1 spike (parsing viled.kz vs goldapple.kz)
+  и Phase 3 production-кода ga_crawler. Точка зрения: тот, кто только что обошёл goldapple,
+  смотрит на viled и видит как его обходить.
+</p>
+
+<div class="callout danger">
+<strong>TL;DR — что увидит атакующий сегодня</strong>
+viled.kz отдаёт <strong>весь товарный каталог</strong> (бренды, цены, остатки, описания) одним
+обычным GET-запросом через <code>curl</code>: данные лежат в <code>__NEXT_DATA__</code> JSON-блоке
+прямо в HTML. Никакого TLS-fingerprint'а, никакого rate-limit, никакой geo-проверки, никаких
+капчей. <strong>15/15 успешных запросов через <code>curl_cffi</code></strong> в Phase 1 spike,
+скорость скрейпа ограничена только вежливостью атакующего, не вашей защитой. На спайке мы
+поняли: чтобы дойти до уровня goldapple — у нас впереди примерно 4 года инженерных решений,
+которые они уже приняли. У вас этого нет совсем.
+</div>
+
+<h2>Контекст: что мы знаем из ga_crawler</h2>
+
+<p>
+В рамках проекта ga_crawler команда viled запустила еженедельный краулер прайс-конкуренции —
+парсит и goldapple, и viled, потом сводит их в Excel. Phase 1 spike (январь–май 2026) измерил
+обе стороны эмпирически. Цифры ниже — не теория, а наш собственный production opyt:
+</p>
+
+<table>
+<tr><th>Сайт</th><th>Стек скрейпера</th><th>Успех</th><th>Что нужно</th><th>Стоимость скрейпинга</th></tr>
+<tr>
+  <td><strong>viled.kz</strong></td>
+  <td><code>curl_cffi + selectolax + __NEXT_DATA__</code></td>
+  <td class="verdict-fail">15/15 (100%)</td>
+  <td>Любая машина, любой IP</td>
+  <td>~$0/нед, ~10 мин кода</td>
+</tr>
+<tr>
+  <td><strong>goldapple.kz</strong></td>
+  <td><code>Camoufox 135.0.1-beta.24 (Firefox + C++ fingerprint spoof) + KZ-IP + 3-5 сек random pause + per-SKU fresh profile + retry+jitter + smoke probe</code></td>
+  <td class="verdict-mid">99/100 (но требует cooldown'ы)</td>
+  <td>Firefox-based anti-detect browser (~250 MB), KZ-residential IP, ~5.5 часа sequential на еженедельный run</td>
+  <td>~$0–2/нед прокси + ~1 неделя инженерного времени на спайк + Phase 3 (8 waves, 192 теста, ~50 коммитов)</td>
+</tr>
+</table>
+
+<p>
+Разница в стоимости обхода защиты — на два порядка. Это и есть разница «есть anti-bot vs нет».
+</p>
+
+<h2>1. Что атакующий видит на viled.kz прямо сейчас</h2>
+
+<p>
+Из Phase 1 spike findings (`.planning/spikes/01-goldapple/MEMO.md`) и Phase 2 контракта парсера:
+</p>
+
+<h3>1.1 Полный товарный JSON в HTML</h3>
+
+<pre><code>curl -s https://viled.kz/p/some-product | grep -o '__NEXT_DATA__[^&lt;]*' | head -1
+# → весь товарный объект: бренд, категория, цена, sku, остатки, описание, фото-URLs</code></pre>
+
+<p>
+Next.js серверной отрисовкой вставляет в HTML блок <code>&lt;script id="__NEXT_DATA__"&gt;...&lt;/script&gt;</code>,
+содержащий <strong>весь</strong> state страницы как сериализованный JSON. Скрейперу не нужно
+парсить DOM, не нужно выполнять JS, не нужно даже знать селекторы — он просто
+<code>json.loads()</code> и получает структурированную базу.
+</p>
+
+<div class="callout warn">
+<strong>Это самая большая проблема</strong>
+В <code>__NEXT_DATA__</code> утекают поля, которых на самой странице нет визуально: внутренние
+SKU-id'ы, остатки на складах, метаданные категоризации, иногда — служебные цены/маржа.
+Атакующий получает больше данных, чем «обычный пользователь» видит в UI.
+</div>
+
+<h3>1.2 Никакой TLS/JA3 fingerprint-проверки</h3>
+
+<p>
+goldapple.kz в Phase 1 спайке возвращал <code>HTTP 403</code> на запросы Python <code>requests</code>
+(urllib3 TLS fingerprint детектируется WAF'ом за миллисекунды). Решение для атакующего —
+<code>curl_cffi</code> с <code>impersonate="chrome"</code>, который имитирует Chrome 136 TLS+JA3+HTTP/2
+fingerprint один-в-один.
+</p>
+
+<p>
+viled.kz отдаёт <code>HTTP 200</code> на любой fingerprint, включая голый Python urllib3.
+То есть нет даже первого, самого дешёвого слоя проверки.
+</p>
+
+<h3>1.3 Никаких rate-limit'ов в наблюдаемом окне</h3>
+
+<p>
+В Phase 1 спайке мы делали 15 последовательных запросов к продуктовым страницам без задержек —
+все 15 вернули <code>200 OK</code>. По косвенным данным (logs, response time consistent ~200ms),
+никакого throttling по IP / user-agent / session нет.
+</p>
+
+<h3>1.4 Sitemap и server-side data — публичны и полны</h3>
+
+<p>
+Если у viled есть <code>/sitemap.xml</code> (что у Next.js обычно по умолчанию), скрейпер за один
+запрос получает список всех URL'ов товаров. Никакой «discover-by-crawling» не нужен.
+</p>
+
+<h3>1.5 Что НЕ нашли</h3>
+
+<ul>
+<li>Cloudflare или другая CDN-защита уровня L7 — отсутствует</li>
+<li>WAF (DataDome, F.A.C.C.T., Imperva, Akamai Bot Manager) — отсутствует</li>
+<li>JavaScript challenge или CAPTCHA на товарных страницах — отсутствует</li>
+<li>Behavioral analysis (mouse/touch/scroll patterns) — отсутствует</li>
+<li>Geo-IP проверка — отсутствует</li>
+<li>Authentication wall — отсутствует (что правильно: товары публичные)</li>
+<li>Rate-limit на anonymous-traffic — отсутствует или слишком высокий</li>
+</ul>
+
+<h2>2. Чего нам стоило обойти защиту goldapple — слой за слоем</h2>
+
+<p>
+Это полезная карта целевого состояния. Каждый слой ниже — это конкретный класс
+защиты, который мы (атакующая сторона) пришлось преодолеть. Вы можете построить столько слоёв,
+сколько готовы оплатить:
+</p>
+
+<table>
+<tr>
+  <th>Слой защиты goldapple</th>
+  <th>Что это значит</th>
+  <th>Чем мы это обошли</th>
+  <th>Сколько часов «инженерного бюджета» у атакующего</th>
+</tr>
+<tr>
+  <td>TLS / JA3 fingerprint</td>
+  <td>WAF смотрит не на UA, а на низкоуровневую TLS-handshake подпись клиента. urllib3 ≠ Chrome.</td>
+  <td><code>curl_cffi impersonate="chrome"</code></td>
+  <td>~1 час (drop-in замена requests)</td>
+</tr>
+<tr>
+  <td>HTTP/2 fingerprint (Akamai-style)</td>
+  <td>Порядок HEADERS/SETTINGS frames у Python ≠ браузера</td>
+  <td>curl_cffi покрывает это автоматически</td>
+  <td>0 (включено в curl_cffi)</td>
+</tr>
+<tr>
+  <td>JavaScript-only rendering</td>
+  <td>Цена и часть атрибутов появляются после выполнения JS на клиенте</td>
+  <td>Headless Chromium / Firefox через Playwright</td>
+  <td>~3–5 часов (первая интеграция)</td>
+</tr>
+<tr>
+  <td>Browser fingerprinting (Canvas, WebGL, AudioContext, Fonts)</td>
+  <td>WAF рендерит на стороне клиента ~100 «отпечатков» окружения. Vanilla Playwright детектируется по характерным паттернам Chromium-headless.</td>
+  <td><strong>Camoufox</strong> — форк Firefox с C++-патчами на уровне gecko, спуфит каждый отпечаток. Playwright/Patchright не справились.</td>
+  <td>~3 дня (research + сравнение Tier 1/2/3)</td>
+</tr>
+<tr>
+  <td>Cookie-fingerprint и behavioral сигнатуры</td>
+  <td>Возвращающийся клиент с тем же cookie-set, но другим IP/UA → подозрение</td>
+  <td>Fresh tmp профиль на каждую SKU; 3-5 сек random pause; humanize=True (mouse/scroll)</td>
+  <td>~1 день (профиль lifecycle, Pitfall 7)</td>
+</tr>
+<tr>
+  <td>Geo-IP проверка</td>
+  <td>EU/US datacenter IP'ы получают усиленный challenge</td>
+  <td>KZ-laptop с домашней KZ-IP + резерв IPRoyal KZ-residential (~$2/нед)</td>
+  <td>~2 часа (учёт прокси)</td>
+</tr>
+<tr>
+  <td>Rate-limit + soft-throttling</td>
+  <td>&gt;1 RPS с одного fingerprint → 429/cool-down на 5 минут</td>
+  <td>3-5 сек random pause + tenacity exponential backoff с jitter</td>
+  <td>~2 часа</td>
+</tr>
+<tr>
+  <td>Gate-shell pattern (HTML 200, но 18KB заглушка)</td>
+  <td>WAF не отдаёт 403, а возвращает 200 с пустой страницей «checking device» — ломая naive scrapers</td>
+  <td>Three-axis state classifier (real-pdp / gate-shell / stale-sku); smoke probe перед crawl</td>
+  <td>~1 день (state machine)</td>
+</tr>
+<tr>
+  <td>Anti-bot vendor: GroupIB / F.A.C.C.T.</td>
+  <td>Российский enterprise fraud-prevention; benchmark'и Patchright против Cloudflare/DataDome не применимы — это другая система</td>
+  <td>Фактически только Camoufox с правильной KZ-IP комбинацией прошла</td>
+  <td>~1 неделя research до того как нашли работающий стек</td>
+</tr>
+<tr>
+  <td>Per-product structural variance</td>
+  <td>Микроданные (price, brand, name) разбросаны по PDP в разной структуре в зависимости от категории / промо / Gold Card</td>
+  <td>Парсер с 3-axis state, priceType discrimination, gold-card heuristic, longest-prefix bucket index — 192 теста</td>
+  <td>~2 недели (Phase 2+3)</td>
+</tr>
+</table>
+
+<p>
+<strong>Итог:</strong> на обход защиты goldapple ушло около 4 недель чистой инженерной работы, ~50 коммитов,
+192 теста, ~$2/нед прокси-бюджета и постоянный риск регрессии после каждого Camoufox-релиза.
+</p>
+
+<p>
+На обход viled (Phase 1 запрос) — <strong>15 минут.</strong>
+</p>
+
+<h2>3. Тиерированные рекомендации</h2>
+
+<p>
+Не стоит сразу строить Tier 4. Большинство ROI в первых трёх тирах. Пройдитесь по ним сверху
+вниз; останавливайтесь, когда стоимость защиты превысит value сохранённых данных.
+</p>
+
+<table class="tier-table">
+<tr>
+  <th>Тир</th>
+  <th>Что делается</th>
+  <th>Защищает от</th>
+  <th>Срок</th>
+  <th>Стоимость</th>
+  <th>Риски ложных срабатываний</th>
+</tr>
+<tr>
+  <td><span class="tier-pill t0">T0</span></td>
+  <td>Гигиена данных: убрать утечки в <code>__NEXT_DATA__</code>; <code>robots.txt</code> и <code>noindex</code> на служебные страницы; не коммитить служебные API-ключи в frontend bundle</td>
+  <td>Самый дешёвый класс атакующих (студенты, junior-script-kiddies)</td>
+  <td>1–2 дня</td>
+  <td>~0₸</td>
+  <td>Нет — это просто гигиена</td>
+</tr>
+<tr>
+  <td><span class="tier-pill t1">T1</span></td>
+  <td>Cloudflare Free Plan + Bot Fight Mode + Managed Challenge для подозрительных IP</td>
+  <td>Vanilla Python <code>requests</code>, naive <code>curl</code>, openly-headless Playwright</td>
+  <td>1 день (DNS-смена + настройка)</td>
+  <td>$0/мес (Free) или ~$20/мес (Pro)</td>
+  <td>Низкие — Cloudflare умеет различать поисковых ботов и партнёров</td>
+</tr>
+<tr>
+  <td><span class="tier-pill t1">T1</span></td>
+  <td>Серверный rate-limit per-IP: 60 req/min на каталог, 10 req/min на продуктовые страницы</td>
+  <td>Любые наивные скрейперы без backoff</td>
+  <td>~1 день (nginx/Cloudflare WAF rule)</td>
+  <td>~0₸</td>
+  <td>Низкие — нормальный пользователь не открывает 60+ страниц/мин</td>
+</tr>
+<tr>
+  <td><span class="tier-pill t2">T2</span></td>
+  <td>Cloudflare Bot Management или Pro plan + JS challenge на product-pages</td>
+  <td>curl_cffi + impersonate уже не проходит; нужен реальный JS-engine</td>
+  <td>1 неделя (включая обновление SEO-strategy: bots whitelist для Google/Yandex)</td>
+  <td>~$200–500/мес (Cloudflare Pro/Business)</td>
+  <td>Средние — нужен whitelist для поисковиков, иначе SEO рушится</td>
+</tr>
+<tr>
+  <td><span class="tier-pill t2">T2</span></td>
+  <td>Серверный fingerprint детектор: проверка Canvas/WebGL/AudioContext через client-side script + fingerprint hash на сервере</td>
+  <td>Vanilla Playwright/Selenium, недопаченные anti-detect браузеры</td>
+  <td>~2 недели</td>
+  <td>Можно купить готовое (~$200–500/мес) или написать на FingerprintJS Open Source</td>
+  <td>Средние — false-positive на пользователях с privacy-расширениями</td>
+</tr>
+<tr>
+  <td><span class="tier-pill t3">T3</span></td>
+  <td>Enterprise WAF: <strong>DataDome</strong>, <strong>Imperva Bot Management</strong>, <strong>Akamai Bot Manager</strong></td>
+  <td>Anti-detect браузеры (Patchright, Camoufox), residential proxy сети, low-and-slow атаки</td>
+  <td>1–2 месяца (настройка + калибровка + мониторинг false-positive)</td>
+  <td>$2–10K/мес в зависимости от трафика</td>
+  <td>Высокие — нужно постоянно мониторить ложные блокировки клиентов</td>
+</tr>
+<tr>
+  <td><span class="tier-pill t4">T4</span></td>
+  <td>F.A.C.C.T. (бывш. Group-IB Fraud Hunting Platform) — то самое, что использует goldapple</td>
+  <td>Всё описанное выше + custom-fingerprint atak'и + sophisticated abuse</td>
+  <td>2–3 месяца (enterprise sales cycle + integration)</td>
+  <td>~$10–30K/мес + setup fee</td>
+  <td>Высокие — нужна команда поддержки и interpretation rules</td>
+</tr>
+</table>
+
+<div class="callout ok">
+<strong>Рекомендация конкретно для viled (комм. команда из бизнес-контекста)</strong>
+Стоп после T1. <strong>T0 + T1 закроют 95% script-kiddies и автоматизированных competitor-тулзов</strong>
+за стоимость 0–20 USD/мес и одну неделю работы. T2+ оправдан только если виледа реально начнут
+парсить конкуренты (которые делают то же что мы делаем для goldapple) — обнаружить это можно по
+аномалиям трафика, и тогда уже эскалировать.
+</div>
+
+<h2>4. Конкретный план действий (приоритезированный)</h2>
+
+<h3>Неделя 1 — T0 гигиена данных</h3>
+
+<ul>
+<li><strong>Аудит <code>__NEXT_DATA__</code>:</strong> в <code>getServerSideProps</code>/<code>getStaticProps</code>
+явно фильтруйте поля product-объекта перед сериализацией. Возвращайте только то, что реально нужно
+для рендера UI. Внутренние SKU-id'ы, складские остатки, маржа — оставить server-only через API
+с авторизацией.</li>
+
+<li><strong>Перейти с SSR на ISR + client-side data fetch для критичных полей.</strong> Цена и остатки
+получаются client-side через JSON API с rate-limit и Cloudflare challenge. Для SEO достаточно отдавать
+бренд + название + категорию серверно (это всё равно публичная информация в Google).</li>
+
+<li><strong>Robots.txt:</strong>
+<pre><code>User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /search?
+Crawl-delay: 2
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /</code></pre>
+LLM/SEO-боты не должны индексировать ваш каталог в свои базы. Это не блокирует их технически
+(robots.txt — джентльменское соглашение), но даёт правовую базу для DMCA / cease-and-desist.</li>
+
+<li><strong>Скрытые служебные эндпоинты:</strong> <code>/admin</code>, <code>/_next/data/*.json</code>,
+<code>/api/internal/*</code> — ставьте либо за Basic Auth, либо отдавайте 404 на запросы без
+правильного <code>Origin</code>/<code>Referer</code>.</li>
+</ul>
+
+<h3>Неделя 2 — T1 базовая защита</h3>
+
+<ul>
+<li><strong>Перенаправить DNS через Cloudflare</strong> (Free план).</li>
+<li><strong>Включить Bot Fight Mode</strong> в Cloudflare → Security → Bots.</li>
+<li><strong>Включить Managed Rules → OWASP Core Rule Set</strong>.</li>
+<li><strong>Настроить rate-limit:</strong>
+<pre><code>(http.request.uri.path matches "^/p/.*")
+  AND (cf.threat_score gt 14)
+  → Managed Challenge
+
+(http.request.uri.path matches "^/p/.*")
+  AND (rate(60s) gt 30)
+  → Block (1h)</code></pre>
+</li>
+<li><strong>Whitelist для поисковиков:</strong> убедитесь, что Cloudflare правильно идентифицирует
+Googlebot, YandexBot, Bingbot, DuckDuckBot — иначе SEO пострадает.</li>
+<li><strong>Логи в SIEM или просто в Sentry/Datadog:</strong> собирайте rate-limit hits и Bot Fight
+challenges. Будете видеть, откуда идут попытки.</li>
+</ul>
+
+<h3>Неделя 3 — Мониторинг</h3>
+
+<ul>
+<li>Поднимите дашборд: количество challenge'ей в день, уникальных IP с &gt;100 product-page hits в час,
+distribution geo (KZ vs не-KZ).</li>
+<li>Если видите устойчивые &gt;1000 hits/день из одного ASN — это или crawler-conkurент, или
+прайс-агрегатор. В первом случае усиливайте до T2; во втором — добавляйте robots.txt и блокируйте
+по ASN.</li>
+</ul>
+
+<h3>Опционально, неделя 4+ — T2 если данные ползут</h3>
+
+<p>
+Триггер: видите устойчивый «голодный» трафик от датацентр-ASN'ов (DigitalOcean, OVH, Hetzner,
+AWS) на товарные страницы. Это значит, что кто-то парсит вас headless-Chromium'ом из VPS.
+</p>
+
+<ul>
+<li>Cloudflare Pro/Business plan</li>
+<li>JS Challenge на product-pages для не-search-bot трафика</li>
+<li>Опционально — FingerprintJS Pro для distinguishing real users vs Patchright</li>
+</ul>
+
+<h2>5. Чего НЕ делать (антипаттерны)</h2>
+
+<div class="callout warn">
+<strong>Не блокируйте всё, что не похоже на Chrome 120</strong>
+Реальные пользователи на Safari iOS, Firefox, Yandex Browser, старых Android Chrome — будут
+получать капчу. CTR упадёт. Подбирайте challenge thresholds по реальному трафику, а не по
+параноидальным дефолтам.
+</div>
+
+<div class="callout warn">
+<strong>Не закрывайте sitemap.xml целиком</strong>
+Это убьёт SEO. Если беспокоитесь, что атакующий за один запрос получает все URL'ы — отдавайте
+sitemap, но дробите его на &lt;50K URL'ов per-file (что хорошая практика для SEO в любом случае),
+и логируйте, кто его скачивает. Реально атакующие сами спарсят URL'ы из категорий, если их нет
+в sitemap; вы только усложните жизнь Google.
+</div>
+
+<div class="callout warn">
+<strong>Не покупайте «AI-powered Bot Detection» по одному обещанию вендора</strong>
+Многие enterprise-вендоры обещают 99% детект, но в реальности их защита обходится Camoufox или
+ScrapingBee Web Unlocker за $1–2/1000 страниц. Перед покупкой просите PoC: возьмите наш
+ga_crawler stack (Camoufox + KZ-IP + правильные паузы), натравите на их demo, измерьте recall.
+Если &gt;50% запросов проходит — продукт не защищает от того, что вы боитесь.
+</div>
+
+<div class="callout warn">
+<strong>Не делайте custom anti-bot in-house без штатного security-инженера</strong>
+F.A.C.C.T. / DataDome держат команды по 50+ человек, обновляющих эвристики каждую неделю в
+ответ на новые anti-detect браузеры. In-house JS-fingerprint detector протянет 6 месяцев,
+потом устареет и даст ложное чувство защиты.
+</div>
+
+<div class="callout danger">
+<strong>Не блокируйте по User-Agent — это бесполезно</strong>
+<code>impersonate="chrome"</code> в curl_cffi отдаёт идеальный Chrome UA. UA-блокировка ловит
+только тех, кто не умеет делать <code>headers={'User-Agent': 'Mozilla/5.0...'}</code> — то есть
+никого старше 18 лет. Это театр безопасности.
+</div>
+
+<h2>6. Как тестировать защиту</h2>
+
+<p>
+После каждого тира защиты — натравите наш собственный краулер на viled. Это идеальный
+red-team:
+</p>
+
+<h3>Тест 0 — наивный <code>curl</code></h3>
+<pre><code>curl -s "https://viled.kz/p/some-product" | grep '__NEXT_DATA__'
+# Сейчас: возвращает JSON с данными
+# После T0: должно вернуть пустой/обрезанный JSON
+# После T1: возможно Cloudflare challenge (зависит от threat_score)</code></pre>
+
+<h3>Тест 1 — <code>curl_cffi</code> с Chrome impersonation</h3>
+<pre><code>uv run python -c "
+from curl_cffi import requests
+r = requests.get('https://viled.kz/p/some-product', impersonate='chrome')
+print(r.status_code, len(r.text))
+"
+# Сейчас: 200, ~150KB
+# После T1 Bot Fight: должно быть challenge HTML или 403
+# После T2: точно challenge</code></pre>
+
+<h3>Тест 2 — Playwright</h3>
+<pre><code>uv run python -c "
+import asyncio
+from playwright.async_api import async_playwright
+
+async def main():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        r = await page.goto('https://viled.kz/p/some-product')
+        print(r.status, len(await page.content()))
+        await browser.close()
+
+asyncio.run(main())
+"
+# После T2: Cloudflare JS challenge может пройти, может нет (зависит от threat score)
+# После T2 + FingerprintJS: должно проваливаться</code></pre>
+
+<h3>Тест 3 — Camoufox (наш «настоящий attacker»)</h3>
+<pre><code>uv run python -c "
+import asyncio
+from camoufox.async_api import AsyncCamoufox
+
+async def main():
+    async with AsyncCamoufox(headless=True, geoip=True, humanize=True) as browser:
+        page = await browser.new_page()
+        r = await page.goto('https://viled.kz/p/some-product')
+        print(r.status, len(await page.content()))
+
+asyncio.run(main())
+"
+# Это серьёзный test — в Phase 1 spike Camoufox прошёл goldapple 99/100.
+# Если viled после T1+T2 всё ещё пропускает Camoufox с KZ-IP — нужен T3.
+# Если фильтрует — T1+T2 достаточны для viled на 2026.</code></pre>
+
+<p>
+Пройдите эти тесты после каждой настройки и фиксируйте baseline. Если завтра всё тот же тест
+вдруг проходит — атакующая сторона выпустила новую версию (Camoufox каждые 2-3 недели обновляется),
+и вам надо реагировать.
+</p>
+
+<h2>7. Бюджет и расписание</h2>
+
+<table>
+<tr><th>Этап</th><th>Срок</th><th>Деньги</th><th>Кто делает</th></tr>
+<tr><td>T0 — гигиена данных</td><td>1–2 нед</td><td>~0 ₸</td><td>1 backend, 0.5 PM</td></tr>
+<tr><td>T1 — Cloudflare + rate-limit + robots</td><td>1 нед</td><td>0–10 000 ₸/мес</td><td>1 devops, 1 backend</td></tr>
+<tr><td>T1 — мониторинг и dashboards</td><td>1 нед</td><td>~0 ₸ (используйте существующий Grafana / Sentry)</td><td>1 devops</td></tr>
+<tr><td>T2 — JS challenge + fingerprint</td><td>1 мес</td><td>~100 000–250 000 ₸/мес</td><td>1 backend + Cloudflare Business</td></tr>
+<tr><td>T3 — DataDome / Imperva</td><td>1–2 мес</td><td>1–5 млн ₸/мес</td><td>+1 security engineer</td></tr>
+<tr><td>T4 — F.A.C.C.T.</td><td>2–3 мес</td><td>5–15 млн ₸/мес</td><td>+1 security team</td></tr>
+</table>
+
+<p>
+<strong>Реалистичная цель для viled на 2026:</strong> закрыть T0 + T1 за 2-3 недели, поставить
+мониторинг, дальше реагировать по фактам. T2 — если в логах появится устойчивый automated traffic
+от competitor'ов.
+</p>
+
+<h2>8. Риск-матрица: что мы реально защищаем</h2>
+
+<table>
+<tr><th>Утечка</th><th>Бизнес-impact</th><th>Текущая защита</th><th>После T0+T1</th></tr>
+<tr><td>Цены товаров</td><td>Конкуренты делают prices monitoring (как мы для goldapple) и оптимизируют свои цены под наши</td><td class="verdict-fail">Нет</td><td class="verdict-mid">Замедление в 100×, но не остановка</td></tr>
+<tr><td>Остатки на складах</td><td>Конкуренты видят нашу дефицит-стратегию, могут тайминг'и под нас выстраивать</td><td class="verdict-fail">Утечка через __NEXT_DATA__</td><td class="verdict-pass">Закрыто (T0)</td></tr>
+<tr><td>Структура каталога / категоризация</td><td>Помогает competitor'ам копировать UX</td><td class="verdict-fail">Открыто (sitemap)</td><td class="verdict-mid">Открыто, но это нормально для SEO</td></tr>
+<tr><td>Внутренние SKU-id'ы</td><td>Можно coordin'ить atак на конкретные позиции (ddos-проверка остатков)</td><td class="verdict-fail">Открыто</td><td class="verdict-pass">Закрыто (T0)</td></tr>
+<tr><td>Производительность инфраструктуры</td><td>Скрейпер-flooding может тормозить реальных пользователей</td><td class="verdict-fail">Без rate-limit'а уязвим</td><td class="verdict-pass">Защищено (T1)</td></tr>
+<tr><td>Фоторесурсы</td><td>Hot-linking из каталогов конкурентов экономит им трафик за наш счёт</td><td class="verdict-fail">Открыто</td><td class="verdict-mid">Cloudflare hotlink-protection (T1)</td></tr>
+</table>
+
+<h2>9. Что делать с тем, что мы знаем про goldapple</h2>
+
+<p>
+Поскольку наша команда теперь умеет обходить goldapple, есть legal/PR risk: если goldapple узнают,
+что viled.kz запускает еженедельный краулер их каталога, они могут эскалировать до cease-and-desist.
+Несколько защитных мер:
+</p>
+
+<ul>
+<li><strong>Документировать законность:</strong> Phase 1 spike зафиксировал, что мы парсим только
+публичные данные без логина, не нарушаем robots.txt и не превышаем разумный rate-limit. У нас
+есть аудит-trail в <code>.planning/spikes/01-goldapple/MEMO.md</code> и Phase 3 коде. Это
+defensible posture.</li>
+
+<li><strong>Запускать crawler с известного KZ-IP с человеческим UA:</strong> не маскировать как
+DDoS, не использовать residential proxy если можно обойтись без них (мы и не используем — Phase 1
+verdict: Camoufox solves the gate без proxy).</li>
+
+<li><strong>Не публиковать данные goldapple:</strong> ga_crawler пишет всё в SQLite, который
+живёт на нашем VPS. Telegram-доставка идёт в приватный канал команды viled. Никаких public
+mirrors / API.</li>
+
+<li><strong>Готовить <code>vsa</code>-protocol:</strong> если goldapple пришлют письмо — ответить
+официальным изложением scope'а (price comparison, weekly cadence, no PII), предложить partnership
+вместо confront (часто работает в B2B retail).</li>
+</ul>
+
+<h2>10. Резюме</h2>
+
+<ol>
+<li><strong>Сейчас viled.kz атакуется одной строкой curl.</strong> Это нормально для startup, но
+ненормально для бизнеса с серьёзным конкурентом, который сам активно занимается prices monitoring.</li>
+
+<li><strong>T0 + T1 за 2-3 недели</strong> поднимают барьер с «1 строка» до «нужно настраивать
+Playwright, обходить Cloudflare challenge, ловить rate-limit'ы». Это отсеет ~95% атакующих.</li>
+
+<li><strong>T2+</strong> оправдан только когда мы увидим в логах устойчивые попытки обойти T1.
+Преждевременная инвестиция в DataDome/F.A.C.C.T. — это $50K/год на ничто.</li>
+
+<li><strong>Тестируйте свою защиту своим же ga_crawler stack'ом.</strong> Если ваша Camoufox-конфигурация
+для goldapple проходит viled — значит viled до уровня goldapple ещё далеко.</li>
+
+<li><strong>Не забывайте: лучшая защита данных — не отдавать их клиенту.</strong> T0 (фильтрация
+<code>__NEXT_DATA__</code>) самая дешёвая и самая эффективная мера. Cloudflare можно обойти,
+fingerprint можно подделать, но если данных в HTML просто нет — их не достать никаким стеком.</li>
+</ol>
+
+<div class="callout ok">
+<strong>Финальная рекомендация</strong>
+Запланируйте T0 на следующий sprint (1 backend + 0.5 PM, ~1 неделя). Запланируйте T1 на спринт
+после T0 (1 devops, ~3 дня). Поднимите Grafana-дашборд для challenge-метрик. Через 8 недель
+смотрите логи — если automated traffic вырос &gt;500 unique IP/нед на product-pages, эскалируйте
+до T2. Иначе остаётесь на T0+T1 и тратите бюджет на функциональность, не на security театр.
+</div>
+
+<div class="footer">
+Документ написан в рамках проекта <code>ga_crawler</code>, Phase 3 (goldapple-crawl). Основан на
+эмпирических находках Phase 1 spike (виled = 15/15 trivial, goldapple = 99/100 после Camoufox + KZ-IP),
+и Phase 3 production-кода (192 теста, 8 waves). Автор: краулер-команда viled, что одной рукой ломает
+goldapple anti-bot, а другой пишет рекомендации защиты viled.kz. Комментарии и итерации:
+mirdbek@gmail.com.
+</div>
+
+</body>
+</html>
