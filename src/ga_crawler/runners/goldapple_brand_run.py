@@ -41,7 +41,7 @@ import yaml
 
 from ga_crawler.enumeration.goldapple_brand import (
     BrandEnumerationResult,
-    enumerate_brand,
+    enumerate_brand_hybrid,
 )
 from ga_crawler.fetchers.goldapple import GoldappleFetcher
 from ga_crawler.interfaces import (
@@ -176,7 +176,11 @@ async def run_goldapple_brand_phase(
       1. Load slug overrides.
       2. Resolve every viled brand_norm → GA slug.
       3. Boot Camoufox via ``GoldappleFetcher`` (one session for all brands).
-      4. Per brand: ``enumerate_brand`` (scroll + cards-list capture).
+      4. Per brand: ``enumerate_brand_hybrid`` — scroll + cards-list capture
+         first; if scroll captured <80% of the brand-page badge total, fall
+         through to API-driven pagination (``enumerate_brand_via_api``),
+         which also runs the ``product-card/base/v3`` multi-variant top-up
+         for cards that expose multiple sizes/shades.
       5. Convert cards → normalized snapshot records.
       6. Snapshot writer batch INSERT.
       7. Compose ``GoldappleStatsBuilder.delta`` (legacy PDP counters set to 0).
@@ -232,7 +236,7 @@ async def run_goldapple_brand_phase(
         for i, (brand_norm, slug) in enumerate(slugs):
             log.info("phase3_enum_brand_start", run_id=run_id, brand_norm=brand_norm, slug=slug)
             try:
-                result = await enumerate_brand(fetcher, slug)
+                result = await enumerate_brand_hybrid(fetcher, slug)
             except Exception as e:  # noqa: BLE001
                 log.error("phase3_enum_brand_failed",
                           run_id=run_id, brand_norm=brand_norm, slug=slug, error=str(e))
