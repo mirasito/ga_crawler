@@ -1,0 +1,36 @@
+# Mapping from viled.brand_norm → goldapple.kz brand slug.
+#
+# Default rule (when a brand_norm is NOT in `overrides`):
+#   slug = re.sub(r'[_\s]+', '-', brand_norm.lower()).strip('-')
+#
+# `brand_norm` is the value stored on snapshots.brand_norm after the
+# Phase 2 normalizer; `slug` is the kebab-case segment that
+# https://goldapple.kz/brands/{slug} accepts.
+#
+# Empirically verified during matcher-review-2026-05-15 probes
+# (see inbox/ga_brand_xhr/, inbox/ga_cards_api/). When you add a new
+# brand to viled and the default rule fails, add an override line here
+# rather than hard-coding it in Python.
+
+overrides:
+  # Brand-norm → GA slug differences seen in probe results:
+  kiehls: kiehl-s                    # Kiehl's → kiehl-s (apostrophe stripped, becomes hyphen)
+  armani_beauty: giorgio-armani      # Armani Beauty → giorgio-armani (GA uses parent label)
+  saint_laurent: yves-saint-laurent  # Yves Saint Laurent
+  givenchy-beauty: givenchy          # Givenchy Beauty → just givenchy on GA
+  frederic_malle: editions-de-parfums-frederic-malle  # Frederic Malle full house name on GA
+  # The following defaults look right (kebab(brand_norm)) but need
+  # empirical verification in a wider sweep:
+  #   bobbi-brown → bobbi-brown        OK
+  #   la-sultane-de-saba → la-sultane-de-saba   OK
+  #   clinique → clinique              OK
+  #   mac → mac                        likely "m-a-c" — TBD
+  #   la_mer → la-mer                  TBD
+  #   tom_ford → tom-ford              TBD
+  #   estee_lauder → estee-lauder      TBD
+  #   creed → creed                    likely OK
+  #   biotherm → biotherm              likely OK
+  #   byredo → byredo                  likely OK
+  #   clarins → clarins                likely OK
+  #   azzaro → azzaro                  likely OK
+  #   chloe → chloe                    likely OK
