@@ -72,6 +72,7 @@ log = structlog.get_logger(__name__)
 # ---- Constants ----
 
 CARDS_LIST_URL_FRAGMENT: str = "/front/api/catalog/cards-list"
+PRODUCT_CARD_API_FRAGMENT: str = "/front/api/catalog/product-card/base/v3"
 GOLDAPPLE_HOST: str = "https://goldapple.kz"
 
 # Scroll pacing — empirically tuned on probe runs:
@@ -153,6 +154,142 @@ def _map_availability(in_stock: Any) -> str:
     no information is lost.
     """
     return "InStock" if bool(in_stock) else "OutOfStock"
+
+
+def variant_to_raw_product(
+    variant: dict,
+    *,
+    brand: str,
+    product_type: str,
+    unit_name: str,
+) -> Optional[GoldappleRawProduct]:
+    """Convert one ``data.variants[i]`` entry from the
+    product-card/base/v3 API response to ``GoldappleRawProduct``.
+
+    Shape of a variant (probe-captured 2026-05-16, inbox/ga_pdp_card_api/):
+      ``{itemId, attributesValue: {units, colors}, url, inStock,
+         price: {actual, regular, old, ...}, name}``
+
+    The variant's own ``name`` is the SHADE / SIZE marketing label
+    ("Black Honey", "1.9 g"). We compose the snapshot's ``name`` field
+    using the parent product's ``brand`` + ``productType`` + variant's
+    ``name`` so downstream token-matching has the full context.
+    """
+    sku_id = variant.get("itemId") or variant.get("mainVariantItemId")
+    if not sku_id:
+        return None
+    price_node = variant.get("price") or {}
+    current = _coerce_int_price(price_node.get("actual")) or _coerce_int_price(
+        price_node.get("regular")
+    )
+    if current is None:
+        return None
+    was = _coerce_int_price(price_node.get("old"))
+    if was is not None and was == current:
+        was = None
+
+    attr_value = variant.get("attributesValue") or {}
+    unit_value = attr_value.get("units")
+    color_value = attr_value.get("colors")
+    raw_volume_text = f"{unit_value} {unit_name}" if unit_value and unit_name else None
+
+    variant_url_path = variant.get("url") or f"/{sku_id}-"
+    url = f"{GOLDAPPLE_HOST}{variant_url_path}"
+
+    variant_name = variant.get("name") or ""
+    # variant.name often carries the shade ("Black Honey") OR is empty;
+    # _compose_name handles missing components cleanly.
+    composed = _compose_name(brand or "", product_type or "", variant_name)
+    if color_value:
+        composed = f"{composed} {color_value}".strip()
+
+    availability = _map_availability(variant.get("inStock"))
+    currency = "KZT"
+    actual = price_node.get("actual") if isinstance(price_node, dict) else None
+    if isinstance(actual, dict) and actual.get("currency"):
+        currency = str(actual["currency"]).upper()
+
+    return GoldappleRawProduct(
+        sku_id=str(sku_id),
+        url=url,
+        name=composed,
+        brand_raw=brand or "",
+        current_price=current,
+        was_price=was,
+        currency=currency,
+        availability=availability,
+        raw_volume_text=raw_volume_text,
+    )
+
+
+async def fetch_product_variants(
+    page: Any,
+    item_id: str,
+    *,
+    timeout_ms: int = 15_000,
+) -> list[GoldappleRawProduct]:
+    """Call product-card/base/v3 for ``item_id`` and yield one
+    ``GoldappleRawProduct`` per ``data.variants[]`` entry.
+
+    Returns an empty list on any failure (network, JSON shape, etc.) —
+    caller treats this as "no extra variants beyond the cards-list one".
+
+    Parameters
+    ----------
+    page
+        Playwright Page from an active ``GoldappleFetcher`` (so the
+        request inherits browser cookies + fingerprint).
+    item_id
+        The master itemId (typically the one returned by cards-list).
+        The API returns this variant PLUS all its siblings.
+
+    Source: matcher-review-2026-05-16 probe sequence
+    (inbox/ga_pdp_card_api/, inbox/probe_pdp_variants.log).
+    """
+    fetch_js = """
+        async (args) => {
+            const params = new URLSearchParams({
+                locale: "ru",
+                cityId: "4c26ad1c-ca49-4fc1-af64-f540c6a873e4",
+                cityDistrict: "Бостандыкский район",
+                regionId: "4da8e628-6856-4e32-95df-60fa493549b8",
+                itemId: args.itemId,
+            });
+            params.append("geoPolygons[]", "KAZ-000000010");
+            params.append("geoPolygons[]", "KAZ-000000014");
+            const url = "/front/api/catalog/product-card/base/v3?" + params.toString();
+            const resp = await fetch(url, {credentials: "include"});
+            if (!resp.ok) return {error: `HTTP ${resp.status}`, status: resp.status};
+            return await resp.json();
+        }
+    """
+    try:
+        result = await page.evaluate(fetch_js, {"itemId": str(item_id)})
+    except Exception as e:
+        log.warning("product_card_fetch_failed", item_id=item_id, error=str(e))
+        return []
+    if not isinstance(result, dict) or result.get("error"):
+        return []
+    data = result.get("data") or {}
+    variants = data.get("variants") or []
+    if not isinstance(variants, list):
+        return []
+    brand = data.get("brand") or ""
+    product_type = data.get("productType") or ""
+    # Unit label lives under attributes.units.unit (e.g. "мл", "г")
+    attributes = data.get("attributes") or {}
+    units_attr = attributes.get("units") or {}
+    unit_name = units_attr.get("unit") or ""
+    out: list[GoldappleRawProduct] = []
+    for v in variants:
+        if not isinstance(v, dict):
+            continue
+        rp = variant_to_raw_product(
+            v, brand=brand, product_type=product_type, unit_name=unit_name,
+        )
+        if rp is not None:
+            out.append(rp)
+    return out
 
 
 def card_to_raw_product(card: dict, slug_path: str) -> Optional[GoldappleRawProduct]:
@@ -389,6 +526,7 @@ async def enumerate_brand_via_api(
     # Deduplicate + convert.
     seen: set[str] = set()
     raw_products: list[GoldappleRawProduct] = []
+    multivariant_master_ids: list[str] = []
     slug_path_default = f"/-{slug}"
     for card in cards_collected:
         p = card.get("product") if isinstance(card, dict) else None
@@ -402,6 +540,30 @@ async def enumerate_brand_via_api(
         if rp is None:
             continue
         raw_products.append(rp)
+        # Multi-variant trigger: when attributes carry >1 unit OR >1
+        # colour, cards-list returned only this "master" card and the
+        # sibling size/shade variants are missing. Queue the master
+        # itemId for a product-card/base/v3 fetch that returns all
+        # variants. Source: matcher-review-2026-05-16.
+        attrs = p.get("attributes") or {}
+        units = attrs.get("units") or {}
+        colors = attrs.get("colors") or {}
+        if (units.get("count", 0) or 0) > 1 or (colors.get("count", 0) or 0) > 1:
+            multivariant_master_ids.append(str(sku_id))
+
+    # ---- Multi-variant top-up ----
+    variant_calls = 0
+    extra_variants = 0
+    for master_id in multivariant_master_ids:
+        variants = await fetch_product_variants(page, master_id)
+        variant_calls += 1
+        for rp in variants:
+            if rp.sku_id in seen:
+                continue
+            seen.add(rp.sku_id)
+            raw_products.append(rp)
+            extra_variants += 1
+        await page.wait_for_timeout(600)
 
     log.info(
         "brand_enum_api_complete",
@@ -409,6 +571,8 @@ async def enumerate_brand_via_api(
         cards_collected=len(cards_collected),
         distinct_raw_products=len(raw_products),
         cards_list_calls=cards_list_calls,
+        multivariant_calls=variant_calls,
+        extra_variants_added=extra_variants,
         badge=badge,
         category_id=category_id,
     )
@@ -652,9 +816,12 @@ __all__ = [
     "SCROLL_INTERVAL_MS",
     "SCROLL_ITERATIONS",
     "SCROLL_STEP_PX",
+    "PRODUCT_CARD_API_FRAGMENT",
     "card_to_raw_product",
     "enumerate_brand",
     "enumerate_brand_hybrid",
     "enumerate_brand_via_api",
     "enumerate_brands",
+    "fetch_product_variants",
+    "variant_to_raw_product",
 ]
