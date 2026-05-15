@@ -73,6 +73,16 @@ m_auto_suggest_factor = 0.7                   # D-310: 0.7 × 4-week-median
 m_auto_suggest_after_runs = 4                 # D-310: needs 4+ history rows
 camoufox_version_expected = "135.0.1.beta24"  # D-313; smoke probe asserts; PR-update flow
 
+# Discovery mode (matcher-review-2026-05-15):
+#   "sitemap"     — legacy: parse XML sitemap, intersect with viled brand
+#                   tokens, fetch each PDP via Camoufox, parse microdata.
+#                   Yields ~89-207 SKUs/run.
+#   "brand_pages" — new: enumerate https://goldapple.kz/brands/{slug} for
+#                   every viled brand, capture cards-list XHR JSON during
+#                   scroll. Yields ~1000-2500 SKUs/run; no PDP fetches.
+# Brand-slug overrides for non-default mappings live in data/ga_brand_slugs.yaml.
+discovery_mode = "brand_pages"
+
 [tool.ga_crawler.crawl.goldapple.smoke_urls]
 # D-312 hardcoded probe URLs. RESEARCH §"Code Examples" L908-913. Avoid spike row 0 (stale).
 # Operator rotation Phase 7 ops-playbook.

@@ -7,30 +7,55 @@
 # Phase 2 normalizer; `slug` is the kebab-case segment that
 # https://goldapple.kz/brands/{slug} accepts.
 #
-# Empirically verified during matcher-review-2026-05-15 probes
-# (see inbox/ga_brand_xhr/, inbox/ga_cards_api/). When you add a new
-# brand to viled and the default rule fails, add an override line here
-# rather than hard-coding it in Python.
+# Empirically verified via probe sequence in inbox/ga_brand_xhr/,
+# inbox/ga_cards_api/, inbox/ga_brand_slugs_from_pdps.json. When you
+# add a new brand to viled and the default rule fails, run
+# `scripts/extract_brand_slugs_from_pdps.py` against a known PDP for
+# that brand and add the discovered slug here.
 
 overrides:
-  # Brand-norm → GA slug differences seen in probe results:
-  kiehls: kiehl-s                    # Kiehl's → kiehl-s (apostrophe stripped, becomes hyphen)
-  armani_beauty: giorgio-armani      # Armani Beauty → giorgio-armani (GA uses parent label)
-  saint_laurent: yves-saint-laurent  # Yves Saint Laurent
-  givenchy-beauty: givenchy          # Givenchy Beauty → just givenchy on GA
-  frederic_malle: editions-de-parfums-frederic-malle  # Frederic Malle full house name on GA
-  # The following defaults look right (kebab(brand_norm)) but need
-  # empirical verification in a wider sweep:
-  #   bobbi-brown → bobbi-brown        OK
-  #   la-sultane-de-saba → la-sultane-de-saba   OK
-  #   clinique → clinique              OK
-  #   mac → mac                        likely "m-a-c" — TBD
-  #   la_mer → la-mer                  TBD
-  #   tom_ford → tom-ford              TBD
-  #   estee_lauder → estee-lauder      TBD
-  #   creed → creed                    likely OK
-  #   biotherm → biotherm              likely OK
-  #   byredo → byredo                  likely OK
-  #   clarins → clarins                likely OK
-  #   azzaro → azzaro                  likely OK
-  #   chloe → chloe                    likely OK
+  # === Confirmed via brand-page badge / PDP-breadcrumb extraction ===
+  armani_beauty: armani            # was giorgio-armani; both work; armani is canonical
+  bobbi-brown: bobbi-brown         # default kebab — explicit for clarity
+  clinique: clinique               # default — works
+  estee_lauder: estee-lauder       # default kebab — explicit
+  givenchy-beauty: givenchy        # GA drops "beauty" suffix
+  kiehls: kiehl-s                  # apostrophe stripped to hyphen; PDP breadcrumb confirmed
+  lancome: lancome                 # default kebab — works
+  la_mer: la-mer                   # default kebab
+  la-sultane-de-saba: la-sultane-de-saba
+  mac: mac                         # default kebab — works (badge=176)
+  saint_laurent: yves-saint-laurent  # GA expands "Saint Laurent" → "Yves Saint Laurent"
+  tom_ford: tom-ford               # default kebab — works (badge=133)
+  frederic_malle: frederic-malle   # default kebab works (PDP breadcrumb confirmed)
+  biotherm: biotherm               # default kebab; PDP breadcrumb confirmed
+
+  # === Other brand_norms that default-kebab handles ===
+  # (listed for documentation; YAML lookup falls through to default when omitted)
+  clarins: clarins
+  byredo: byredo
+  creed: creed
+  zielinski_rozen: zielinski-rozen
+  darphin: darphin
+  paco-rabanne: paco-rabanne
+  dr-jart: dr-jart
+  oribe: oribe
+  davines: davines
+  azzaro: azzaro
+  chloe: chloe
+  memo_paris: memo-paris
+  kilian_paris: kilian-paris
+  maison_francis_kurkdjian: maison-francis-kurkdjian
+
+  # === Brands where the GA slug is still unknown (TODO) ===
+  # The brand exists on viled but we haven't located its GA brand page.
+  # /brands/{viled-norm-kebab} returns the SPA shell with random products.
+  # Workaround: continue accepting the failure — viled brand simply has no
+  # GA price comparison until the slug is identified.
+  #
+  #   jo_malone_london   tried: jo-malone-london, jo-malone, jomalone-london
+  #   ex_nihilo          tried: ex-nihilo, exnihilo, ex-nihilo-paris
+  #   kenzo-beauty       tried: kenzo, kenzo-parfums, kenzo-beauty
+  #   amouage            tried: amouage
+  #   starskin           tried: starskin
+  #   jean-paul-gaultier tried: jean-paul-gaultier

@@ -113,6 +113,41 @@ def _config_with_overrides(
     return dataclasses.replace(config, sanity_gate_n=sanity_gate_n)
 
 
+def _read_goldapple_discovery_mode(pyproject_path: Path | str) -> str:
+    """Read ``[tool.ga_crawler.crawl.goldapple] discovery_mode`` from
+    pyproject.toml. Defaults to ``"sitemap"`` (legacy) when the key is
+    absent so older pyproject.toml files preserve existing behavior.
+
+    Valid values: ``"sitemap"`` | ``"brand_pages"``. Any other value
+    falls back to ``"sitemap"`` with a warning.
+    """
+    try:
+        import tomllib
+        path = Path(pyproject_path)
+        if not path.exists():
+            return "sitemap"
+        with path.open("rb") as f:
+            data = tomllib.load(f)
+        mode = (
+            data.get("tool", {})
+            .get("ga_crawler", {})
+            .get("crawl", {})
+            .get("goldapple", {})
+            .get("discovery_mode", "sitemap")
+        )
+        if mode not in ("sitemap", "brand_pages"):
+            log.warning(
+                "goldapple_discovery_mode_invalid",
+                value=mode,
+                fallback="sitemap",
+            )
+            return "sitemap"
+        return mode
+    except Exception as e:  # noqa: BLE001
+        log.warning("goldapple_discovery_mode_read_failed", error=str(e))
+        return "sitemap"
+
+
 def run_weekly(
     repo_root: Path | str,
     *,
@@ -229,30 +264,56 @@ def run_weekly(
 
         # ---- Goldapple phase ----
         if not viled_only:
-            from ga_crawler.runners.goldapple_run import run_goldapple_phase
+            # Discovery-mode toggle (matcher-review-2026-05-15):
+            # pyproject.toml [tool.ga_crawler.crawl.goldapple] discovery_mode
+            # selects between the legacy sitemap path and the new brand-page
+            # path. Both produce an identically-shaped PhaseResult so this
+            # orchestrator doesn't care which one ran.
+            discovery_mode = _read_goldapple_discovery_mode(pyproject_path)
 
             viled_brands = _derive_viled_brands_from_snapshots(engine, run_id)
             log.info(
                 "goldapple_phase_starting",
                 run_id=run_id,
                 viled_brand_count=len(viled_brands),
+                discovery_mode=discovery_mode,
             )
             kwargs: dict = {}
             if sanity_gate_m is not None:
                 kwargs["M"] = sanity_gate_m
-            g_result = asyncio.run(
-                run_goldapple_phase(
-                    run_id=run_id,
-                    viled_brands=viled_brands,
-                    repo_root=repo_root,
-                    brand_alias=brand_alias,
-                    normalizer=normalizer,
-                    snapshot_writer=snapshot_writer,
-                    run_writer=run_writer,
-                    headless=headless,
-                    **kwargs,
+
+            if discovery_mode == "brand_pages":
+                from ga_crawler.runners.goldapple_brand_run import (
+                    run_goldapple_brand_phase,
                 )
-            )
+                g_result = asyncio.run(
+                    run_goldapple_brand_phase(
+                        run_id=run_id,
+                        viled_brands=viled_brands,
+                        repo_root=repo_root,
+                        brand_alias=brand_alias,
+                        normalizer=normalizer,
+                        snapshot_writer=snapshot_writer,
+                        run_writer=run_writer,
+                        headless=headless,
+                        **kwargs,
+                    )
+                )
+            else:
+                from ga_crawler.runners.goldapple_run import run_goldapple_phase
+                g_result = asyncio.run(
+                    run_goldapple_phase(
+                        run_id=run_id,
+                        viled_brands=viled_brands,
+                        repo_root=repo_root,
+                        brand_alias=brand_alias,
+                        normalizer=normalizer,
+                        snapshot_writer=snapshot_writer,
+                        run_writer=run_writer,
+                        headless=headless,
+                        **kwargs,
+                    )
+                )
             goldapple_count = g_result.goldapple_count
             stats_delta_acc.update(g_result.stats_delta)
             viled_unmatched = list(g_result.unmatched_viled_brands)
