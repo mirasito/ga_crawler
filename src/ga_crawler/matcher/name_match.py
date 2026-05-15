@@ -110,6 +110,139 @@ VARIANT_MARKERS: frozenset[str] = frozenset({
 })
 
 
+# Russian product-type buckets — viled uses one of these as the leading
+# word(s) of name; GA's composed name (productType + brand + name) does
+# the same. When the V and G first-Russian-words map to DIFFERENT buckets,
+# the pair is a cross-category match (e.g. "Крем для рук Portrait of a
+# Lady" vs "Парфюмерная вода Portrait of a Lady By Frederic Malle").
+#
+# Each entry maps a Cyrillic STEM (case-insensitive prefix-match) to a
+# canonical bucket name. Lookup picks the first stem that the leading
+# Cyrillic words start with.
+#
+# Source: matcher-review-2026-05-15 run-19 v2.7 FP audit — cross-category
+# matches surfaced when volume-loose mode let hand creams pair with
+# perfumes that share the marketing name.
+_PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
+    # Fragrance family
+    ("парфюм",       "perfume"),    # парфюмерная, парфюмерной, парфюмерные
+    ("туалетн",      "perfume"),    # туалетная вода (EDT == perfume bucket)
+    ("одеколон",     "perfume"),
+    ("духи",         "perfume"),
+    ("аромат",       "perfume"),    # ароматическая вода
+    # Skincare
+    ("крем",         "cream"),
+    ("сыворот",      "serum"),
+    ("эмульси",      "lotion"),
+    ("лосьон",       "lotion"),
+    ("тоник",        "toner"),
+    ("эссенци",      "essence"),
+    ("маск",         "mask"),
+    ("концентрат",   "serum"),
+    ("масл",         "oil"),
+    ("эликсир",      "elixir"),
+    ("патч",         "patch"),
+    ("флюид",        "fluid"),
+    ("гель-крем",    "cream"),
+    # Cleansing
+    ("гель",         "gel"),
+    ("пенк",         "foam"),
+    ("пенн",         "foam"),
+    ("мыл",          "soap"),
+    ("молочк",       "milk"),
+    ("мицелл",       "micellar"),
+    ("скраб",        "scrub"),
+    ("пилинг",       "peeling"),
+    ("гомм",         "gommage"),
+    # Hair
+    ("шампунь",      "shampoo"),
+    ("кондиционер",  "conditioner"),
+    ("бальзам-конд", "conditioner"),
+    ("спрей",        "spray"),
+    ("дымк",         "spray"),
+    ("сыворотка-сп", "spray"),
+    # Makeup
+    ("помад",        "lipstick"),
+    ("блеск",        "lipgloss"),
+    ("тушь",         "mascara"),
+    ("карандаш",     "pencil"),
+    ("подводк",      "liner"),
+    ("консил",       "concealer"),
+    ("тональн",      "foundation"),
+    ("основ",        "foundation"),
+    ("пудр",         "powder"),
+    ("румян",        "blush"),
+    ("хайлайт",      "highlighter"),
+    ("бронз",        "bronzer"),
+    ("праймер",      "primer"),
+    # Body / personal care
+    ("дезодорант",   "deodorant"),
+    ("антиперспир",  "deodorant"),
+    ("бальзам",      "balm"),       # generic — placed late
+    # Sets / multipacks (caller separately filters multipack_flag, but
+    # the leading word still appears in name)
+    ("набор",        "set"),
+    ("рефил",        "refill"),     # variant of base — VARIANT_MARKERS also caught
+    ("рефилл",       "refill"),
+)
+
+
+def _cyrillic_leading_words(text: str | None) -> list[str]:
+    """Return leading Cyrillic words (lowercased) from a name.
+
+    Stops at the first non-Cyrillic/non-space token. The viled and
+    composed-GA name shapes both start with the Russian product type;
+    the function returns up to the first 3 such words for stem matching.
+    """
+    if not text:
+        return []
+    out: list[str] = []
+    for word in text.lower().split():
+        # Pure Cyrillic word (allow hyphen for compounds like "гель-крем")
+        if all(("а" <= ch <= "я") or ch == "ё" or ch == "-" for ch in word):
+            if len(word) >= 3:  # skip "и", "на", "до", etc.
+                out.append(word)
+                if len(out) >= 3:
+                    break
+        else:
+            break
+    return out
+
+
+def product_type_bucket(name: str | None) -> str | None:
+    """Map a name's leading Russian word(s) to a product-type bucket.
+
+    Returns None when the name has no Cyrillic prefix or no stem matches.
+    Caller treats None as "no signal" (don't apply cross-category veto).
+
+    Refill-prefix handling: if the leading word is ``рефил`` or ``рефилл``
+    (refill — viled-style: "Рефилл геля для душа..."; GA-style: "Рефил
+    парфюмерной воды..."), the bucket is determined by the NEXT Cyrillic
+    word so a perfume refill is bucketed as ``perfume`` and a shower-gel
+    refill as ``gel``. Without this, both would resolve to ``refill`` and
+    cross-category pairs would slip through.
+    """
+    words = _cyrillic_leading_words(name)
+    if not words:
+        return None
+    # Skip leading refill marker — the meaningful bucket comes next.
+    while words and (words[0].startswith("рефил")):
+        words = words[1:]
+    if not words:
+        return None
+    # Try compound first (e.g. "гель-крем"), then individual words.
+    candidates = list(words)
+    for w1 in words:
+        for w2 in words:
+            if w1 != w2:
+                candidates.append(f"{w1}-{w2}")
+    for word in candidates:
+        for stem, bucket in _PRODUCT_TYPE_STEMS:
+            if word.startswith(stem):
+                return bucket
+    return None
+
+
 def en_tokens(text: str | None) -> set[str]:
     """Latin tokens length ≥3 from a string (lowercased)."""
     if not text:
@@ -182,6 +315,18 @@ def name_matches(
 
     See module docstring for the full v2 strategy.
     """
+    # Cross-category veto: viled and GA names start with a Russian
+    # product-type word ("Крем для рук" / "Парфюмерная вода" / etc.).
+    # If both sides resolve to a known bucket AND the buckets differ,
+    # the pair is a hand-cream vs perfume style cross-category match —
+    # reject before anything else. When either side has no Cyrillic
+    # prefix (or the prefix doesn't map to a known bucket), this veto
+    # silently does not apply.
+    v_bucket = product_type_bucket(viled_name_norm)
+    g_bucket = product_type_bucket(goldapple_name_norm)
+    if v_bucket and g_bucket and v_bucket != g_bucket:
+        return False
+
     v_tok = en_tokens(viled_name_norm)
     # GA-side token set is the UNION of slug + name_norm tokens.
     #
@@ -252,5 +397,6 @@ __all__ = [
     "brand_tokens",
     "en_tokens",
     "name_matches",
+    "product_type_bucket",
     "slug_tokens",
 ]

@@ -80,7 +80,8 @@ SELECT_CANDIDATE_PAIRS_SQL = text(
       v.name_norm         AS v_name_norm,
       g.name_norm         AS g_name_norm,
       g.url               AS g_url,
-      v.volume_norm       AS volume_norm,
+      v.volume_norm       AS v_volume_norm,
+      g.volume_norm       AS g_volume_norm,
       v.current_price     AS v_price,
       g.current_price     AS g_price,
       v.was_price         AS v_was,
@@ -88,19 +89,24 @@ SELECT_CANDIDATE_PAIRS_SQL = text(
     FROM snapshots v
     JOIN snapshots g
       ON v.brand_norm = g.brand_norm
-     AND v.volume_norm = g.volume_norm
+     AND (
+            v.volume_norm = g.volume_norm
+         OR v.volume_norm IS NULL
+         OR g.volume_norm IS NULL
+        )
     WHERE v.retailer = 'viled'
       AND v.run_id = :rid
       AND v.multipack_flag = 0
-      AND v.volume_norm IS NOT NULL
       AND v.stock_state != 'DELISTED'
       AND v.current_price IS NOT NULL
       AND g.retailer = 'goldapple'
       AND g.run_id = :rid
       AND g.multipack_flag = 0
-      AND g.volume_norm IS NOT NULL
       AND g.stock_state != 'DELISTED'
       AND g.current_price IS NOT NULL
+      -- matches.volume_norm is NOT NULL; require at least one side to
+      -- carry a volume so the inserted match-row has a usable value.
+      AND (v.volume_norm IS NOT NULL OR g.volume_norm IS NOT NULL)
     """
 )
 
@@ -135,7 +141,6 @@ DENOMINATOR_SQL = text(
     WHERE v.retailer = 'viled'
       AND v.run_id = :rid
       AND v.multipack_flag = 0
-      AND v.volume_norm IS NOT NULL
       AND v.stock_state != 'DELISTED'
       AND v.brand_norm IN (
         SELECT DISTINCT g.brand_norm FROM snapshots g
@@ -162,7 +167,6 @@ COMPARABLE_COUNT_SQL = text(
     WHERE retailer = :retailer
       AND run_id = :rid
       AND multipack_flag = 0
-      AND volume_norm IS NOT NULL
       AND stock_state != 'DELISTED'
     """
 )
@@ -210,6 +214,21 @@ def build_matches_for_run(engine, run_id: int) -> int:
                 brand_norm=cand.brand_norm,
             ):
                 continue
+            # Volume reconciliation:
+            #   * Both non-null AND equal           → trivially compatible.
+            #   * Either null                       → SQL accepted; Python
+            #                                         accepts too (one side
+            #                                         lacks volume metadata).
+            #   * Both non-null AND different       → SQL would NOT have
+            #                                         emitted this pair
+            #                                         (the WHERE clause
+            #                                         enforces equality
+            #                                         when both present),
+            #                                         so this branch is
+            #                                         unreachable.
+            # Pick the non-null volume_norm for the match row (used as
+            # display key in Excel reports).
+            volume_norm = cand.v_volume_norm or cand.g_volume_norm
             conn.execute(
                 INSERT_MATCHES_SQL,
                 {
@@ -221,7 +240,7 @@ def build_matches_for_run(engine, run_id: int) -> int:
                     # (kept as the canonical "match key" for human review of
                     # the matches table).
                     "name_norm": cand.v_name_norm,
-                    "volume_norm": cand.volume_norm,
+                    "volume_norm": volume_norm,
                     "v_price": cand.v_price,
                     "g_price": cand.g_price,
                     "v_was": cand.v_was,

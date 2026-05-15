@@ -139,15 +139,23 @@ def test_multipack_excluded_from_numerator(engine):
     assert build_matches_for_run(engine, 1) == 0
 
 
-def test_volume_norm_null_excluded(engine):
-    """D-402: NULL volume_norm on either side → not matched."""
+def test_volume_norm_one_side_null_allowed(engine):
+    """v2.7 (matcher-review-2026-05-15): when one side's volume_norm is
+    NULL but the other side has a usable volume, accept the pair. viled
+    lipsticks / mascaras frequently lack volume in the product name and
+    a strict-equality requirement would drop ~30% of legitimate GT pairs.
+
+    Reject only when BOTH sides are NULL (the matches.volume_norm column
+    is NOT NULL — we'd have nothing to insert).
+    """
+    # viled NULL, goldapple has volume → ACCEPT
     _plant(
         engine,
         1,
         [_viled_payload("V1", volume_norm=None)],
         [_goldapple_payload("G1")],
     )
-    assert build_matches_for_run(engine, 1) == 0
+    assert build_matches_for_run(engine, 1) == 1
 
     # Reverse case — new run to keep the test isolated.
     with Session(engine) as s:
@@ -159,7 +167,19 @@ def test_volume_norm_null_excluded(engine):
         [_viled_payload("V2")],
         [_goldapple_payload("G2", volume_norm=None)],
     )
-    assert build_matches_for_run(engine, 2) == 0
+    assert build_matches_for_run(engine, 2) == 1
+
+
+def test_volume_norm_both_null_excluded(engine):
+    """v2.7 invariant: matches.volume_norm is NOT NULL, so reject when
+    neither side carries a volume."""
+    _plant(
+        engine,
+        1,
+        [_viled_payload("V1", volume_norm=None)],
+        [_goldapple_payload("G1", volume_norm=None)],
+    )
+    assert build_matches_for_run(engine, 1) == 0
 
 
 def test_delisted_excluded(engine):
@@ -252,7 +272,10 @@ def test_brand_overlap_count(engine):
 
 
 def test_comparable_counts_per_retailer(engine):
-    """compute_comparable_counts: filters multipack / volume / DELISTED for given retailer."""
+    """compute_comparable_counts: filters multipack / DELISTED for the
+    given retailer. v2.7 dropped the ``volume_norm IS NOT NULL`` filter
+    (matcher tolerates one-sided NULL volume), so the GA snapshot whose
+    volume_norm is None now counts as comparable."""
     _plant(
         engine,
         1,
@@ -260,16 +283,16 @@ def test_comparable_counts_per_retailer(engine):
             _viled_payload("V1"),  # comparable
             _viled_payload("V2", name_norm="b"),  # comparable
             _viled_payload("V3", name_norm="c"),  # comparable
-            _viled_payload("V4", multipack_flag=True),  # excluded
+            _viled_payload("V4", multipack_flag=True),  # excluded (multipack)
             _viled_payload("V5", stock_state="DELISTED", name_norm="d"),  # excluded
         ],
         [
             _goldapple_payload("G1"),  # comparable
-            _goldapple_payload("G2", volume_norm=None, name_norm="b"),  # excluded
+            _goldapple_payload("G2", volume_norm=None, name_norm="b"),  # comparable (v2.7)
         ],
     )
     assert compute_comparable_counts(engine, 1, "viled") == 3
-    assert compute_comparable_counts(engine, 1, "goldapple") == 1
+    assert compute_comparable_counts(engine, 1, "goldapple") == 2
 
 
 def test_read_run_status_running_vs_success_vs_missing(engine):
