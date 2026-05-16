@@ -231,3 +231,50 @@ def test_accepts_vitamin_enriched_subset() -> None:
         goldapple_name_norm="bobbi brown vitamin enriched",
         brand_norm="bobbi-brown",
     )
+
+
+def test_rejects_palette_vs_perfume_same_marketing_name() -> None:
+    """Run-19 v3.1 FP postmortem (commit 937213d+): viled
+    `Палетка теней Eye Color Quad оттенок Electric cherry` (Tom Ford
+    eyeshadow palette) matched GA `Парфюмерная вода Tom Ford Electric
+    Cherry` because both share the marketing-name "electric cherry" AND
+    palette had no `volume_norm` (volume-loose JOIN permits NULL one side).
+
+    Bucket veto must reject this pair: `палетка` → palette bucket,
+    `парфюмерная` → perfume bucket, mismatch ⇒ no match."""
+    assert not name_matches(
+        viled_name_norm="палетка тенеи eye color quad оттенок electric cherry",
+        goldapple_url="https://goldapple.kz/19000402298-electric-cherry-eau-de-parfum",
+        goldapple_name_norm="парфюмерная вода tom ford electric cherry eau de parfum",
+        brand_norm="tom_ford",
+    )
+
+
+def test_accepts_palette_vs_palette_same_product() -> None:
+    """Companion to the FP-rejection test: when BOTH sides are palettes,
+    bucket veto MUST NOT fire — `палетка` ↔ `палетка` is a same-bucket
+    match and the Path-2 token logic should accept the pair."""
+    assert name_matches(
+        viled_name_norm="палетка тенеи eye color quad оттенок electric cherry",
+        goldapple_url="https://goldapple.kz/19000196765-eye-color-quad",
+        goldapple_name_norm="палетка тенеи tom ford eye color quad",
+        brand_norm="tom_ford",
+    )
+
+
+def test_plural_spray_form_resolves_to_spray_bucket() -> None:
+    """viled normalizer emits `спреи` (plural) for "Спрей для тела". The
+    bucket stem `спре` covers both `спрей` (singular) and `спреи` (plural)
+    so spray-vs-perfume pairs are still vetoed despite plural normalization."""
+    from ga_crawler.matcher.name_match import product_type_bucket
+    assert product_type_bucket("спреи для тела electric cherry") == "spray"
+    assert product_type_bucket("спрей для волос") == "spray"
+
+
+def test_palette_and_eyeshadow_both_map_to_palette_bucket() -> None:
+    """`Тени для век` and `Палетка теней` are the same product family in
+    practice — both must map to `palette` so viled "Тени для век" can
+    match GA "Палетка теней" without the veto firing."""
+    from ga_crawler.matcher.name_match import product_type_bucket
+    assert product_type_bucket("палетка тенеи tom ford") == "palette"
+    assert product_type_bucket("тени для век guerlain") == "palette"

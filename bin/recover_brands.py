@@ -45,6 +45,7 @@ from ga_crawler.runners.goldapple_brand_run import (
     resolve_brand_slug,
 )
 from ga_crawler.storage.sqlite import (
+    SqliteRunWriter,
     SqliteSnapshotWriter,
     init_db,
     make_engine,
@@ -65,6 +66,7 @@ async def _recover_brands(
     init_db(db_path)
     engine = make_engine(db_path)
     snapshot_writer = SqliteSnapshotWriter(engine)
+    run_writer = SqliteRunWriter(engine)
 
     alias_path = repo_root / "config" / "brand-aliases.yaml"
     alias = YamlBrandAlias(alias_path)
@@ -134,7 +136,25 @@ async def _recover_brands(
             "badge": result.product_count_badge,
         })
 
-    return {"run_id": run_id, "recovered": results}
+    # Refresh goldapple.fetch_count / persisted_count stat to the authoritative
+    # post-recovery DB row count so downstream report-run renders the correct
+    # «goldapple: N SKU» figure. Without this, the summary keeps the stale
+    # count from the original phase-3 run.
+    with engine.connect() as conn:
+        new_ga_count = conn.execute(
+            text("SELECT COUNT(*) FROM snapshots "
+                 "WHERE run_id=:rid AND retailer='goldapple'"),
+            {"rid": run_id},
+        ).scalar() or 0
+    run_writer.patch_stats(run_id, {
+        "goldapple.fetch_count": int(new_ga_count),
+        "goldapple.persisted_count": int(new_ga_count),
+    })
+    log.info("recover_stats_refreshed", run_id=run_id,
+             goldapple_fetch_count=int(new_ga_count))
+
+    return {"run_id": run_id, "recovered": results,
+            "goldapple_fetch_count_after": int(new_ga_count)}
 
 
 def main() -> int:

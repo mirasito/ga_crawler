@@ -158,7 +158,7 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
     ("шампунь",      "shampoo"),
     ("кондиционер",  "conditioner"),
     ("бальзам-конд", "conditioner"),
-    ("спрей",        "spray"),
+    ("спре",         "spray"),     # спрей / спреи (plural viled-style normalization)
     ("дымк",         "spray"),
     ("сыворотка-сп", "spray"),
     # Makeup
@@ -168,6 +168,8 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
     ("карандаш",     "pencil"),
     ("подводк",      "liner"),
     ("консил",       "concealer"),
+    ("палетк",       "palette"),    # палетка теней / палетка хайлайтеров
+    ("тен",          "palette"),    # тени для век (same bucket as палетка — same product family)
     ("тональн",      "foundation"),
     ("основ",        "foundation"),
     ("пудр",         "powder"),
