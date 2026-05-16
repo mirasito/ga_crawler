@@ -184,7 +184,13 @@ def variant_to_raw_product(
     )
     if current is None:
         return None
+    # was_price = MSRP. Same two-path logic as card_to_raw_product:
+    # explicit price.old, falling back to price.regular > price.actual.
     was = _coerce_int_price(price_node.get("old"))
+    if was is None:
+        regular = _coerce_int_price(price_node.get("regular"))
+        if regular is not None and regular > current:
+            was = regular
     if was is not None and was == current:
         was = None
 
@@ -320,8 +326,17 @@ def card_to_raw_product(card: dict, slug_path: str) -> Optional[GoldappleRawProd
     )
     if current is None:
         return None
+    # was_price = strikethrough MSRP visible on GA page. Two paths:
+    #   1. price.old — explicit GA-emitted strikethrough (active promo)
+    #   2. price.regular > price.actual — implicit MSRP fallback when GA
+    #      shows the discount via regular vs actual without populating old
+    #      (observed 2026-05-16: Kilian Good Girl Gone Bad 100 ml shows
+    #      315900 → 284310 in UI but cards-list omits price.old)
     was = _coerce_int_price(price_node.get("old"))
-    # If "old" equals "actual", there's no real discount — emit None for was.
+    if was is None:
+        regular = _coerce_int_price(price_node.get("regular"))
+        if regular is not None and regular > current:
+            was = regular
     if was is not None and was == current:
         was = None
 

@@ -74,6 +74,108 @@ def _extract_volume_from_attributes(attributes: list[dict]) -> Optional[str]:
     return None
 
 
+def _all_size_attributes(attributes: list[dict]) -> list[str]:
+    """Return ALL Размер/объем values (one per size variant viled exposes).
+
+    Multi-variant SKUs surface every variant in attributes — e.g. Kilian
+    Good Girl Gone Bad lists 100/50/7.5 ml. Catalog API returns a single
+    minPrice but the SKU is actually sold across N sizes at N prices.
+    """
+    if not attributes:
+        return []
+    out: list[str] = []
+    for attr in attributes:
+        name = (attr.get("name") or "").strip().lower()
+        if name in _VOLUME_ATTR_NAMES:
+            value = (attr.get("value") or "").strip()
+            if value:
+                out.append(value)
+    return out
+
+
+def _fetch_variant_prices(sku_id: int) -> Optional[list[dict]]:
+    """Fetch viled PDP HTML for a multi-variant SKU, extract per-variant
+    pricing from `__NEXT_DATA__`.
+
+    Returns a list of dicts shaped like:
+        [{"item_price_id": int, "size": "100 мл", "price": int, "real_price": int}, ...]
+
+    Returns None on any fetch / parse failure — caller falls back to the
+    single-row catalog path.
+
+    Per-variant data lives in:
+      __NEXT_DATA__.props.pageProps.attributes[] — list of variant pricing
+      __NEXT_DATA__.props.pageProps.item.selectAttributes[0].values[] — id→size mapping
+    """
+    import re
+    import json as _json
+
+    pdp_url = f"https://viled.kz/item/{sku_id}"
+    try:
+        resp = cffi_requests.get(pdp_url, impersonate="chrome", timeout=25)
+    except Exception as e:
+        log.warning("viled_pdp_fetch_failed", sku_id=sku_id, error=str(e))
+        return None
+    if resp.status_code != 200:
+        log.warning("viled_pdp_non_200", sku_id=sku_id, status=resp.status_code)
+        return None
+    try:
+        html = resp.text
+    except Exception:
+        return None
+    m = re.search(
+        r'<script id="__NEXT_DATA__"[^>]*>(\{.*?\})</script>',
+        html, re.DOTALL,
+    )
+    if not m:
+        log.warning("viled_pdp_no_next_data", sku_id=sku_id)
+        return None
+    try:
+        nd = _json.loads(m.group(1))
+    except Exception:
+        log.warning("viled_pdp_next_data_parse_failed", sku_id=sku_id)
+        return None
+    pp = nd.get("props", {}).get("pageProps", {}) or {}
+    attrs_list = pp.get("attributes") or []
+    if not isinstance(attrs_list, list) or not attrs_list:
+        return None
+
+    # Build itemPriceId → size value map from selectAttributes.
+    # __NEXT_DATA__ uses Cyrillic "Размер"; the alternate
+    # /api/viled-catalog/v2/items/{id} endpoint uses Latin "size".
+    # Accept either so the lookup survives source flips.
+    item = pp.get("item") or {}
+    select_attrs = item.get("selectAttributes") or []
+    size_map: dict[int, str] = {}
+    _SIZE_NAMES = {"size", "размер", "объем", "объём"}
+    for sa in select_attrs:
+        if (sa.get("name") or "").strip().lower() not in _SIZE_NAMES:
+            continue
+        for v in (sa.get("values") or []):
+            ipid = v.get("itemPriceId")
+            size = v.get("value")
+            if isinstance(ipid, int) and isinstance(size, str):
+                size_map[ipid] = size
+
+    out: list[dict] = []
+    for a in attrs_list:
+        if not isinstance(a, dict):
+            continue
+        ipid = a.get("id")
+        price = a.get("price")
+        real_price = a.get("realPrice")
+        if not isinstance(ipid, int) or not isinstance(price, int):
+            continue
+        out.append({
+            "item_price_id": ipid,
+            "size": size_map.get(ipid, ""),
+            "price": int(price),
+            "real_price": int(real_price) if isinstance(real_price, int) else int(price),
+            "enable_discount": bool(a.get("enableDiscount")),
+        })
+    return out
+
+
 def _walk_catalog(gender: str, catalog_id: str, pause: float) -> list[dict]:
     """Walk all pages of /api/viled-catalog/v2/items/content for (gender, catalog_id).
 
@@ -139,10 +241,27 @@ def _walk_catalog(gender: str, catalog_id: str, pause: float) -> list[dict]:
     return items
 
 
-def _catalog_item_to_normalized(item: dict, normalizer: Normalizer) -> Optional[dict]:
-    """Convert a catalog API item to the SnapshotWriter dict shape.
+def _catalog_item_to_normalized(
+    item: dict,
+    normalizer: Normalizer,
+    *,
+    pdp_topup_pause_s: float = 0.6,
+) -> list[dict]:
+    """Convert a catalog API item to a list of snapshot-writer dicts.
 
-    Returns None if essential fields are missing.
+    For single-variant SKUs returns a one-element list (same as the old
+    single-row path). For multi-variant SKUs (≥2 Размер attributes — ~12%
+    of viled inventory based on run-20 audit), fetches the PDP to extract
+    per-variant pricing and returns N rows — one per size.
+
+    Multi-variant fix rationale: viled catalog API returns `minPrice` for
+    the cheapest variant but the `attributes` list mixes ALL sizes in the
+    same record. The pre-fix path emitted ONE row labelled with the FIRST
+    size attribute at the minimum price — producing rows like "Kilian
+    Good Girl Gone Bad 100 мл @ 41 400 ₸" when the 100 мл price is
+    actually 328 600 and 41 400 is the 7,5 мл price.
+
+    Returns [] if essential fields are missing.
     """
     sku_id = item.get("id")
     brand_raw = (item.get("brandName") or "").strip()
@@ -150,34 +269,97 @@ def _catalog_item_to_normalized(item: dict, normalizer: Normalizer) -> Optional[
     min_price = item.get("minPrice")
     real_min_price = item.get("realMinPrice")
     if sku_id is None or not brand_raw or not name_raw or not min_price:
-        return None
+        return []
 
-    raw_volume_text = _extract_volume_from_attributes(item.get("attributes", []))
-    volume_norm_tuple = normalizer.volume(raw_volume_text or "")
-    volume_norm = serialize_volume_norm(volume_norm_tuple)
-    multipack_flag = detect_multipack(raw_volume_text or "")
-
+    sizes = _all_size_attributes(item.get("attributes", []))
     enable_discount = item.get("enableDiscount", False)
-    was_price = None
-    if enable_discount and real_min_price and real_min_price != min_price:
-        was_price = int(real_min_price)
+    base_url = f"https://viled.kz/item/{sku_id}"
+    brand_norm = normalizer.brand(brand_raw)
+    name_norm = normalizer.name(name_raw)
 
-    return {
-        "sku_id": str(sku_id),
-        "url": f"https://viled.kz/item/{sku_id}",
-        "name": name_raw,
-        "brand": brand_raw,
-        "brand_norm": normalizer.brand(brand_raw),
-        "name_norm": normalizer.name(name_raw),
-        "current_price": int(min_price),
-        "was_price": was_price,
-        "currency": "KZT",
-        "stock_state": "IN_STOCK",  # catalog API only lists available items; UNKNOWN if site changes
-        "volume_raw": raw_volume_text,
-        "volume_norm": volume_norm,
-        "multipack_flag": multipack_flag,
-        "parse_error_flag": False,
-    }
+    # ---- Single-variant path (or zero sizes) — fast catalog-only emit ----
+    if len(sizes) <= 1:
+        raw_volume_text = sizes[0] if sizes else None
+        volume_norm = serialize_volume_norm(normalizer.volume(raw_volume_text or ""))
+        was_price = None
+        if enable_discount and real_min_price and real_min_price != min_price:
+            was_price = int(real_min_price)
+        return [{
+            "sku_id": str(sku_id),
+            "url": base_url,
+            "name": name_raw,
+            "brand": brand_raw,
+            "brand_norm": brand_norm,
+            "name_norm": name_norm,
+            "current_price": int(min_price),
+            "was_price": was_price,
+            "currency": "KZT",
+            "stock_state": "IN_STOCK",
+            "volume_raw": raw_volume_text,
+            "volume_norm": volume_norm,
+            "multipack_flag": detect_multipack(raw_volume_text or ""),
+            "parse_error_flag": False,
+        }]
+
+    # ---- Multi-variant path — fetch PDP for per-variant prices ----
+    variants = _fetch_variant_prices(sku_id)
+    time.sleep(pdp_topup_pause_s)  # polite pacing
+    if not variants:
+        # PDP fetch failed — fall back to single-row catalog path so we
+        # don't lose the SKU entirely. Mark with parse_error_flag for
+        # later operator review.
+        log.warning("viled_pdp_topup_fallback", sku_id=sku_id,
+                    size_count=len(sizes))
+        raw_volume_text = sizes[0]
+        volume_norm = serialize_volume_norm(normalizer.volume(raw_volume_text or ""))
+        return [{
+            "sku_id": str(sku_id),
+            "url": base_url,
+            "name": name_raw,
+            "brand": brand_raw,
+            "brand_norm": brand_norm,
+            "name_norm": name_norm,
+            "current_price": int(min_price),
+            "was_price": None,
+            "currency": "KZT",
+            "stock_state": "IN_STOCK",
+            "volume_raw": raw_volume_text,
+            "volume_norm": volume_norm,
+            "multipack_flag": detect_multipack(raw_volume_text or ""),
+            "parse_error_flag": True,
+        }]
+
+    # Emit one row per variant with compound sku_id = "{viled_id}-{itemPriceId}".
+    # Single-variant sku_ids stay as plain "{viled_id}" so most matches stay
+    # backwards-compatible.
+    out: list[dict] = []
+    for v in variants:
+        ipid = v["item_price_id"]
+        size_text = v["size"] or sizes[0]
+        price = v["price"]
+        real_price = v.get("real_price", price)
+        was = int(real_price) if real_price and real_price != price else None
+        volume_norm = serialize_volume_norm(normalizer.volume(size_text))
+        out.append({
+            "sku_id": f"{sku_id}-{ipid}",
+            "url": base_url,
+            "name": name_raw,
+            "brand": brand_raw,
+            "brand_norm": brand_norm,
+            "name_norm": name_norm,
+            "current_price": int(price),
+            "was_price": was,
+            "currency": "KZT",
+            "stock_state": "IN_STOCK",
+            "volume_raw": size_text,
+            "volume_norm": volume_norm,
+            "multipack_flag": detect_multipack(size_text or ""),
+            "parse_error_flag": False,
+        })
+    log.info("viled_pdp_topup_complete", sku_id=sku_id,
+             variant_count=len(out), prices=[r["current_price"] for r in out],
+             volumes=[r["volume_raw"] for r in out])
+    return out
 
 
 def main() -> int:
@@ -237,14 +419,13 @@ def main() -> int:
         raw_items = _walk_catalog(gender, catalog_id, args.pause)
         log.info("viled_catalog_walked", catalog_base=catalog_base, raw_count=len(raw_items))
         for item in raw_items:
-            record = _catalog_item_to_normalized(item, normalizer)
-            if record is None:
-                continue
-            sku = record["sku_id"]
-            if sku in seen_ids:
-                continue  # dedup across catalogs
-            seen_ids.add(sku)
-            all_records.append(record)
+            records = _catalog_item_to_normalized(item, normalizer)
+            for record in records:
+                sku = record["sku_id"]
+                if sku in seen_ids:
+                    continue  # dedup across catalogs
+                seen_ids.add(sku)
+                all_records.append(record)
 
     inserted = snapshot_writer.append(run_id, "viled", all_records)
     duration = time.perf_counter() - started

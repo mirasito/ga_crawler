@@ -303,3 +303,62 @@ class TestFetchProductVariants:
         assert args == {"itemId": "555"}
         # JS shim must call /front/api/catalog/product-card/base/v3
         assert "/front/api/catalog/product-card/base/v3" in js
+
+
+# ---- was_price fallback to price.regular (2026-05-16 user-reported gap) ----
+
+
+class TestWasPriceRegularFallback:
+    """When GA omits price.old (no explicit strikethrough emitted by
+    cards-list) but price.regular > price.actual, the discount is still
+    visible on the website page itself. Operator reported Kilian Good
+    Girl Gone Bad 100ml shows 315900 ₸ struck → 284310 ₸ current but our
+    snapshot had was_price=NULL. Fix: fall back to regular when old is
+    absent and regular > actual."""
+
+    def test_regular_used_when_old_missing(self) -> None:
+        v = {
+            "itemId": "555",
+            "price": {
+                "regular": {"currency": "KZT", "amount": 315900, "denominator": 1},
+                "actual":  {"currency": "KZT", "amount": 284310, "denominator": 1},
+                # no "old" field — operator-observed gap on Kilian
+            },
+            "attributesValue": {"units": "100", "colors": ""},
+            "inStock": True,
+        }
+        rp = variant_to_raw_product(v, brand="Kilian", product_type="EDP", unit_name="мл")
+        assert rp is not None
+        assert rp.current_price == 284310
+        assert rp.was_price == 315900  # ← fallback to regular MSRP
+
+    def test_regular_ignored_when_equal_to_actual(self) -> None:
+        v = {
+            "itemId": "556",
+            "price": {
+                "regular": {"currency": "KZT", "amount": 100000, "denominator": 1},
+                "actual":  {"currency": "KZT", "amount": 100000, "denominator": 1},
+            },
+            "attributesValue": {"units": "50", "colors": ""},
+            "inStock": True,
+        }
+        rp = variant_to_raw_product(v, brand="X", product_type="T", unit_name="мл")
+        assert rp is not None
+        assert rp.was_price is None  # no real discount
+
+    def test_explicit_old_still_preferred_when_present(self) -> None:
+        # If GA emits BOTH old and regular, old wins (it's the canonical
+        # strikethrough; regular might be MSRP that exceeds even old).
+        v = {
+            "itemId": "557",
+            "price": {
+                "regular": {"currency": "KZT", "amount": 50000, "denominator": 1},
+                "actual":  {"currency": "KZT", "amount": 30000, "denominator": 1},
+                "old":     {"currency": "KZT", "amount": 40000, "denominator": 1},
+            },
+            "attributesValue": {"units": "50", "colors": ""},
+            "inStock": True,
+        }
+        rp = variant_to_raw_product(v, brand="X", product_type="T", unit_name="мл")
+        assert rp is not None
+        assert rp.was_price == 40000  # explicit old wins
