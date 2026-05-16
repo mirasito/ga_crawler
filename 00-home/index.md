@@ -9,7 +9,8 @@ date: 2026-05-15
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — matcher v2.8 + multi-variant shipped, full re-enum next]]** — что делать прямо сейчас (**matcher v2.8 + brand-pages discovery + multi-variant capture закоммичены 2026-05-16**; 7 коммитов запушены `7f396fd → 3df6aba`; на run 19: 2780 матчей vs 0 раньше; GT recall 67% на 316 manual pairs; multi-variant top-up через `product-card/base/v3` доказан на Bobbi Brown +47% SKU; Hetzner-cron подтянет с понедельника `discovery_mode = "brand_pages"`)
+- **[[Текущие приоритеты — re-enum verified, 8 slugs unlocked, git push + Monday cron next]]** — что делать прямо сейчас (**run-19 полностью re-enum'ен 2026-05-16 evening через hybrid+variant production-path**; 4 локальных коммита `04060d5/6a966f3/e73ebe7/07e2254` НЕ запушены; goldapple 1319→2396 SKU +82%, brand overlap 20→40, matches 2780→3831, rate 68.85%→78.71% +9.86 pp; 8 brand-slug overrides добавлены через `/front/api/brands` discovery; **`git push origin master` срочно до понедельничного Hetzner-cron-run**)
+- Утренний trail: ~~[[Текущие приоритеты — matcher v2.8 + multi-variant shipped, full re-enum next]]~~ — superseded 2026-05-16 evening (re-enum done, multi-variant code в проде, 8 slugs unlocked, production wiring drift bug пойман+fixed)
 - Phase 11 deploy trail: ~~[[Текущие приоритеты — Phase 10 done + viled pagination unlocked, Phase 11 deploy next]]~~ — superseded 2026-05-16 (matcher 0→2780, discovery 207→1322 GA SKU; не понадобилось Phase 11 как отдельная фаза — всё закоммитилось как matcher-iteration)
 - Phase 9 close trail: ~~[[Текущие приоритеты — Phase 9 planned, execute next]]~~ — superseded 2026-05-15 (Phase 9 closed 2026-05-14, Phase 10 closed same day; production reality-check next)
 - Phase 9 contexted trail: ~~[[Текущие приоритеты — Phase 9 contexted, plan next]]~~ — superseded 2026-05-14 evening (4 PLAN.md ready; plan-checker PASS 8/8; execute next)
