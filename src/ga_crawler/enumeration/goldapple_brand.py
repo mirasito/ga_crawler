@@ -372,10 +372,10 @@ async def enumerate_brand_via_api(
     max_pages: int = 30,
     inter_page_delay_ms: int = 4_000,
     post_goto_settle_ms: int = 5_000,
-    post_burst_cooldown_ms: int = 10_000,
+    post_burst_cooldown_ms: int = 20_000,
     pages_per_burst: int = 3,
     max_403_retries_per_page: int = 3,
-    max_403_budget_per_brand: int = 6,
+    max_403_budget_per_brand: int = 12,
 ) -> BrandEnumerationResult:
     """API-driven enumeration: open brand page once, then loop cards-list
     directly via ``page.evaluate('fetch(...)')`` for full pagination.

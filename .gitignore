@@ -46,6 +46,7 @@ prices.db
 prices.db-journal
 prices.db-wal
 prices.db-shm
+prices.db.bak-*
 
 # Phase 5 reporter artifacts (D-510 output_dir + D-516 namespace).
 # Directory tracked via reports/.gitkeep (mirror Phase 2 D-219 backups/ pattern);
