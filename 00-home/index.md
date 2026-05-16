@@ -9,7 +9,8 @@ date: 2026-05-15
 
 ## Ориентируйся отсюда
 
-- **[[Текущие приоритеты — 5337 matches достигнуто, локальный режим продолжается]]** — что делать прямо сейчас (**run-19 финал: GA 3 675 SKU / matches 5 337 / rate 105.6%**; +1 506 matches в late-evening session; 6 локальных коммитов; **Hetzner-cron на паузе — локальный режим** до confidence; два архитектурных бага закрыты — brand-alias mismatch и cards-list burst limit; xlsx 801 KB готов)
+- **[[Текущие приоритеты — sub-bucketing v3 закрыт top-10 honest 4312 matches]]** — что делать прямо сейчас (**run-21 финал: viled 6 359 / GA 3 744 / matches 4 312 @ 81.74% honest rate**; viled multi-variant per-variant capture + perfume concentration sub-bucketing + body-part qualifier + default-face heuristic закрыли все user-reported FP-классы; 583/583 unit tests; xlsx прилетел message_id=42; 8 коммитов запушены `04060d5..dfa4ab7`)
+- 5337-matches trail: ~~[[Текущие приоритеты — 5337 matches достигнуто, локальный режим продолжается]]~~ — superseded 2026-05-16 evening forensic review (forensic review показал что 5337 inflated cross-class FPs; правильный count 4312 honest после sub-bucketing)
 - Vечерний trail: ~~[[Текущие приоритеты — re-enum verified, 8 slugs unlocked, git push + Monday cron next]]~~ — superseded 2026-05-16 поздний вечер (re-enum #2/#3 + recovery loop добавили +1 506 matches; 3 831 → 5 337)
 - Утренний trail: ~~[[Текущие приоритеты — matcher v2.8 + multi-variant shipped, full re-enum next]]~~ — superseded 2026-05-16 evening (re-enum done, multi-variant code в проде, 8 slugs unlocked, production wiring drift bug пойман+fixed)
 - Phase 11 deploy trail: ~~[[Текущие приоритеты — Phase 10 done + viled pagination unlocked, Phase 11 deploy next]]~~ — superseded 2026-05-16 (matcher 0→2780, discovery 207→1322 GA SKU; не понадобилось Phase 11 как отдельная фаза — всё закоммитилось как matcher-iteration)
