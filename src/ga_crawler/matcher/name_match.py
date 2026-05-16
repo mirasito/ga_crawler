@@ -169,6 +169,7 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
     ("бальзам-конд", "conditioner"),
     ("спре",         "spray"),     # спрей / спреи (plural viled-style normalization)
     ("дымк",         "spray"),
+    ("мист",         "spray"),     # мист для волос — hair mist, atomized like spray
     ("сыворотка-сп", "spray"),
     # Makeup
     ("помад",        "lipstick"),
@@ -191,6 +192,8 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
     ("антиперспир",  "deodorant"),
     ("свеч",         "candle"),     # свеча, свечи — NOT perfume even when ароматическая
     ("атомаизер",    "atomizer"),   # атомайзер — refillable spray bottle, not parfum
+    ("футляр",       "case"),       # cosmetic case / cushion case — accessory, NOT a beauty liquid
+    ("массаж",       "device"),     # массажер для лица — device, NOT a cream
     ("бальзам",      "balm"),       # generic — placed late
     # Sets / multipacks (caller separately filters multipack_flag, but
     # the leading word still appears in name)
