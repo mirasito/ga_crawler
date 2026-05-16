@@ -265,9 +265,14 @@ def test_accepts_palette_vs_palette_same_product() -> None:
 def test_plural_spray_form_resolves_to_spray_bucket() -> None:
     """viled normalizer emits `спреи` (plural) for "Спрей для тела". The
     bucket stem `спре` covers both `спрей` (singular) and `спреи` (plural)
-    so spray-vs-perfume pairs are still vetoed despite plural normalization."""
+    so spray-vs-perfume pairs are still vetoed despite plural normalization.
+
+    Updated 2026-05-16 for body-part sub-bucketing: spray is body-part-aware
+    so "для тела" → spray_body. "для волос" — hair isn't in body-part stems
+    so it stays bare spray (no default-face, since spray isn't in
+    _DEFAULT_FACE_BASES — sprays are commonly body/hair, not implicit-face)."""
     from ga_crawler.matcher.name_match import product_type_bucket
-    assert product_type_bucket("спреи для тела electric cherry") == "spray"
+    assert product_type_bucket("спреи для тела electric cherry") == "spray_body"
     assert product_type_bucket("спрей для волос") == "spray"
 
 
@@ -325,7 +330,8 @@ def test_mascara_vs_face_mask_does_not_alias() -> None:
     `маск`, mascara collisions с face mask SKUs are theoretical FPs."""
     from ga_crawler.matcher.name_match import product_type_bucket
     assert product_type_bucket("маскара hypnose lancome") == "mascara"
-    assert product_type_bucket("маска для лица la mer") == "mask"
+    # mask is body-part-aware — «для лица» → mask_face sub-bucket
+    assert product_type_bucket("маска для лица la mer") == "mask_face"
 
 
 def test_plural_mascara_form_maps_to_mascara_bucket() -> None:
@@ -389,7 +395,9 @@ def test_english_leading_cream_resolves_to_cream_bucket() -> None:
     product on GA («крем для лица Vitamin Enriched») also = cream ⇒
     same bucket, veto does NOT fire (correct — let token logic decide)."""
     from ga_crawler.matcher.name_match import product_type_bucket
-    assert product_type_bucket("bobbi brown vitamin enriched 50 мл крем") == "cream"
+    # cream is body-part-aware AND default-face — bare cream collapses to cream_face
+    assert product_type_bucket("bobbi brown vitamin enriched 50 мл крем") == "cream_face"
+    # powder is NOT body-part-aware (no qualifier expected) — stays bare
     assert product_type_bucket("teint idole ultra wear пудра компактная") == "powder"
 
 
@@ -459,4 +467,78 @@ def test_highlighter_vs_eau_de_toilette_does_not_match() -> None:
         goldapple_url="https://goldapple.kz/19000293751-idole",
         goldapple_name_norm="туалетная вода lancome idole",
         brand_norm="lancome",
+    )
+
+
+# ---- Sub-bucketing v2 — fragrance concentration + body-part qualifier ----
+
+
+def test_eau_de_toilette_does_not_match_parfum() -> None:
+    """Run-21 v3 top-5 FP: viled «Туалетная вода Alive» matched GA
+    «Духи Hugo Boss Alive» on token overlap. Both bucket=perfume pre-fix.
+    Sub-bucketing splits fragrance by concentration: EDT vs Parfum
+    are different products of the same line."""
+    assert not name_matches(
+        viled_name_norm="туалетная вода alive",
+        goldapple_url="https://goldapple.kz/19000268750-alive",
+        goldapple_name_norm="духи hugo boss alive",
+        brand_norm="hugo-boss-beauty",
+    )
+
+
+def test_eau_de_toilette_does_not_match_eau_de_parfum() -> None:
+    """Run-21 v3 top-8 FP: viled EDT vs GA EDP same line.
+    Tom Ford Eau De Soleil Blanc EDT (viled) × Soleil Blanc EDP (GA)."""
+    assert not name_matches(
+        viled_name_norm="туалетная вода eau de soleil blanc",
+        goldapple_url="https://goldapple.kz/26372900002-soleil-blanc",
+        goldapple_name_norm="парфюмерная вода спрей tom ford soleil blanc",
+        brand_norm="tom_ford",
+    )
+
+
+def test_eau_de_toilette_does_not_match_eau_de_parfum_chloe() -> None:
+    """Run-21 v3 top-4 FP: viled Chloe Nomade EDT × GA Nomade EDP
+    («jardin d'egypte» variant)."""
+    assert not name_matches(
+        viled_name_norm="туалетная вода nomade 75 мл",
+        goldapple_url="https://goldapple.kz/19000474957-nomade",
+        goldapple_name_norm="парфюмерная вода chloe nomade jardin d egypte",
+        brand_norm="chloe",
+    )
+
+
+def test_face_base_does_match_face_primer_alias() -> None:
+    """Run-21 v3 top-1 FP fix: viled «База под макияж» (foundation_base
+    via «база» stem, default-face fallback applies) matches GA
+    «Крем-основа для лица» (foundation_base via «крем-основа» compound,
+    body-part «лица» → face). Both → foundation_base_face → MATCH ✓."""
+    assert name_matches(
+        viled_name_norm="база под макияж vitamin enriched",
+        goldapple_url="https://goldapple.kz/19760319274-vitamin-enriched-face-base",
+        goldapple_name_norm="крем основа для лица bobbi brown vitamin enriched face base",
+        brand_norm="bobbi-brown",
+    )
+
+
+def test_face_base_does_not_match_eye_base() -> None:
+    """Companion to face-base match — eye base is a different sub-bucket
+    even within the same primer family."""
+    assert not name_matches(
+        viled_name_norm="база под макияж vitamin enriched",
+        goldapple_url="https://goldapple.kz/19760336199-eye-base",
+        goldapple_name_norm="крем основа для области вокруг глаз bobbi brown vitamin enriched eye base",
+        brand_norm="bobbi-brown",
+    )
+
+
+def test_face_cream_does_not_match_eye_cream() -> None:
+    """Run-21 v3 top-7 FP: viled «Антивозрастной крем» (cream, no body
+    part → default face) × GA «Крем для глаз» (cream_eye). Different
+    sub-buckets even within cream family → veto."""
+    assert not name_matches(
+        viled_name_norm="антивозрастнои крем smart clinical repair wrinkle correcting cream",
+        goldapple_url="https://goldapple.kz/19000082063-smart-clinical-repair",
+        goldapple_name_norm="крем для глаз clinique smart clinical repair",
+        brand_norm="clinique",
     )

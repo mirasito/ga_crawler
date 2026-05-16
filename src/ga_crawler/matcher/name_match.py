@@ -124,14 +124,23 @@ VARIANT_MARKERS: frozenset[str] = frozenset({
 # matches surfaced when volume-loose mode let hand creams pair with
 # perfumes that share the marketing name.
 _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
+    # ---- Compound stems (must come BEFORE their constituent singles so
+    # the compound-priority pass in product_type_bucket finds them) ----
+    ("крем-основа",  "foundation_base"),   # "Крем-основа для лица" — primer
+    ("гель-крем",    "cream"),             # пре-existing compound
+
     # Fragrance family — IMPORTANT: stems must be precise enough NOT to
     # catch ADJECTIVE forms ("парфюмированное мыло" = perfumed SOAP, not
     # perfume). Use "парфюмерн-" not "парфюм-" because the adjective
     # "парфюмированн-" branches differently after "парфюм".
-    ("парфюмерн",    "perfume"),    # парфюмерная, парфюмерной, парфюмерные
-    ("туалетн",      "perfume"),    # туалетная вода (EDT == perfume bucket)
-    ("одеколон",     "perfume"),
-    ("духи",         "perfume"),
+    # Sub-buckets (perfume_edt / perfume_edp / perfume_parfum / perfume_cologne)
+    # are applied in product_type_bucket after this list resolves the base
+    # to `perfume`. Operator review 2026-05-16 surfaced viled EDT × GA EDP /
+    # GA Парфюм cross-concentration FPs that must be vetoed.
+    ("парфюмерн",    "perfume"),    # парфюмерная вода / -ной / -ные
+    ("туалетн",      "perfume"),    # туалетная вода (EDT)
+    ("одеколон",     "perfume"),    # cologne
+    ("духи",         "perfume"),    # Дух — extrait de parfum (highest concentration)
     # NOTE: removed "аромат" stem 2026-05-16 — overreached to "ароматическая
     # свеча" (candle) and "ароматизатор" (room freshener). Run-20 audit
     # confirmed no current viled/GA SKU uses "ароматическая вода" as a
@@ -153,7 +162,7 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
     ("эликсир",      "elixir"),
     ("патч",         "patch"),
     ("флюид",        "fluid"),
-    ("гель-крем",    "cream"),
+    ("база",         "foundation_base"), # «База под макияж» — viled-style primer naming
     # Cleansing
     ("гел",          "gel"),         # гель / геля / гелем (Russian declension)
     ("пен",          "foam"),        # пенка / пенки / пенный / пенный
@@ -214,28 +223,38 @@ def _cyrillic_leading_words(text: str | None) -> list[str]:
     first-appearance order — INCLUDING when Cyrillic words appear after
     a non-Cyrillic prefix.
 
-    Historical name kept for backwards compatibility. Up to 2026-05-16
-    this function stopped at the first non-Cyrillic word, which produced
-    bucket=None for any viled SKU whose name leads with English marketing
-    + brand ("Teint Idole Ultra Wear пудра компактная для лица" — the
-    real product-type "пудра" sits in the middle, never reached).
-
-    The fix scans ALL words and collects Cyrillic ones in order; the
-    bucket-stem loop then resolves correctly. Safe because all stems
-    target product-type nouns/adjectives unique to beauty inventory —
-    they won't collide with a Cyrillic brand name in the middle.
+    Historical name kept for backwards compatibility. Limited to 3 words
+    because the BASE bucket is determined by the leading product-type
+    noun ("крем", "помада", "парфюмерная") — a 3-word window catches
+    that plus a refill-marker plus one safety word. For body-part
+    sub-bucketing (which needs to find "для глаз" several words into the
+    name), see `_all_cyrillic_words` instead.
     """
     if not text:
         return []
     out: list[str] = []
     for word in text.lower().split():
-        # Pure Cyrillic word (allow hyphen for compounds like "гель-крем")
         if all(("а" <= ch <= "я") or ch == "ё" or ch == "-" for ch in word):
-            if len(word) >= 3:  # skip "и", "на", "до", etc.
+            if len(word) >= 3:
                 out.append(word)
                 if len(out) >= 3:
                     break
-        # else: skip non-Cyrillic words (do NOT break — keep scanning)
+    return out
+
+
+def _all_cyrillic_words(text: str | None) -> list[str]:
+    """Return ALL Cyrillic words (len ≥3) from the name. Used by
+    body-part sub-bucketing where the qualifier «глаз» / «лица» / «рук»
+    may sit anywhere — including after «для области вокруг ...» (6th
+    word) which the 3-word leading-scan would miss.
+    """
+    if not text:
+        return []
+    out: list[str] = []
+    for word in text.lower().split():
+        if all(("а" <= ch <= "я") or ch == "ё" or ch == "-" for ch in word):
+            if len(word) >= 3:
+                out.append(word)
     return out
 
 
@@ -278,12 +297,14 @@ def product_type_bucket(name: str | None) -> str | None:
     if not words:
         return None
 
-    # ---- Pass 3: stem scan (first match) + palette sub-bucketing ----
-    candidates = list(words)
-    for w1 in words:
-        for w2 in words:
-            if w1 != w2:
-                candidates.append(f"{w1}-{w2}")
+    # ---- Pass 3: stem scan (compounds FIRST, then singles) ----
+    # Compound stems (e.g. «крем-основа» → foundation_base) MUST be tested
+    # before their constituent single words ("крем" → cream). Without
+    # this ordering the single word matches first and the compound never
+    # fires — pre-fix виled «База под макияж» × GA «Крем-основа для лица»
+    # bucketed differently and missed the legitimate primer-vs-primer match.
+    compounds = [f"{w1}-{w2}" for w1 in words for w2 in words if w1 != w2]
+    candidates = compounds + list(words)
     base: str | None = None
     for word in candidates:
         for stem, bucket in _PRODUCT_TYPE_STEMS:
@@ -295,9 +316,56 @@ def product_type_bucket(name: str | None) -> str | None:
     if base is None:
         return None
 
-    # Palette sub-bucketing — palette FAMILY is too coarse: an eyeshadow
-    # palette and a corrector palette have nothing to compare price-wise.
-    # If we landed on the `palette` base, refine by the qualifying noun.
+    # ---- Sub-bucketing — refine base into a more discriminative category ----
+    # For body-part sub-bucketing we need ALL Cyrillic words, not just the
+    # 3 leading ones — "крем основа для области вокруг ГЛАЗ" has the
+    # qualifier in the 6th word position.
+    all_words = _all_cyrillic_words(name)
+    return _refine_sub_bucket(base, all_words)
+
+
+# Body-part qualifier prefixes — used to split skincare/makeup family buckets
+# into face/eye/hands/body/etc. variants so face cream ≠ eye cream.
+_BODY_PART_STEMS: tuple[tuple[str, str], ...] = (
+    ("глаз",     "eye"),       # для глаз / вокруг глаз
+    ("век",      "eye"),       # для век (eyelids) — same sub-bucket as glaz
+    ("ресниц",   "lashes"),    # для ресниц
+    ("брове",    "brows"),     # бровей
+    ("губ",      "lips"),      # губ / губная
+    ("лиц",      "face"),      # для лица
+    ("ног",      "feet"),      # для ног
+    ("рук",      "hands"),     # для рук
+    ("шеи",      "neck"),
+    ("декольте", "decolletage"),
+    ("тел",      "body"),      # для тела (placed last — generic)
+)
+
+# Skincare/makeup families that benefit from body-part sub-bucketing.
+# Fragrance (perfume) gets its own sub-bucketing by concentration instead.
+_BODY_PART_AWARE_BASES = frozenset({
+    "cream", "serum", "oil", "lotion", "gel", "balm", "fluid",
+    "mask", "essence", "elixir", "milk", "foam", "soap", "scrub",
+    "patch", "toner", "cleanser", "spray", "mist", "foundation_base",
+})
+
+# Subset of body-part-aware bases that default to FACE when no explicit
+# body-part word is present. Operator-confirmed semantic (2026-05-16):
+# a generic "Антивозрастной крем" / "База под макияж" / "Крем-основа" is
+# implicitly a face product — should NOT match an explicit eye-cream /
+# body-lotion variant of the same brand+marketing line.
+_DEFAULT_FACE_BASES = frozenset({
+    "cream", "serum", "essence", "toner", "foundation_base",
+})
+
+
+def _refine_sub_bucket(base: str, words: list[str]) -> str:
+    """Apply category-specific sub-bucketing to a base bucket.
+
+    - Palette → eyeshadow / corrector / highlighter / blush / bronzer
+    - Perfume → parfum / edp / edt / cologne (by concentration stem)
+    - Skincare/makeup with body-part qualifier → cream_face / serum_eye / …
+    """
+    # Palette family
     if base == "palette":
         for word in words:
             if word.startswith("коррекц"):
@@ -310,7 +378,38 @@ def product_type_bucket(name: str | None) -> str | None:
                 return "palette_blush"
             if word.startswith("брон") or word.startswith("бронз"):
                 return "palette_bronzer"
-        # Plain "Палетка" without qualifier — keep base palette bucket.
+        return base
+
+    # Fragrance concentration
+    if base == "perfume":
+        # Walk words and pick the FIRST concentration marker. Stems are
+        # checked in priority order: «духи» > «парфюмерн» > «туалетн» >
+        # «одеколон» so a mixed name like «Парфюмерная вода-спрей»
+        # collapses to EDP (not cologne).
+        for word in words:
+            if word.startswith("духи"):
+                return "perfume_parfum"
+            if word.startswith("парфюмерн"):
+                return "perfume_edp"
+            if word.startswith("туалетн"):
+                return "perfume_edt"
+            if word.startswith("одеколон"):
+                return "perfume_cologne"
+        return base
+
+    # Body-part sub-bucketing for skincare/makeup
+    if base in _BODY_PART_AWARE_BASES:
+        for word in words:
+            for stem, suffix in _BODY_PART_STEMS:
+                if word.startswith(stem):
+                    return f"{base}_{suffix}"
+        # No explicit body part — apply "default face" for skincare/primer
+        # bases (cream, serum, toner, foundation_base, etc.). This ensures
+        # bare «Крем X» is treated as a face cream and does NOT match an
+        # explicit «Крем для глаз X» variant of the same line.
+        if base in _DEFAULT_FACE_BASES:
+            return f"{base}_face"
+        return base
 
     return base
 
