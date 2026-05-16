@@ -278,3 +278,81 @@ def test_palette_and_eyeshadow_both_map_to_palette_bucket() -> None:
     from ga_crawler.matcher.name_match import product_type_bucket
     assert product_type_bucket("палетка тенеи tom ford") == "palette"
     assert product_type_bucket("тени для век guerlain") == "palette"
+
+
+def test_rejects_perfumed_soap_vs_perfume() -> None:
+    """Run-20 v3.1 top-1 FP postmortem (commit f67db88+): viled
+    «Парфюмированное мыло Creed Green Irish Tweed 150 гр» matched GA
+    «Парфюмерная вода Creed Green Irish Tweed» because the OLD stem
+    `парфюм` ate the adjective `парфюмированное` → bucket=perfume on
+    both sides → no veto.
+
+    Fix: stem narrowed to `парфюмерн` — adjective `парфюмированн-` no
+    longer collides. Soap leading word `мыло` falls through to `мыл`
+    stem → bucket=soap. soap × perfume ⇒ veto fires."""
+    assert not name_matches(
+        viled_name_norm="парфюмированное мыло green irish tweed 150 гр",
+        goldapple_url="https://goldapple.kz/26542200005-green-irish-tweed",
+        goldapple_name_norm="парфюмерная вода creed green irish tweed",
+        brand_norm="creed",
+    )
+
+
+def test_rejects_shower_gel_refill_vs_perfume() -> None:
+    """Run-20 same FP class: viled «Рефилл геля для душа Kilian Good
+    Girl Gone Bad 250 мл» matched GA «Парфюмерная вода Kilian Good Girl
+    Gone Bad». Old `гель` stem missed the genitive «геля» (after refill
+    strip). Fix: stem shortened to `гел` covers all Russian declensions.
+
+    After refill prefix strip, leading word becomes `геля` → matches
+    `гел` stem → bucket=gel. gel × perfume ⇒ veto fires."""
+    assert not name_matches(
+        viled_name_norm="рефилл геля для душа good girl gone bad 250 мл",
+        goldapple_url="https://goldapple.kz/19000311846-good-girl-gone-bad",
+        goldapple_name_norm="парфюмерная вода kilian paris good girl gone bad",
+        brand_norm="kilian_paris",
+    )
+
+
+def test_mascara_vs_face_mask_does_not_alias() -> None:
+    """Distinct bucket: `маскара` (mascara transliteration) maps to
+    mascara bucket, NOT mask. Without the `маскар` stem placed before
+    `маск`, mascara collisions с face mask SKUs are theoretical FPs."""
+    from ga_crawler.matcher.name_match import product_type_bucket
+    assert product_type_bucket("маскара hypnose lancome") == "mascara"
+    assert product_type_bucket("маска для лица la mer") == "mask"
+
+
+def test_plural_mascara_form_maps_to_mascara_bucket() -> None:
+    """`тушь` (singular) was the only mascara stem, missing plural
+    `туши` and instrumental `тушью`. Stem shortened to `туш`."""
+    from ga_crawler.matcher.name_match import product_type_bucket
+    assert product_type_bucket("тушь для ресниц lancome") == "mascara"
+    assert product_type_bucket("туши для ресниц estee lauder") == "mascara"
+
+
+def test_candle_does_not_bucket_as_perfume() -> None:
+    """`Ароматическая свеча Vanisia` had been bucketed as perfume via
+    the old `аромат` stem (catch-too-broad for "ароматический…").
+    Fix dropped `аромат` entirely (no fragrance SKUs use it as leading
+    word in viled/GA inventory). New `свеч` stem catches candles."""
+    from ga_crawler.matcher.name_match import product_type_bucket
+    assert product_type_bucket("ароматическая свеча vanisia") == "candle"
+    assert product_type_bucket("фарфоровая свеча vanisia 220 гр") == "candle"
+
+
+def test_atomizer_is_not_perfume() -> None:
+    """`Атомайзер Creed Pocket Leather` is an empty refillable bottle,
+    not parfum. Bucket=atomizer ensures it never matches against GA
+    perfume SKUs (which would produce nonsense price deltas)."""
+    from ga_crawler.matcher.name_match import product_type_bucket
+    assert product_type_bucket("атомаизер creed s pocket leather atomizers") == "atomizer"
+
+
+def test_eyeliner_genitive_form_resolves() -> None:
+    """`Водостойкий лайнер для глаз Lancome Idole Liner` viled
+    normalizer emits `лаинер` (й → и). Stem `лаин` covers лайнер /
+    лайнера / лайнером."""
+    from ga_crawler.matcher.name_match import product_type_bucket
+    assert product_type_bucket("лаинер для глаз lancome") == "liner"
+    assert product_type_bucket("водостоикии лаинер для глаз lancome idole liner") == "liner"

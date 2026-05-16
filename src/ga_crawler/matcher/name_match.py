@@ -124,12 +124,22 @@ VARIANT_MARKERS: frozenset[str] = frozenset({
 # matches surfaced when volume-loose mode let hand creams pair with
 # perfumes that share the marketing name.
 _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
-    # Fragrance family
-    ("парфюм",       "perfume"),    # парфюмерная, парфюмерной, парфюмерные
+    # Fragrance family — IMPORTANT: stems must be precise enough NOT to
+    # catch ADJECTIVE forms ("парфюмированное мыло" = perfumed SOAP, not
+    # perfume). Use "парфюмерн-" not "парфюм-" because the adjective
+    # "парфюмированн-" branches differently after "парфюм".
+    ("парфюмерн",    "perfume"),    # парфюмерная, парфюмерной, парфюмерные
     ("туалетн",      "perfume"),    # туалетная вода (EDT == perfume bucket)
     ("одеколон",     "perfume"),
     ("духи",         "perfume"),
-    ("аромат",       "perfume"),    # ароматическая вода
+    # NOTE: removed "аромат" stem 2026-05-16 — overreached to "ароматическая
+    # свеча" (candle) and "ароматизатор" (room freshener). Run-20 audit
+    # confirmed no current viled/GA SKU uses "ароматическая вода" as a
+    # leading product-type — "парфюмерная" / "туалетная" / "духи" cover the
+    # actual fragrance vocabulary in stock.
+    # Mascara MUST come before "маск" so "маскара" doesn't bucket as mask
+    ("маскар",       "mascara"),    # маскара (transliteration form)
+    ("туш",          "mascara"),    # тушь / туши (plural) / тушью
     # Skincare
     ("крем",         "cream"),
     ("сыворот",      "serum"),
@@ -137,7 +147,7 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
     ("лосьон",       "lotion"),
     ("тоник",        "toner"),
     ("эссенци",      "essence"),
-    ("маск",         "mask"),
+    ("маск",         "mask"),       # face mask, hair mask (ONLY after маскар)
     ("концентрат",   "serum"),
     ("масл",         "oil"),
     ("эликсир",      "elixir"),
@@ -145,9 +155,8 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
     ("флюид",        "fluid"),
     ("гель-крем",    "cream"),
     # Cleansing
-    ("гель",         "gel"),
-    ("пенк",         "foam"),
-    ("пенн",         "foam"),
+    ("гел",          "gel"),         # гель / геля / гелем (Russian declension)
+    ("пен",          "foam"),        # пенка / пенки / пенный / пенный
     ("мыл",          "soap"),
     ("молочк",       "milk"),
     ("мицелл",       "micellar"),
@@ -164,7 +173,6 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
     # Makeup
     ("помад",        "lipstick"),
     ("блеск",        "lipgloss"),
-    ("тушь",         "mascara"),
     ("карандаш",     "pencil"),
     ("подводк",      "liner"),
     ("консил",       "concealer"),
@@ -177,9 +185,12 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
     ("хайлайт",      "highlighter"),
     ("бронз",        "bronzer"),
     ("праймер",      "primer"),
+    ("лаин",         "liner"),      # лайнер / лайнера (Russian declension)
     # Body / personal care
     ("дезодорант",   "deodorant"),
     ("антиперспир",  "deodorant"),
+    ("свеч",         "candle"),     # свеча, свечи — NOT perfume even when ароматическая
+    ("атомаизер",    "atomizer"),   # атомайзер — refillable spray bottle, not parfum
     ("бальзам",      "balm"),       # generic — placed late
     # Sets / multipacks (caller separately filters multipack_flag, but
     # the leading word still appears in name)
