@@ -278,3 +278,56 @@ versace:
 prada:
   - "Prada"
   - "Прада"
+
+# === Resolved 2026-05-16 evening via run-19 v2 brand_norm-mismatch postmortem ===
+# Viled emits the marketing-suffixed brand string ("Carolina Herrera Beauty"),
+# GA emits the bare brand name ("Carolina Herrera"). Slug-override in
+# data/ga_brand_slugs.yaml routes enumeration to the right /brands/{slug}
+# URL, but the matcher SQL JOIN on brand_norm requires both sides to
+# normalize to the same canonical key. Each canonical here matches viled's
+# default-normalizer output so existing run-19 viled snapshots don't need
+# rewriting; only GA-side rows need a SQL UPDATE for this run, then future
+# runs normalize via these aliases at write-time.
+
+carolina-herrera-beauty:
+  - "Carolina Herrera Beauty"
+  - "Carolina Herrera"
+  - "Каролина Эррера"
+
+gucci-beauty:
+  - "Gucci Beauty"
+  - "Gucci"
+  - "Гуччи"
+
+hugo-boss-beauty:
+  - "Hugo Boss Beauty"
+  - "Hugo Boss"
+  - "Хьюго Босс"
+
+valentino-beauty:
+  - "Valentino Beauty"
+  - "Valentino"
+  - "Valentino Garavani"
+  - "Валентино"
+
+kenzo-beauty:
+  - "Kenzo Beauty"
+  - "Kenzo"
+  - "Кензо"
+
+lanvin-beauty:
+  - "Lanvin Beauty"
+  - "Lanvin"
+  - "Ланвин"
+
+courreges-perfume:
+  - "Courreges Perfume"
+  - "Courreges"
+  - "COURREGES"
+  - "Курреж"
+
+dr-vranjes:
+  - "Dr. Vranjes"
+  - "Dr. Vranjes Firenze"
+  - "Dr Vranjes"
+  - "Доктор Вранес"

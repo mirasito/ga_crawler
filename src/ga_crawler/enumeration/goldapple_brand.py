@@ -370,8 +370,12 @@ async def enumerate_brand_via_api(
     slug: str,
     *,
     max_pages: int = 30,
-    inter_page_delay_ms: int = 2_800,
+    inter_page_delay_ms: int = 4_000,
     post_goto_settle_ms: int = 5_000,
+    post_burst_cooldown_ms: int = 10_000,
+    pages_per_burst: int = 3,
+    max_403_retries_per_page: int = 3,
+    max_403_budget_per_brand: int = 6,
 ) -> BrandEnumerationResult:
     """API-driven enumeration: open brand page once, then loop cards-list
     directly via ``page.evaluate('fetch(...)')`` for full pagination.
@@ -471,55 +475,94 @@ async def enumerate_brand_via_api(
         }
     """
 
-    consecutive_403 = 0
-    for page_num in range(1, max_pages + 1):
+    # Per-brand 403 budget — break only when systemic blocking is evident.
+    # Per-page retry — exponential backoff (12s → 24s → 48s) before SKIPPING
+    # the page (not breaking the brand): zielinski_rozen v2 postmortem showed
+    # the old "break on first stuck page" path costs ~17 unread pages worth
+    # of SKUs when only one page is rate-limited.
+    backoff_ms = [12_000, 24_000, 48_000]
+    total_403 = 0
+    successful_pages_since_cooldown = 0
+    last_pagination_seen_nextpage = True
+
+    async def _fetch_page(p_num: int) -> Optional[dict]:
         try:
-            result = await page.evaluate(fetch_js, {
-                "categoryId": category_id,
-                "pageNumber": page_num,
+            return await page.evaluate(fetch_js, {
+                "categoryId": category_id, "pageNumber": p_num,
             })
         except Exception as e:
             log.warning("brand_enum_fetch_failed",
-                        slug=slug, page=page_num, error=str(e))
-            break
+                        slug=slug, page=p_num, error=str(e))
+            return None
+
+    for page_num in range(1, max_pages + 1):
+        # Anti-burst cooldown: after pages_per_burst successful pages, sleep
+        # post_burst_cooldown_ms to let the server-side rate-counter decay.
+        # Empirically the 403-after-4-pages pattern indicates a burst limit.
+        if successful_pages_since_cooldown >= pages_per_burst:
+            log.info("brand_enum_api_burst_cooldown",
+                     slug=slug, before_page=page_num,
+                     cooldown_ms=post_burst_cooldown_ms)
+            await page.wait_for_timeout(post_burst_cooldown_ms)
+            successful_pages_since_cooldown = 0
+
+        result = await _fetch_page(page_num)
         cards_list_calls += 1
+        if result is None:
+            break  # transport-level fetch failure → bail brand
         if not isinstance(result, dict):
             break
-        if result.get("status") == 403:
-            # API rate-limit. Wait substantially longer + retry once before
-            # giving up. Empirically a 10s cooldown lets ~50% of brand
-            # enumerations recover at this stage.
-            consecutive_403 += 1
-            if consecutive_403 > 2:
-                log.warning("brand_enum_api_403_persistent",
-                            slug=slug, page=page_num)
+
+        # Per-page 403 retry loop with exponential backoff.
+        retry_attempt = 0
+        while result.get("status") == 403 and retry_attempt < max_403_retries_per_page:
+            total_403 += 1
+            if total_403 > max_403_budget_per_brand:
+                log.warning("brand_enum_api_403_budget_exhausted",
+                            slug=slug, page=page_num, total_403=total_403)
+                result = None
                 break
+            cooldown = backoff_ms[min(retry_attempt, len(backoff_ms) - 1)]
             log.info("brand_enum_api_403_retry",
-                     slug=slug, page=page_num, cooldown_ms=12_000)
-            await page.wait_for_timeout(12_000)
-            try:
-                result = await page.evaluate(fetch_js, {
-                    "categoryId": category_id,
-                    "pageNumber": page_num,
-                })
-            except Exception as e:
-                log.warning("brand_enum_fetch_retry_failed",
-                            slug=slug, page=page_num, error=str(e))
-                break
+                     slug=slug, page=page_num,
+                     attempt=retry_attempt + 1, cooldown_ms=cooldown,
+                     total_403=total_403)
+            await page.wait_for_timeout(cooldown)
+            result = await _fetch_page(page_num)
             cards_list_calls += 1
-            if not isinstance(result, dict) or result.get("status") == 403:
-                log.warning("brand_enum_api_403_stuck", slug=slug, page=page_num)
+            retry_attempt += 1
+            if result is None:
                 break
+
+        if result is None:
+            break  # 403 budget exhausted → can't continue safely
+
+        # If still 403 after exhausting page-level retries: SKIP this page,
+        # try the next. (Pre-fix behaviour broke the entire brand here —
+        # costing zielinski_rozen ~14 unread pages of SKUs in v2.)
+        if isinstance(result, dict) and result.get("status") == 403:
+            log.warning("brand_enum_api_403_page_skipped",
+                        slug=slug, page=page_num,
+                        retries_used=retry_attempt,
+                        total_403=total_403)
+            successful_pages_since_cooldown = 0  # reset burst counter
+            # Conservative pause before next page so we don't immediately
+            # re-trigger the rate-limiter.
+            await page.wait_for_timeout(inter_page_delay_ms * 2)
+            continue
+
         if result.get("error"):
             log.warning("brand_enum_api_error",
                         slug=slug, page=page_num, error=result.get("error"))
             break
-        consecutive_403 = 0
+
         data = result.get("data") or {}
         page_cards = data.get("cards") or []
         cards_collected.extend(page_cards)
         pag = data.get("pagination") or {}
-        if not pag.get("nextPage"):
+        last_pagination_seen_nextpage = bool(pag.get("nextPage"))
+        successful_pages_since_cooldown += 1
+        if not last_pagination_seen_nextpage:
             break
         await page.wait_for_timeout(inter_page_delay_ms)
 
