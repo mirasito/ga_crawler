@@ -30,6 +30,21 @@ overrides:
   frederic_malle: frederic-malle   # default kebab works (PDP breadcrumb confirmed)
   biotherm: biotherm               # default kebab; PDP breadcrumb confirmed
 
+  # === Resolved 2026-05-16 via /front/api/brands authoritative index ===
+  # The /brands page calls /front/api/brands?locale=ru once and returns
+  # all 1389 brands with canonical slugs. Captured via
+  # scripts/probe_ga_brands_index_v2.py + scripts/resolve_unmatched_brands_v2.py.
+  # Default-kebab failure mode for these brands is the "-beauty" /
+  # "-perfume" suffix that viled appends but GA omits.
+  carolina-herrera-beauty: carolina-herrera
+  courreges-perfume: courreges
+  gucci-beauty: gucci
+  hugo-boss-beauty: hugo-boss
+  kenzo-beauty: kenzo
+  lanvin-beauty: lanvin
+  valentino-beauty: valentino
+  dr-vranjes: dr-vranjes-firenze   # GA uses full marca name
+
   # === Other brand_norms that default-kebab handles ===
   # (listed for documentation; YAML lookup falls through to default when omitted)
   clarins: clarins
@@ -47,15 +62,18 @@ overrides:
   kilian_paris: kilian-paris
   maison_francis_kurkdjian: maison-francis-kurkdjian
 
-  # === Brands where the GA slug is still unknown (TODO) ===
-  # The brand exists on viled but we haven't located its GA brand page.
-  # /brands/{viled-norm-kebab} returns the SPA shell with random products.
-  # Workaround: continue accepting the failure — viled brand simply has no
-  # GA price comparison until the slug is identified.
+  # === Brands genuinely absent from GA's /front/api/brands index ===
+  # Verified 2026-05-16: scripts/resolve_unmatched_brands_v2.py searched
+  # the full 1389-brand authoritative index from /front/api/brands. The
+  # brand_norms below produced ZERO substring/normalized-label hits — GA
+  # does not stock them at all on the KZ storefront. No further slug
+  # archaeology will help; viled has no comparator price.
   #
-  #   jo_malone_london   tried: jo-malone-london, jo-malone, jomalone-london
-  #   ex_nihilo          tried: ex-nihilo, exnihilo, ex-nihilo-paris
-  #   kenzo-beauty       tried: kenzo, kenzo-parfums, kenzo-beauty
-  #   amouage            tried: amouage
-  #   starskin           tried: starskin
-  #   jean-paul-gaultier tried: jean-paul-gaultier
+  #   affinessence, aj-arabia, amouage, aveda, clive-christian,
+  #   ex_nihilo, jo_malone_london, margys, marly, nescens,
+  #   roja-parfums (closest GA hit "OJAR" is a different house),
+  #   starskin, aura-of-kazakhstan (GA "Aura" is a different brand)
+  #
+  # Action: accept the unmatched-viled-brands count as a permanent floor.
+  # If GA later adds any of these, the Norm06 review queue will resurface
+  # them and we re-run scripts/resolve_unmatched_brands_v2.py.
