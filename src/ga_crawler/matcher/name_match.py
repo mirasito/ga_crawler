@@ -204,11 +204,20 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
 
 
 def _cyrillic_leading_words(text: str | None) -> list[str]:
-    """Return leading Cyrillic words (lowercased) from a name.
+    """Return up to 3 Cyrillic product-type words from the name, in
+    first-appearance order — INCLUDING when Cyrillic words appear after
+    a non-Cyrillic prefix.
 
-    Stops at the first non-Cyrillic/non-space token. The viled and
-    composed-GA name shapes both start with the Russian product type;
-    the function returns up to the first 3 such words for stem matching.
+    Historical name kept for backwards compatibility. Up to 2026-05-16
+    this function stopped at the first non-Cyrillic word, which produced
+    bucket=None for any viled SKU whose name leads with English marketing
+    + brand ("Teint Idole Ultra Wear пудра компактная для лица" — the
+    real product-type "пудра" sits in the middle, never reached).
+
+    The fix scans ALL words and collects Cyrillic ones in order; the
+    bucket-stem loop then resolves correctly. Safe because all stems
+    target product-type nouns/adjectives unique to beauty inventory —
+    they won't collide with a Cyrillic brand name in the middle.
     """
     if not text:
         return []
@@ -220,8 +229,7 @@ def _cyrillic_leading_words(text: str | None) -> list[str]:
                 out.append(word)
                 if len(out) >= 3:
                     break
-        else:
-            break
+        # else: skip non-Cyrillic words (do NOT break — keep scanning)
     return out
 
 

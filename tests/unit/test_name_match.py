@@ -356,3 +356,33 @@ def test_eyeliner_genitive_form_resolves() -> None:
     from ga_crawler.matcher.name_match import product_type_bucket
     assert product_type_bucket("лаинер для глаз lancome") == "liner"
     assert product_type_bucket("водостоикии лаинер для глаз lancome idole liner") == "liner"
+
+
+def test_english_leading_name_resolves_cyrillic_product_type() -> None:
+    """Run-21 v2 FP postmortem (commit 4569a4e+): viled
+    «Teint Idole Ultra Wear пудра компактная для лица оттенок 04 Medium»
+    matched GA «Рефил парфюмерной воды Lancome Idole» — same brand,
+    common token "idole", and BOTH sides resolved to bucket=None
+    because the old `_cyrillic_leading_words` stopped at the first
+    non-Cyrillic word ("teint"), never reaching the actual product-type
+    noun «пудра» that sits in the middle.
+
+    Fix: scan all words, collect Cyrillic ones in order. Now "пудра"
+    → powder bucket; GA's leading «рефил» strips to «парфюмерной»
+    → perfume bucket; powder × perfume ⇒ veto fires."""
+    assert not name_matches(
+        viled_name_norm="teint idole ultra wear пудра компактная для лица оттенок 04 medium",
+        goldapple_url="https://goldapple.kz/19000267094-idole",
+        goldapple_name_norm="рефил парфюмернои воды lancome idole",
+        brand_norm="lancome",
+    )
+
+
+def test_english_leading_cream_resolves_to_cream_bucket() -> None:
+    """Companion regression: «Bobbi Brown Vitamin Enriched 50 мл крем»
+    must produce bucket=cream (the «крем» word is reachable now). Same
+    product on GA («крем для лица Vitamin Enriched») also = cream ⇒
+    same bucket, veto does NOT fire (correct — let token logic decide)."""
+    from ga_crawler.matcher.name_match import product_type_bucket
+    assert product_type_bucket("bobbi brown vitamin enriched 50 мл крем") == "cream"
+    assert product_type_bucket("teint idole ultra wear пудра компактная") == "powder"
