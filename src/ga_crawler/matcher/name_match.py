@@ -177,13 +177,19 @@ _PRODUCT_TYPE_STEMS: tuple[tuple[str, str], ...] = (
     ("карандаш",     "pencil"),
     ("подводк",      "liner"),
     ("консил",       "concealer"),
-    ("палетк",       "palette"),    # палетка теней / палетка хайлайтеров
+    ("палетк",       "palette"),    # палетка теней / палетка хайлайтеров (base bucket;
+                                    # product_type_bucket sub-divides into
+                                    # palette_eyeshadow / palette_corrector / etc.)
     ("тен",          "palette"),    # тени для век (same bucket as палетка — same product family)
+    ("кисть",        "brush_tool"), # cosmetic brush (the tool) — NOT a beauty liquid
+    ("очист",        "cleanser"),   # очищающее средство / средство для очистки
     ("тональн",      "foundation"),
     ("основ",        "foundation"),
     ("пудр",         "powder"),
     ("румян",        "blush"),
-    ("хайлайт",      "highlighter"),
+    ("хаила",        "highlighter"), # viled й→и normalizer turns "Хайлайтер" into
+                                     # "хаилаитер"; stem must NOT contain й
+    ("хайла",        "highlighter"), # GA / Cyrillic-strict normalizers may preserve й
     ("бронз",        "bronzer"),
     ("праймер",      "primer"),
     ("лаин",         "liner"),      # лайнер / лайнера (Russian declension)
@@ -234,37 +240,79 @@ def _cyrillic_leading_words(text: str | None) -> list[str]:
 
 
 def product_type_bucket(name: str | None) -> str | None:
-    """Map a name's leading Russian word(s) to a product-type bucket.
+    """Map a name's Cyrillic words to a product-type bucket.
 
-    Returns None when the name has no Cyrillic prefix or no stem matches.
-    Caller treats None as "no signal" (don't apply cross-category veto).
+    Returns None when no Cyrillic word matches any stem. Caller treats None
+    as "no signal" (don't apply cross-category veto).
 
-    Refill-prefix handling: if the leading word is ``рефил`` or ``рефилл``
-    (refill — viled-style: "Рефилл геля для душа..."; GA-style: "Рефил
-    парфюмерной воды..."), the bucket is determined by the NEXT Cyrillic
-    word so a perfume refill is bucketed as ``perfume`` and a shower-gel
-    refill as ``gel``. Without this, both would resolve to ``refill`` and
-    cross-category pairs would slip through.
+    Lookup is THREE-pass:
+
+      1. **Priority overrides** — high-precedence qualifiers ("набор",
+         "сет") fire regardless of where they sit. A "Парфюмерный набор" is
+         a SET (bucketed `set`), not a perfume — even though "Парфюмерный"
+         appears first and would otherwise match the perfume stem.
+
+      2. **Refill strip** — a leading "Рефил"/"Рефилл" prefix is dropped so
+         the meaningful product type behind it determines the bucket
+         (perfume refill → perfume, shower-gel refill → gel, etc.).
+
+      3. **Stem scan** — first Cyrillic word whose prefix matches any
+         stem wins. After the base bucket is determined, sub-bucketing
+         applies for `palette` (см. ниже) — different palette TYPES
+         (eyeshadow vs corrector vs highlighter) should not match.
     """
     words = _cyrillic_leading_words(name)
     if not words:
         return None
-    # Skip leading refill marker — the meaningful bucket comes next.
+
+    # ---- Pass 1: priority overrides (qualifier-anywhere wins) ----
+    # "Парфюмерный набор Travel set" — leading "парфюмерный" would match
+    # perfume stem; "набор" anywhere overrides to `set`.
+    for word in words:
+        if word.startswith("набор") or word.startswith("сет"):
+            return "set"
+
+    # ---- Pass 2: refill strip ----
     while words and (words[0].startswith("рефил")):
         words = words[1:]
     if not words:
         return None
-    # Try compound first (e.g. "гель-крем"), then individual words.
+
+    # ---- Pass 3: stem scan (first match) + palette sub-bucketing ----
     candidates = list(words)
     for w1 in words:
         for w2 in words:
             if w1 != w2:
                 candidates.append(f"{w1}-{w2}")
+    base: str | None = None
     for word in candidates:
         for stem, bucket in _PRODUCT_TYPE_STEMS:
             if word.startswith(stem):
-                return bucket
-    return None
+                base = bucket
+                break
+        if base is not None:
+            break
+    if base is None:
+        return None
+
+    # Palette sub-bucketing — palette FAMILY is too coarse: an eyeshadow
+    # palette and a corrector palette have nothing to compare price-wise.
+    # If we landed on the `palette` base, refine by the qualifying noun.
+    if base == "palette":
+        for word in words:
+            if word.startswith("коррекц"):
+                return "palette_corrector"
+            if word.startswith("тен"):
+                return "palette_eyeshadow"
+            if word.startswith("хаила") or word.startswith("хайла"):
+                return "palette_highlighter"
+            if word.startswith("румян"):
+                return "palette_blush"
+            if word.startswith("брон") or word.startswith("бронз"):
+                return "palette_bronzer"
+        # Plain "Палетка" without qualifier — keep base palette bucket.
+
+    return base
 
 
 def en_tokens(text: str | None) -> set[str]:

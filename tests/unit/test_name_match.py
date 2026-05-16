@@ -271,13 +271,18 @@ def test_plural_spray_form_resolves_to_spray_bucket() -> None:
     assert product_type_bucket("спрей для волос") == "spray"
 
 
-def test_palette_and_eyeshadow_both_map_to_palette_bucket() -> None:
+def test_palette_and_eyeshadow_both_map_to_eyeshadow_palette_bucket() -> None:
     """`Тени для век` and `Палетка теней` are the same product family in
-    practice — both must map to `palette` so viled "Тени для век" can
-    match GA "Палетка теней" without the veto firing."""
+    practice — both must map to the SAME sub-bucket so viled "Тени для
+    век" can match GA "Палетка теней" without the veto firing.
+
+    Updated 2026-05-16 (commit ccbba58+): palette sub-bucketing splits
+    `palette` into eyeshadow / corrector / highlighter / blush / bronzer
+    sub-categories. Both inputs here qualify with «тени» / «теней» → both
+    resolve to `palette_eyeshadow`."""
     from ga_crawler.matcher.name_match import product_type_bucket
-    assert product_type_bucket("палетка тенеи tom ford") == "palette"
-    assert product_type_bucket("тени для век guerlain") == "palette"
+    assert product_type_bucket("палетка тенеи tom ford") == "palette_eyeshadow"
+    assert product_type_bucket("тени для век guerlain") == "palette_eyeshadow"
 
 
 def test_rejects_perfumed_soap_vs_perfume() -> None:
@@ -386,3 +391,72 @@ def test_english_leading_cream_resolves_to_cream_bucket() -> None:
     from ga_crawler.matcher.name_match import product_type_bucket
     assert product_type_bucket("bobbi brown vitamin enriched 50 мл крем") == "cream"
     assert product_type_bucket("teint idole ultra wear пудра компактная") == "powder"
+
+
+# ---- run-21 forensic top-10 FP regressions (operator review 2026-05-16 21:00) ----
+
+
+def test_palette_eyeshadow_vs_palette_corrector_does_not_match() -> None:
+    """Run-21 v3 top-1 FP: viled «Палетка для теней Pro Palette» (MAC)
+    matched GA «Палетка для коррекции лица MAC PRO CONCEAL AND CORRECT
+    PALETTE». Same brand, both bucket=palette, common token "pro"
+    triggered token-overlap acceptance. Fix: palette sub-bucketing —
+    eyeshadow vs corrector are different sub-buckets, veto fires."""
+    assert not name_matches(
+        viled_name_norm="палетка для тенеи pro palette",
+        goldapple_url="https://goldapple.kz/19760340290-conceal-and-correct",
+        goldapple_name_norm="палетка для коррекции лица mac pro conceal and correct palette",
+        brand_norm="mac",
+    )
+
+
+def test_brush_cleanser_vs_brush_tool_does_not_match() -> None:
+    """Run-21 top-2/4 FP: viled «Средство для очистки кистей Brush
+    Cleanser» (cleaning liquid) matched GA «Кисть для пудры Bobbi Brown
+    Powder brush» (the brush itself). Fix: «очист» → cleanser bucket;
+    «кисть» → brush_tool bucket. Different buckets, veto fires."""
+    assert not name_matches(
+        viled_name_norm="средство для очистки кистеи brush cleanser 100 мл",
+        goldapple_url="https://goldapple.kz/24880100013-powder-brush",
+        goldapple_name_norm="кисть для пудры bobbi brown powder brush",
+        brand_norm="bobbi-brown",
+    )
+
+
+def test_perfume_set_does_not_match_standalone_perfume() -> None:
+    """Run-21 top-6/7 FP: viled «Парфюмерный набор Portrait of a Lady
+    Travel set» (a SET containing 10ml mini) matched GA «Парфюмерная
+    вода Portrait Of A Lady» (standalone 100ml). Both bucket=perfume
+    pre-fix. Fix: priority «набор»/«сет» override → set bucket,
+    overriding any other stem hit."""
+    assert not name_matches(
+        viled_name_norm="парфюмерныи набор portrait of a lady travel set",
+        goldapple_url="https://goldapple.kz/82401800003-portrait-of-a-lady",
+        goldapple_name_norm="парфюмерная вода frederic malle portrait of a lady",
+        brand_norm="frederic_malle",
+    )
+
+
+def test_highlighter_vs_perfume_refill_does_not_match() -> None:
+    """Run-21 top-8 FP: viled «Хайлайтер Teint Idole Ultra Wear» (й→и
+    normalized to «хаилаитер») matched GA «Рефил парфюмерной воды
+    Lancome Idole» (perfume refill). Pre-fix the «хайлайт» stem missed
+    the transliterated form. Fix: stem widened to «хаила»/«хайла»
+    covers both spellings → bucket=highlighter; GA bucket=perfume
+    (after refill strip) → veto fires."""
+    assert not name_matches(
+        viled_name_norm="хаилаитер teint idole ultra wear оттенок 03 generous honey",
+        goldapple_url="https://goldapple.kz/19000267094-idole",
+        goldapple_name_norm="рефил парфюмернои воды lancome idole",
+        brand_norm="lancome",
+    )
+
+
+def test_highlighter_vs_eau_de_toilette_does_not_match() -> None:
+    """Run-21 top-10 FP — companion to highlighter-vs-refill case."""
+    assert not name_matches(
+        viled_name_norm="хаилаитер teint idole ultra wear оттенок 03 generous honey",
+        goldapple_url="https://goldapple.kz/19000293751-idole",
+        goldapple_name_norm="туалетная вода lancome idole",
+        brand_norm="lancome",
+    )

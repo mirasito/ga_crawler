@@ -284,6 +284,12 @@ def _catalog_item_to_normalized(
         was_price = None
         if enable_discount and real_min_price and real_min_price != min_price:
             was_price = int(real_min_price)
+        # Detect multipack from NAME ∪ volume_raw — viled often puts "набор"
+        # / "Travel set" / "набор миниатюр" in the product name without any
+        # Размер attribute. Pre-fix path missed these and they leaked into
+        # matcher as full-volume comparisons (run-21 top-6/7: "Парфюмерный
+        # набор Portrait of a Lady" matched against the standalone 100 мл).
+        multipack = detect_multipack(name_raw) or detect_multipack(raw_volume_text or "")
         return [{
             "sku_id": str(sku_id),
             "url": base_url,
@@ -297,7 +303,7 @@ def _catalog_item_to_normalized(
             "stock_state": "IN_STOCK",
             "volume_raw": raw_volume_text,
             "volume_norm": volume_norm,
-            "multipack_flag": detect_multipack(raw_volume_text or ""),
+            "multipack_flag": multipack,
             "parse_error_flag": False,
         }]
 
@@ -332,6 +338,7 @@ def _catalog_item_to_normalized(
     # Emit one row per variant with compound sku_id = "{viled_id}-{itemPriceId}".
     # Single-variant sku_ids stay as plain "{viled_id}" so most matches stay
     # backwards-compatible.
+    name_multipack = detect_multipack(name_raw)
     out: list[dict] = []
     for v in variants:
         ipid = v["item_price_id"]
@@ -353,7 +360,7 @@ def _catalog_item_to_normalized(
             "stock_state": "IN_STOCK",
             "volume_raw": size_text,
             "volume_norm": volume_norm,
-            "multipack_flag": detect_multipack(size_text or ""),
+            "multipack_flag": name_multipack or detect_multipack(size_text or ""),
             "parse_error_flag": False,
         })
     log.info("viled_pdp_topup_complete", sku_id=sku_id,
